@@ -1,0 +1,173 @@
+{
+  "prospectus_metadata": {
+    "title": "KULIMA OS Demand-Signal Prospectus",
+    "subtitle": "Verified Coordination Patterns for Infrastructure Planning",
+    "generated_at": "2026-05-01T18:05:01.838060Z",
+    "pilot_region": "Pilot Region - Rural Energy Planning",
+    "evaluation_period": "7-cycle window (Week 1)",
+    "system_version": "KULIMA OS Pilot v0.1"
+  },
+  "executive_summary": {
+    "total_coordination_patterns": 5,
+    "high_confidence_patterns": 2,
+    "moderate_confidence_patterns": 1,
+    "zones_with_coordinated_demand": [
+      "zone_c",
+      "zone_a",
+      "zone_b"
+    ],
+    "productive_activities_detected": [
+      "cold_storage",
+      "milling",
+      "irrigation"
+    ],
+    "key_finding": "Detected 5 stable coordination patterns across 3 zones, with 2 patterns showing high confidence for infrastructure investment."
+  },
+  "coordination_patterns": [
+    {
+      "pattern_id": "zone_a_irrigation_morning",
+      "activity_type": "irrigation",
+      "zone": "zone_a",
+      "demand_rhythm": {
+        "time_window": "morning",
+        "frequency": "6 of 7 cycles",
+        "stability_class": "stable"
+      },
+      "coordination_confidence": {
+        "score": 0.86,
+        "class": "high",
+        "bankability": "High confidence for infrastructure investment. Pattern is stable and corroborated."
+      },
+      "validation": {
+        "strength": "strong",
+        "details": "6 of 6 human cycles corroborated by telemetry"
+      },
+      "infrastructure_implication": "Requires reliable morning power for water pumping. Consider three-phase capacity. HIGH PRIORITY for infrastructure investment."
+    },
+    {
+      "pattern_id": "zone_a_milling_afternoon",
+      "activity_type": "milling",
+      "zone": "zone_a",
+      "demand_rhythm": {
+        "time_window": "afternoon",
+        "frequency": "5 of 7 cycles",
+        "stability_class": "stable"
+      },
+      "coordination_confidence": {
+        "score": 0.71,
+        "class": "moderate",
+        "bankability": "Moderate confidence. Pattern shows coordination but may need monitoring."
+      },
+      "validation": {
+        "strength": "strong",
+        "details": "5 of 5 human cycles corroborated by telemetry"
+      },
+      "infrastructure_implication": "Requires high-power afternoon capacity for grain processing. Peak demand periods. MODERATE PRIORITY. Monitor for stability."
+    },
+    {
+      "pattern_id": "zone_b_cold_storage_evening",
+      "activity_type": "cold_storage",
+      "zone": "zone_b",
+      "demand_rhythm": {
+        "time_window": "evening",
+        "frequency": "6 of 7 cycles",
+        "stability_class": "stable"
+      },
+      "coordination_confidence": {
+        "score": 0.86,
+        "class": "high",
+        "bankability": "High confidence for infrastructure investment. Pattern is stable and corroborated."
+      },
+      "validation": {
+        "strength": "strong",
+        "details": "6 of 6 human cycles corroborated by telemetry"
+      },
+      "infrastructure_implication": "Requires continuous evening power for cold chain. Critical for food security. HIGH PRIORITY for infrastructure investment."
+    },
+    {
+      "pattern_id": "zone_c_milling_morning",
+      "activity_type": "milling",
+      "zone": "zone_c",
+      "demand_rhythm": {
+        "time_window": "morning",
+        "frequency": "4 of 7 cycles",
+        "stability_class": "intermediate"
+      },
+      "coordination_confidence": {
+        "score": 0.48,
+        "class": "low",
+        "bankability": "Low confidence. Pattern exists but lacks strong validation or stability."
+      },
+      "validation": {
+        "strength": "moderate",
+        "details": "3 of 4 human cycles corroborated by telemetry"
+      },
+      "infrastructure_implication": "Requires high-power morning capacity for grain processing. Peak demand periods. LOW PRIORITY. Requires further validation."
+    },
+    {
+      "pattern_id": "zone_c_irrigation_afternoon",
+      "activity_type": "irrigation",
+      "zone": "zone_c",
+      "demand_rhythm": {
+        "time_window": "afternoon",
+        "frequency": "3 of 7 cycles",
+        "stability_class": "intermediate"
+      },
+      "coordination_confidence": {
+        "score": 0.26,
+        "class": "insufficient",
+        "bankability": "Insufficient confidence for infrastructure planning at this time."
+      },
+      "validation": {
+        "strength": "human_only",
+        "details": "Human signals in 3 cycles, no telemetry corroboration"
+      },
+      "infrastructure_implication": "Requires reliable afternoon power for water pumping. Consider three-phase capacity. LOW PRIORITY. Requires further validation."
+    }
+  ],
+  "infrastructure_planning_guidance": {
+    "high_priority_zones": [
+      "zone_a",
+      "zone_b"
+    ],
+    "moderate_priority_zones": [
+      "zone_a"
+    ],
+    "investment_recommendation": "RECOMMENDED: Prioritize infrastructure deployment in 2 high-confidence zone(s). Coordination patterns are stable and validated, indicating bankable demand.",
+    "capacity_planning_note": "Infrastructure capacity must account for productive-use demand patterns, not just household consumption. Include 20% social reserve for communal assets."
+  },
+  "social_reserve_policy": {
+    "description": "20% capacity reserved for communal productive assets",
+    "rationale": "Ensures infrastructure serves collective economic activity, not just individual consumption",
+    "implementation": "Infrastructure design must include capacity for shared assets (mills, pumps, cold storage)"
+  },
+  "ethics_compliance": {
+    "system_invariants": [
+      "Zero-PII: No personal identifiers in any data or outputs",
+      "Temporal Moat: All processing in time-batched windows (no real-time tracking)",
+      "Coordination > Identity: System reasons over collective patterns only",
+      "Semantic Guard: No surveillance, credit scoring, or individual profiling"
+    ],
+    "verification": "All outputs are auditable against AGENTS.md system invariants",
+    "data_governance": "Raw signals are never stored or exported. Only aggregated patterns cross institutional boundary."
+  },
+  "methodology": {
+    "signal_sources": [
+      "Human-reported coordination signals (identity-free)",
+      "Infrastructure telemetry (shared assets only, aggregated)"
+    ],
+    "processing_pipeline": [
+      "1. Signal ingestion (identity-free, scope-enforced)",
+      "2. Time-batching (7-cycle windows, no real-time)",
+      "3. Aggregation (collective patterns, noise filtering)",
+      "4. LUMOZA processing (demand rhythms, stability scores)",
+      "5. ZENTARI evaluation (coordination confidence)",
+      "6. Prospectus generation (institutional outputs only)"
+    ],
+    "coordination_thresholds": {
+      "stable_pattern": ">=5 of 7 cycles",
+      "noise_threshold": "<3 of 7 cycles",
+      "validation": "Human signals cross-validated with telemetry"
+    }
+  }
+}
