@@ -33,6 +33,7 @@ class ProspectusGenerator:
     def generate_prospectus(
         self,
         confidence_results: List[Dict],
+        lundai_analysis: Dict = None,
         metadata: Dict = None
     ) -> Dict:
         """
@@ -44,6 +45,7 @@ class ProspectusGenerator:
         
         Args:
             confidence_results: Coordination patterns with confidence scores from ZENTARI
+            lundai_analysis: Settlement and infrastructure gap analysis from LUNDAI (optional)
             metadata: Optional metadata about the pilot (region, time period, etc.)
             
         Returns:
@@ -61,14 +63,18 @@ class ProspectusGenerator:
                 "generated_at": datetime.utcnow().isoformat() + "Z",
                 "pilot_region": metadata.get("region", "Pilot Region"),
                 "evaluation_period": metadata.get("period", "7-cycle window (1 week)"),
-                "system_version": "KULIMA OS Pilot v0.1"
+                "system_version": "KULIMA OS Pilot v0.2 (LUMOZA + LUNDAI + Critical Load Protection)"
             },
             
-            "executive_summary": self._generate_executive_summary(confidence_results),
+            "executive_summary": self._generate_executive_summary(confidence_results, lundai_analysis),
             
             "coordination_patterns": self._format_patterns_for_institutions(confidence_results),
             
-            "infrastructure_planning_guidance": self._generate_planning_guidance(confidence_results),
+            "settlement_and_infrastructure_analysis": lundai_analysis if lundai_analysis else {"status": "LUNDAI analysis not included"},
+            
+            "critical_load_protection": self._generate_critical_load_analysis(confidence_results, lundai_analysis),
+            
+            "infrastructure_planning_guidance": self._generate_planning_guidance(confidence_results, lundai_analysis),
             
             "social_reserve_policy": {
                 "description": "20% capacity reserved for communal productive assets",
@@ -110,7 +116,7 @@ class ProspectusGenerator:
         
         return prospectus
     
-    def _generate_executive_summary(self, confidence_results: List[Dict]) -> Dict:
+    def _generate_executive_summary(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
         """Generate executive summary of coordination patterns."""
         
         total_patterns = len(confidence_results)
@@ -121,7 +127,7 @@ class ProspectusGenerator:
         zones = set(r['zone'] for r in confidence_results)
         activities = set(r['activity_type'] for r in confidence_results)
         
-        return {
+        summary = {
             "total_coordination_patterns": total_patterns,
             "high_confidence_patterns": high_confidence,
             "moderate_confidence_patterns": moderate_confidence,
@@ -129,6 +135,113 @@ class ProspectusGenerator:
             "productive_activities_detected": list(activities),
             "key_finding": f"Detected {total_patterns} stable coordination patterns across {len(zones)} zones, "
                           f"with {high_confidence} patterns showing high confidence for infrastructure investment."
+        }
+        
+        # Add LUNDAI insights if available
+        if lundai_analysis and 'overall_assessment' in lundai_analysis:
+            overall = lundai_analysis['overall_assessment']
+            summary["infrastructure_status"] = overall.get('overall_infrastructure_status', 'Unknown')
+            summary["critical_infrastructure_gaps"] = overall.get('critical_infrastructure_gaps', 0)
+            summary["urgent_priority_zones"] = overall.get('urgent_priority_zones', 0)
+        
+        return summary
+    
+    def _generate_critical_load_analysis(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
+        """
+        Generate Critical Load Protection analysis for essential services.
+        
+        SYSTEM CONSTRAINT: CRITICAL LOAD PROTECTION + LUNDAI INTEGRATION
+        Essential communal services (clinics, schools, water systems, emergency infrastructure)
+        are non-negotiable priority loads that must be protected in capacity planning.
+        
+        This analysis:
+        1. Identifies recurring essential-service demand patterns (LUMOZA)
+        2. Assesses settlement context and infrastructure gaps (LUNDAI)
+        3. Simulates baseline, peak, and shock scenarios
+        4. Calculates required capacity reservation with LUNDAI-informed adjustments
+        5. Ensures this capacity is excluded from optimization/monetization logic
+        """
+        # Separate essential and productive patterns
+        essential_patterns = [p for p in confidence_results if p.get('service_priority') == 'essential']
+        productive_patterns = [p for p in confidence_results if p.get('service_priority') == 'productive']
+        
+        # Calculate essential service load profile
+        essential_zones = set(p['zone'] for p in essential_patterns)
+        essential_activities = set(p['activity_type'] for p in essential_patterns)
+        
+        # Determine capacity reservation percentage with LUNDAI-informed adjustments
+        # Base: 20%, adjusted based on essential service density AND infrastructure gaps
+        base_reservation = 20
+        
+        if len(essential_patterns) == 0:
+            reservation_percentage = 0
+            reservation_note = "No essential services detected. Standard capacity planning applies."
+        elif len(essential_patterns) >= len(productive_patterns):
+            reservation_percentage = 30
+            reservation_note = "High essential service density. 30% capacity reserved for critical loads."
+        else:
+            reservation_percentage = base_reservation
+            reservation_note = f"Standard essential service protection. {base_reservation}% capacity reserved for critical loads."
+        
+        # LUNDAI-informed adjustment: increase reservation for critical infrastructure gaps
+        if lundai_analysis and 'zone_analyses' in lundai_analysis:
+            critical_gap_zones = [
+                zone for zone, analysis in lundai_analysis['zone_analyses'].items()
+                if analysis.get('gap_severity') in ['critical', 'severe'] and zone in essential_zones
+            ]
+            
+            if critical_gap_zones:
+                # Increase reservation by 10% for zones with critical gaps and essential services
+                reservation_percentage = min(reservation_percentage + 10, 40)
+                reservation_note += f" Increased by 10% due to critical infrastructure gaps in {len(critical_gap_zones)} zone(s) with essential services."
+        
+        # Scenario analysis
+        scenarios = {
+            "baseline": {
+                "description": "Normal operation with all essential services active",
+                "essential_load_percentage": reservation_percentage,
+                "available_for_productive_use": 100 - reservation_percentage
+            },
+            "peak": {
+                "description": "Peak demand when all services operate simultaneously",
+                "essential_load_percentage": min(reservation_percentage * 1.5, 40),
+                "available_for_productive_use": max(100 - (reservation_percentage * 1.5), 60)
+            },
+            "shock": {
+                "description": "Emergency scenario requiring maximum essential service capacity",
+                "essential_load_percentage": min(reservation_percentage * 2, 50),
+                "available_for_productive_use": max(100 - (reservation_percentage * 2), 50)
+            }
+        }
+        
+        return {
+            "enforcement_status": "ACTIVE - Architecturally enforced, cannot be overridden",
+            "essential_service_count": len(essential_patterns),
+            "productive_activity_count": len(productive_patterns),
+            "zones_with_essential_services": sorted(list(essential_zones)),
+            "essential_service_types": sorted(list(essential_activities)),
+            "capacity_reservation": {
+                "percentage": reservation_percentage,
+                "rationale": reservation_note,
+                "enforcement": "Reserved capacity is excluded from optimization, monetization, and load-shedding logic"
+            },
+            "scenario_analysis": scenarios,
+            "planning_requirements": [
+                f"Infrastructure MUST reserve {reservation_percentage}% capacity for essential services",
+                "Essential service loads cannot be shed during peak demand periods",
+                "Productive use optimization must operate within remaining capacity only",
+                "Emergency scenarios require ability to scale essential capacity to 50%"
+            ],
+            "non_negotiable_loads": [
+                {
+                    "activity": p['activity_type'],
+                    "zone": p['zone'],
+                    "time_window": p['time_window'],
+                    "stability": p['demand_rhythm']['stability_class'],
+                    "priority": "CRITICAL - Cannot be interrupted"
+                }
+                for p in essential_patterns
+            ]
         }
     
     def _format_patterns_for_institutions(self, confidence_results: List[Dict]) -> List[Dict]:
@@ -185,8 +298,8 @@ class ProspectusGenerator:
         else:
             return f"{base_implication} LOW PRIORITY. Requires further validation."
     
-    def _generate_planning_guidance(self, confidence_results: List[Dict]) -> Dict:
-        """Generate infrastructure planning guidance."""
+    def _generate_planning_guidance(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
+        """Generate infrastructure planning guidance with LUNDAI integration."""
         
         high_priority_zones = set()
         moderate_priority_zones = set()
@@ -197,7 +310,7 @@ class ProspectusGenerator:
             elif result['confidence_class'] == 'moderate':
                 moderate_priority_zones.add(result['zone'])
         
-        return {
+        guidance = {
             "high_priority_zones": list(high_priority_zones),
             "moderate_priority_zones": list(moderate_priority_zones),
             "investment_recommendation": self._get_investment_recommendation(
@@ -205,8 +318,21 @@ class ProspectusGenerator:
                 len(moderate_priority_zones)
             ),
             "capacity_planning_note": "Infrastructure capacity must account for productive-use demand patterns, "
-                                     "not just household consumption. Include 20% social reserve for communal assets."
+                                     "not just household consumption. Social reserve enforced for essential services."
         }
+        
+        # Add LUNDAI-informed zone prioritization
+        if lundai_analysis and 'zone_analyses' in lundai_analysis:
+            urgent_zones = [
+                zone for zone, analysis in lundai_analysis['zone_analyses'].items()
+                if analysis.get('priority_classification') == 'urgent'
+            ]
+            
+            if urgent_zones:
+                guidance["urgent_infrastructure_zones"] = urgent_zones
+                guidance["lundai_recommendation"] = f"URGENT: {len(urgent_zones)} zone(s) require immediate infrastructure intervention due to critical gaps and essential service presence."
+        
+        return guidance
     
     def _get_investment_recommendation(self, high_priority_count: int, moderate_priority_count: int) -> str:
         """Generate investment recommendation based on priority zones."""
@@ -273,6 +399,54 @@ class ProspectusGenerator:
 - **Validation:** {pattern['validation']['strength']} - {pattern['validation']['details']}
 - **Infrastructure Implication:** {pattern['infrastructure_implication']}
 
+"""
+        
+        md_content += f"""
+---
+
+## Critical Load Protection
+
+**Enforcement Status:** {prospectus['critical_load_protection']['enforcement_status']}
+
+**Essential Services Detected:** {prospectus['critical_load_protection']['essential_service_count']}
+**Productive Activities Detected:** {prospectus['critical_load_protection']['productive_activity_count']}
+
+**Zones with Essential Services:** {', '.join(prospectus['critical_load_protection']['zones_with_essential_services']) if prospectus['critical_load_protection']['zones_with_essential_services'] else 'None'}
+
+**Essential Service Types:** {', '.join(prospectus['critical_load_protection']['essential_service_types']) if prospectus['critical_load_protection']['essential_service_types'] else 'None'}
+
+### Capacity Reservation
+
+**Reserved Capacity:** {prospectus['critical_load_protection']['capacity_reservation']['percentage']}%
+
+**Rationale:** {prospectus['critical_load_protection']['capacity_reservation']['rationale']}
+
+**Enforcement:** {prospectus['critical_load_protection']['capacity_reservation']['enforcement']}
+
+### Scenario Analysis
+
+"""
+        
+        for scenario_name, scenario_data in prospectus['critical_load_protection']['scenario_analysis'].items():
+            md_content += f"""
+**{scenario_name.upper()} Scenario:**
+- Description: {scenario_data['description']}
+- Essential Load: {scenario_data['essential_load_percentage']}%
+- Available for Productive Use: {scenario_data['available_for_productive_use']}%
+"""
+        
+        md_content += "\n### Planning Requirements\n\n"
+        for req in prospectus['critical_load_protection']['planning_requirements']:
+            md_content += f"- {req}\n"
+        
+        if prospectus['critical_load_protection']['non_negotiable_loads']:
+            md_content += "\n### Non-Negotiable Loads\n\n"
+            for load in prospectus['critical_load_protection']['non_negotiable_loads']:
+                md_content += f"""
+**{load['activity']}** ({load['zone']})
+- Time Window: {load['time_window']}
+- Stability: {load['stability']}
+- Priority: {load['priority']}
 """
         
         md_content += f"""

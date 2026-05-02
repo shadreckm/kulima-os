@@ -88,12 +88,17 @@ class LumozaEngine:
             # Cross-validate with telemetry
             validation_result = self._cross_validate(pattern_signals)
             
+            # Determine service priority (essential vs productive)
+            # CRITICAL LOAD PROTECTION: Essential services are identified and flagged
+            service_priority = self._determine_service_priority(pattern_signals)
+            
             # Build coordination pattern output
             # ZERO-PII: Output contains only aggregates, no individual data
             coordination_pattern = {
                 "activity_type": activity_type,
                 "zone": zone,
                 "time_window": time_window,
+                "service_priority": service_priority,
                 "demand_rhythm": {
                     "frequency": f"{pattern_analysis['cycle_count']} of {self.TOTAL_CYCLES} cycles",
                     "cycles_present": sorted(pattern_analysis['cycles_present']),
@@ -199,6 +204,29 @@ class LumozaEngine:
             'strength': strength,
             'details': f'{len(aligned_cycles)} of {len(human_cycles)} human cycles corroborated by telemetry'
         }
+    
+    def _determine_service_priority(self, pattern_signals: List[Dict]) -> str:
+        """
+        Determine if a coordination pattern represents essential services or productive activity.
+        
+        CRITICAL LOAD PROTECTION:
+        - Essential services (clinics, schools, water systems, emergency services) are flagged
+        - These patterns will be prioritized in capacity planning
+        - Cannot be overridden by commercial optimization
+        
+        Returns:
+            'essential' for critical communal services, 'productive' for economic activities
+        """
+        # Check if any signal in the pattern has essential priority
+        for signal in pattern_signals:
+            if signal.get('service_priority') == 'essential':
+                return 'essential'
+        
+        # Default to productive if not explicitly marked as essential
+        # Use first signal's priority or default to 'productive'
+        if pattern_signals:
+            return pattern_signals[0].get('service_priority', 'productive')
+        return 'productive'
 
 
 def print_coordination_patterns(patterns: List[Dict]) -> None:
@@ -216,6 +244,7 @@ def print_coordination_patterns(patterns: List[Dict]) -> None:
         print(f"  Activity: {pattern['activity_type']}")
         print(f"  Zone: {pattern['zone']}")
         print(f"  Time Window: {pattern['time_window']}")
+        print(f"  Service Priority: {pattern['service_priority'].upper()}")
         print(f"  Demand Rhythm: {pattern['demand_rhythm']['frequency']}")
         print(f"  Cycles Present: {pattern['demand_rhythm']['cycles_present']}")
         print(f"  Stability: {pattern['demand_rhythm']['stability_class']} (score: {pattern['stability_score']})")
@@ -224,9 +253,9 @@ def print_coordination_patterns(patterns: List[Dict]) -> None:
     
     print("\n" + "=" * 60)
     print("INVARIANT COMPLIANCE:")
-    print("✓ Zero-PII: No individual identifiers in outputs")
-    print("✓ Temporal Moat: Cycle-level aggregation (no precise timestamps)")
-    print("✓ Coordination > Identity: Patterns represent collective activity")
+    print("[OK] Zero-PII: No individual identifiers in outputs")
+    print("[OK] Temporal Moat: Cycle-level aggregation (no precise timestamps)")
+    print("[OK] Coordination > Identity: Patterns represent collective activity")
     print("=" * 60)
 
 

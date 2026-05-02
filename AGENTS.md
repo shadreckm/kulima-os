@@ -266,6 +266,21 @@ These are hard architectural constraints, not policy guidelines. Violations must
   - Individual profiling
 - Implement refusal mechanisms at API and query layers
 
+### 5. Critical Load Protection
+- Essential communal services (clinics, schools, water systems, emergency infrastructure) are non-negotiable priority loads
+- System must identify recurring essential-service demand patterns using 7-cycle coordination logic
+- Capacity planning must reserve sufficient energy capacity (approximately 20% or as required by local essential-load profiles) BEFORE allocating to productive or commercial uses
+- Reserved capacity is excluded from optimization, monetization, or load-shedding logic
+- This social reserve is enforced at the coordination and capacity-planning layer, not as a financial contingency
+- Cannot be overridden by external actors or commercial optimization algorithms
+- Baseline, peak, and shock scenarios must be simulated to ensure essential services remain protected under all conditions
+
+**Implementation Requirements**:
+- LUMOZA must classify coordination patterns as 'essential' or 'productive' based on activity type
+- Prospectus generator must calculate and enforce capacity reservation percentages
+- Infrastructure planning guidance must explicitly reserve capacity for essential services
+- Non-negotiable loads must be clearly identified and protected in all planning scenarios
+
 ## Architectural Principles
 
 ### Think Infrastructure, Not Features

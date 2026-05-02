@@ -35,15 +35,16 @@ def print_header(title: str) -> None:
 
 def print_invariant_check() -> None:
     """Print system invariant compliance check."""
-    print("\n" + "🛡️  " * 20)
+    print("\n" + "=" * 70)
     print("\nSYSTEM INVARIANT COMPLIANCE CHECK")
     print("-" * 70)
-    print("✓ Zero-PII: No personal identifiers in signals or outputs")
-    print("✓ Temporal Moat: All processing in 7-cycle batched windows")
-    print("✓ Coordination > Identity: System reasons over collective patterns")
-    print("✓ Semantic Guard: No surveillance, tracking, or profiling")
+    print("[OK] Zero-PII: No personal identifiers in signals or outputs")
+    print("[OK] Temporal Moat: All processing in 7-cycle batched windows")
+    print("[OK] Coordination > Identity: System reasons over collective patterns")
+    print("[OK] Semantic Guard: No surveillance, tracking, or profiling")
+    print("[OK] Critical Load Protection: Essential services prioritized")
     print("-" * 70)
-    print("🛡️  " * 20)
+    print("=" * 70)
 
 
 def main():
@@ -73,13 +74,13 @@ def main():
     signals = generate_pilot_signals()
     print_signal_summary(signals)
     
-    print("\n📊 Signal Examples:")
+    print("\n[EXAMPLES] Signal Examples:")
     print("-" * 70)
     for i, signal in enumerate(signals[:3], 1):
         print(f"{i}. {signal}")
     print(f"... and {len(signals) - 3} more signals")
     
-    input("\n▶ Press Enter to continue to LUMOZA processing...")
+    input("\n>> Press Enter to continue to LUMOZA processing...")
     
     # ========================================================================
     # STEP 2: LUMOZA - Coordination Engine
@@ -96,14 +97,14 @@ def main():
     
     print_coordination_patterns(coordination_patterns)
     
-    print("\n📈 Key Insights:")
+    print("\n[INSIGHTS] Key Insights:")
     print("-" * 70)
     print(f"✓ Detected {len(coordination_patterns)} stable coordination patterns")
     print("✓ Patterns represent collective activity, not individuals")
     print("✓ Telemetry corroborates human-reported coordination")
     print("✓ Noise filtered out (one-off events excluded)")
     
-    input("\n▶ Press Enter to continue to ZENTARI evaluation...")
+    input("\n>> Press Enter to continue to ZENTARI evaluation...")
     
     # ========================================================================
     # STEP 3: ZENTARI - Trust Engine
@@ -128,7 +129,7 @@ def main():
     print("✓ No credit scores, no reputations, no profiling")
     print("✓ Trust decays if coordination breaks down")
     
-    input("\n▶ Press Enter to generate Demand-Signal Prospectus...")
+    input("\n>> Press Enter to generate Demand-Signal Prospectus...")
     
     # ========================================================================
     # STEP 4: Demand-Signal Prospectus
@@ -166,7 +167,7 @@ def main():
     # ========================================================================
     print_header("DEMONSTRATION COMPLETE")
     
-    print("\n✅ KULIMA OS Pilot Successfully Demonstrated:")
+    print("\n[SUCCESS] KULIMA OS Pilot Successfully Demonstrated:")
     print("-" * 70)
     print("1. ✓ Identity-free signal processing")
     print("2. ✓ 7-cycle coordination logic (LUMOZA)")
@@ -206,10 +207,10 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n⚠️  Demo interrupted by user.")
+        print("\n\n[WARNING] Demo interrupted by user.")
         print("=" * 70)
     except Exception as e:
-        print(f"\n\n❌ Error during demo: {e}")
+        print(f"\n\n[ERROR] Error during demo: {e}")
         print("=" * 70)
         raise
 

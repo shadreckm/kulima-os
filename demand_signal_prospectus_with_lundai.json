@@ -1,0 +1,424 @@
+{
+  "prospectus_metadata": {
+    "title": "KULIMA OS Demand-Signal Prospectus",
+    "subtitle": "Verified Coordination Patterns for Infrastructure Planning",
+    "generated_at": "2026-05-02T12:56:15.856871Z",
+    "pilot_region": "Pilot Region",
+    "evaluation_period": "7-cycle window",
+    "system_version": "KULIMA OS Pilot v0.2 (LUMOZA + LUNDAI + Critical Load Protection)"
+  },
+  "executive_summary": {
+    "total_coordination_patterns": 10,
+    "high_confidence_patterns": 2,
+    "moderate_confidence_patterns": 1,
+    "zones_with_coordinated_demand": [
+      "zone_c",
+      "zone_b",
+      "zone_a"
+    ],
+    "productive_activities_detected": [
+      "milling",
+      "water_system",
+      "emergency_services",
+      "clinic",
+      "school",
+      "cold_storage",
+      "irrigation"
+    ],
+    "key_finding": "Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing high confidence for infrastructure investment.",
+    "infrastructure_status": "Critical infrastructure gaps require urgent intervention",
+    "critical_infrastructure_gaps": 1,
+    "urgent_priority_zones": 1
+  },
+  "coordination_patterns": [
+    {
+      "pattern_id": "zone_a_irrigation_morning",
+      "activity_type": "irrigation",
+      "zone": "zone_a",
+      "demand_rhythm": {
+        "time_window": "morning",
+        "frequency": "6 of 7 cycles",
+        "stability_class": "stable"
+      },
+      "coordination_confidence": {
+        "score": 0.86,
+        "class": "high",
+        "bankability": "High confidence for infrastructure investment. Pattern is stable and corroborated."
+      },
+      "validation": {
+        "strength": "strong",
+        "details": "6 of 6 human cycles corroborated by telemetry"
+      },
+      "infrastructure_implication": "Requires reliable morning power for water pumping. Consider three-phase capacity. HIGH PRIORITY for infrastructure investment."
+    },
+    {
+      "pattern_id": "zone_a_milling_afternoon",
+      "activity_type": "milling",
+      "zone": "zone_a",
+      "demand_rhythm": {
+        "time_window": "afternoon",
+        "frequency": "5 of 7 cycles",
+        "stability_class": "stable"
+      },
+      "coordination_confidence": {
+        "score": 0.71,
+        "class": "moderate",
+        "bankability": "Moderate confidence. Pattern shows coordination but may need monitoring."
+      },
+      "validation": {
+        "strength": "strong",
+        "details": "5 of 5 human cycles corroborated by telemetry"
+      },
+      "infrastructure_implication": "Requires high-power afternoon capacity for grain processing. Peak demand periods. MODERATE PRIORITY. Monitor for stability."
+    },
+    {
+      "pattern_id": "zone_b_cold_storage_evening",
+      "activity_type": "cold_storage",
+      "zone": "zone_b",
+      "demand_rhythm": {
+        "time_window": "evening",
+        "frequency": "6 of 7 cycles",
+        "stability_class": "stable"
+      },
+      "coordination_confidence": {
+        "score": 0.86,
+        "class": "high",
+        "bankability": "High confidence for infrastructure investment. Pattern is stable and corroborated."
+      },
+      "validation": {
+        "strength": "strong",
+        "details": "6 of 6 human cycles corroborated by telemetry"
+      },
+      "infrastructure_implication": "Requires continuous evening power for cold chain. Critical for food security. HIGH PRIORITY for infrastructure investment."
+    },
+    {
+      "pattern_id": "zone_c_milling_morning",
+      "activity_type": "milling",
+      "zone": "zone_c",
+      "demand_rhythm": {
+        "time_window": "morning",
+        "frequency": "4 of 7 cycles",
+        "stability_class": "intermediate"
+      },
+      "coordination_confidence": {
+        "score": 0.48,
+        "class": "low",
+        "bankability": "Low confidence. Pattern exists but lacks strong validation or stability."
+      },
+      "validation": {
+        "strength": "moderate",
+        "details": "3 of 4 human cycles corroborated by telemetry"
+      },
+      "infrastructure_implication": "Requires high-power morning capacity for grain processing. Peak demand periods. LOW PRIORITY. Requires further validation."
+    },
+    {
+      "pattern_id": "zone_c_irrigation_afternoon",
+      "activity_type": "irrigation",
+      "zone": "zone_c",
+      "demand_rhythm": {
+        "time_window": "afternoon",
+        "frequency": "3 of 7 cycles",
+        "stability_class": "intermediate"
+      },
+      "coordination_confidence": {
+        "score": 0.26,
+        "class": "insufficient",
+        "bankability": "Insufficient confidence for infrastructure planning at this time."
+      },
+      "validation": {
+        "strength": "human_only",
+        "details": "Human signals in 3 cycles, no telemetry corroboration"
+      },
+      "infrastructure_implication": "Requires reliable afternoon power for water pumping. Consider three-phase capacity. LOW PRIORITY. Requires further validation."
+    },
+    {
+      "pattern_id": "zone_a_clinic_continuous",
+      "activity_type": "clinic",
+      "zone": "zone_a",
+      "demand_rhythm": {
+        "time_window": "continuous",
+        "frequency": "7 of 7 cycles",
+        "stability_class": "stable"
+      },
+      "coordination_confidence": {
+        "score": 0.0,
+        "class": "insufficient",
+        "bankability": "Insufficient confidence for infrastructure planning at this time."
+      },
+      "validation": {
+        "strength": "none",
+        "details": "No human coordination signals"
+      },
+      "infrastructure_implication": "Productive use demand in continuous window. LOW PRIORITY. Requires further validation."
+    },
+    {
+      "pattern_id": "zone_a_school_morning",
+      "activity_type": "school",
+      "zone": "zone_a",
+      "demand_rhythm": {
+        "time_window": "morning",
+        "frequency": "5 of 7 cycles",
+        "stability_class": "stable"
+      },
+      "coordination_confidence": {
+        "score": 0.0,
+        "class": "insufficient",
+        "bankability": "Insufficient confidence for infrastructure planning at this time."
+      },
+      "validation": {
+        "strength": "none",
+        "details": "No human coordination signals"
+      },
+      "infrastructure_implication": "Productive use demand in morning window. LOW PRIORITY. Requires further validation."
+    },
+    {
+      "pattern_id": "zone_b_water_system_morning",
+      "activity_type": "water_system",
+      "zone": "zone_b",
+      "demand_rhythm": {
+        "time_window": "morning",
+        "frequency": "7 of 7 cycles",
+        "stability_class": "stable"
+      },
+      "coordination_confidence": {
+        "score": 0.0,
+        "class": "insufficient",
+        "bankability": "Insufficient confidence for infrastructure planning at this time."
+      },
+      "validation": {
+        "strength": "none",
+        "details": "No human coordination signals"
+      },
+      "infrastructure_implication": "Productive use demand in morning window. LOW PRIORITY. Requires further validation."
+    },
+    {
+      "pattern_id": "zone_b_emergency_services_continuous",
+      "activity_type": "emergency_services",
+      "zone": "zone_b",
+      "demand_rhythm": {
+        "time_window": "continuous",
+        "frequency": "7 of 7 cycles",
+        "stability_class": "stable"
+      },
+      "coordination_confidence": {
+        "score": 0.0,
+        "class": "insufficient",
+        "bankability": "Insufficient confidence for infrastructure planning at this time."
+      },
+      "validation": {
+        "strength": "none",
+        "details": "No human coordination signals"
+      },
+      "infrastructure_implication": "Productive use demand in continuous window. LOW PRIORITY. Requires further validation."
+    },
+    {
+      "pattern_id": "zone_c_water_system_morning",
+      "activity_type": "water_system",
+      "zone": "zone_c",
+      "demand_rhythm": {
+        "time_window": "morning",
+        "frequency": "6 of 7 cycles",
+        "stability_class": "stable"
+      },
+      "coordination_confidence": {
+        "score": 0.0,
+        "class": "insufficient",
+        "bankability": "Insufficient confidence for infrastructure planning at this time."
+      },
+      "validation": {
+        "strength": "none",
+        "details": "No human coordination signals"
+      },
+      "infrastructure_implication": "Productive use demand in morning window. LOW PRIORITY. Requires further validation."
+    }
+  ],
+  "settlement_and_infrastructure_analysis": {
+    "zone_analyses": {
+      "zone_c": {
+        "settlement_type": "informal_settlement",
+        "infrastructure_status": "critical_gap",
+        "gap_severity": "critical",
+        "grid_connection": "none",
+        "grid_edge_exposure": true,
+        "distance_to_substation_km": 25,
+        "transformer_capacity_kva": 0,
+        "service_reliability": "none",
+        "essential_services_count": 1,
+        "productive_activities_count": 2,
+        "infrastructure_adequacy_score": 0,
+        "gap_justification": "No grid connection; Remote location (25km from substation); Essential services present (water_system) require reliable power; Grid-edge exposure increases vulnerability; 2 productive activities require capacity expansion",
+        "priority_classification": "urgent"
+      },
+      "zone_b": {
+        "settlement_type": "peri_urban",
+        "infrastructure_status": "partial_coverage",
+        "gap_severity": "minimal",
+        "grid_connection": "connected",
+        "grid_edge_exposure": false,
+        "distance_to_substation_km": 5,
+        "transformer_capacity_kva": 100,
+        "service_reliability": "moderate",
+        "essential_services_count": 2,
+        "productive_activities_count": 1,
+        "infrastructure_adequacy_score": 95,
+        "gap_justification": "Essential services present (water_system, emergency_services) require reliable power; 1 productive activities require capacity expansion",
+        "priority_classification": "medium"
+      },
+      "zone_a": {
+        "settlement_type": "rural_agricultural",
+        "infrastructure_status": "underserved",
+        "gap_severity": "severe",
+        "grid_connection": "partial",
+        "grid_edge_exposure": true,
+        "distance_to_substation_km": 15,
+        "transformer_capacity_kva": 50,
+        "service_reliability": "intermittent",
+        "essential_services_count": 2,
+        "productive_activities_count": 2,
+        "infrastructure_adequacy_score": 45,
+        "gap_justification": "Partial grid access with frequent outages; Essential services present (clinic, school) require reliable power; Grid-edge exposure increases vulnerability; 2 productive activities require capacity expansion",
+        "priority_classification": "high"
+      }
+    },
+    "overall_assessment": {
+      "total_zones_analyzed": 3,
+      "critical_infrastructure_gaps": 1,
+      "severe_infrastructure_gaps": 1,
+      "urgent_priority_zones": 1,
+      "total_essential_services_detected": 5,
+      "zones_with_grid_edge_exposure": 2,
+      "average_infrastructure_adequacy_score": 46.7,
+      "overall_infrastructure_status": "Critical infrastructure gaps require urgent intervention"
+    }
+  },
+  "critical_load_protection": {
+    "enforcement_status": "ACTIVE - Architecturally enforced, cannot be overridden",
+    "essential_service_count": 5,
+    "productive_activity_count": 5,
+    "zones_with_essential_services": [
+      "zone_a",
+      "zone_b",
+      "zone_c"
+    ],
+    "essential_service_types": [
+      "clinic",
+      "emergency_services",
+      "school",
+      "water_system"
+    ],
+    "capacity_reservation": {
+      "percentage": 40,
+      "rationale": "High essential service density. 30% capacity reserved for critical loads. Increased by 10% due to critical infrastructure gaps in 2 zone(s) with essential services.",
+      "enforcement": "Reserved capacity is excluded from optimization, monetization, and load-shedding logic"
+    },
+    "scenario_analysis": {
+      "baseline": {
+        "description": "Normal operation with all essential services active",
+        "essential_load_percentage": 40,
+        "available_for_productive_use": 60
+      },
+      "peak": {
+        "description": "Peak demand when all services operate simultaneously",
+        "essential_load_percentage": 40,
+        "available_for_productive_use": 60
+      },
+      "shock": {
+        "description": "Emergency scenario requiring maximum essential service capacity",
+        "essential_load_percentage": 50,
+        "available_for_productive_use": 50
+      }
+    },
+    "planning_requirements": [
+      "Infrastructure MUST reserve 40% capacity for essential services",
+      "Essential service loads cannot be shed during peak demand periods",
+      "Productive use optimization must operate within remaining capacity only",
+      "Emergency scenarios require ability to scale essential capacity to 50%"
+    ],
+    "non_negotiable_loads": [
+      {
+        "activity": "clinic",
+        "zone": "zone_a",
+        "time_window": "continuous",
+        "stability": "stable",
+        "priority": "CRITICAL - Cannot be interrupted"
+      },
+      {
+        "activity": "school",
+        "zone": "zone_a",
+        "time_window": "morning",
+        "stability": "stable",
+        "priority": "CRITICAL - Cannot be interrupted"
+      },
+      {
+        "activity": "water_system",
+        "zone": "zone_b",
+        "time_window": "morning",
+        "stability": "stable",
+        "priority": "CRITICAL - Cannot be interrupted"
+      },
+      {
+        "activity": "emergency_services",
+        "zone": "zone_b",
+        "time_window": "continuous",
+        "stability": "stable",
+        "priority": "CRITICAL - Cannot be interrupted"
+      },
+      {
+        "activity": "water_system",
+        "zone": "zone_c",
+        "time_window": "morning",
+        "stability": "stable",
+        "priority": "CRITICAL - Cannot be interrupted"
+      }
+    ]
+  },
+  "infrastructure_planning_guidance": {
+    "high_priority_zones": [
+      "zone_b",
+      "zone_a"
+    ],
+    "moderate_priority_zones": [
+      "zone_a"
+    ],
+    "investment_recommendation": "RECOMMENDED: Prioritize infrastructure deployment in 2 high-confidence zone(s). Coordination patterns are stable and validated, indicating bankable demand.",
+    "capacity_planning_note": "Infrastructure capacity must account for productive-use demand patterns, not just household consumption. Social reserve enforced for essential services.",
+    "urgent_infrastructure_zones": [
+      "zone_c"
+    ],
+    "lundai_recommendation": "URGENT: 1 zone(s) require immediate infrastructure intervention due to critical gaps and essential service presence."
+  },
+  "social_reserve_policy": {
+    "description": "20% capacity reserved for communal productive assets",
+    "rationale": "Ensures infrastructure serves collective economic activity, not just individual consumption",
+    "implementation": "Infrastructure design must include capacity for shared assets (mills, pumps, cold storage)"
+  },
+  "ethics_compliance": {
+    "system_invariants": [
+      "Zero-PII: No personal identifiers in any data or outputs",
+      "Temporal Moat: All processing in time-batched windows (no real-time tracking)",
+      "Coordination > Identity: System reasons over collective patterns only",
+      "Semantic Guard: No surveillance, credit scoring, or individual profiling"
+    ],
+    "verification": "All outputs are auditable against AGENTS.md system invariants",
+    "data_governance": "Raw signals are never stored or exported. Only aggregated patterns cross institutional boundary."
+  },
+  "methodology": {
+    "signal_sources": [
+      "Human-reported coordination signals (identity-free)",
+      "Infrastructure telemetry (shared assets only, aggregated)"
+    ],
+    "processing_pipeline": [
+      "1. Signal ingestion (identity-free, scope-enforced)",
+      "2. Time-batching (7-cycle windows, no real-time)",
+      "3. Aggregation (collective patterns, noise filtering)",
+      "4. LUMOZA processing (demand rhythms, stability scores)",
+      "5. ZENTARI evaluation (coordination confidence)",
+      "6. Prospectus generation (institutional outputs only)"
+    ],
+    "coordination_thresholds": {
+      "stable_pattern": ">=5 of 7 cycles",
+      "noise_threshold": "<3 of 7 cycles",
+      "validation": "Human signals cross-validated with telemetry"
+    }
+  }
+}
