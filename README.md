@@ -89,13 +89,13 @@ KULIMA OS is built on four non-negotiable architectural constraints:
 ### The Three Engines
 
 #### LUMOZA - Livelihood and Energy Coordination Engine
-Processes identity-free coordination signals (irrigation, milling, cold storage, welding) into time-batched demand rhythms using 7-cycle logic.
+Processes identity-free coordination signals (irrigation, milling, cold storage, welding) into time-batched demand rhythms using 7-cycle logic. Operates exclusively on activity types and temporal patterns, never on individual actors.
 
 #### LUNDAI - Spatial and Infrastructure Mismatch Engine
-*(Conceptual in pilot)* Analyzes infrastructure geometry to identify zones where coordinated demand exists but infrastructure does not.
+Analyzes infrastructure geometry and settlement-scale patterns to identify zones where coordinated demand exists but infrastructure does not. Operates at settlement and infrastructure scale only—does not map households or track individuals.
 
 #### ZENTARI - Trust and Coordination Confidence Engine
-Derives trust from coordination pattern stability and validation strength. Trust is a property of coordination, not individuals.
+Evaluates coordination pattern persistence across multiple time windows. Trust emerges from sustained collective alignment, not from individual reputation or creditworthiness. A high confidence score indicates stable, bankable demand patterns—not reliable participants.
 
 ### Output: Demand-Signal Prospectus
 
@@ -196,13 +196,21 @@ Pattern: zone_a_irrigation_morning
 
 ## 🎓 Key Concepts
 
-### Trust-as-a-Service
+### Emergent Verification
 
-ZENTARI replaces credit scoring without creating reputations:
-- **High trust** = "this demand pattern is stable and bankable"
-- **NOT** = "these people are reliable"
+KULIMA OS does not validate individual inputs or authenticate participants. Trust emerges from sustained, aligned coordination patterns across time. Fake or noisy signals decay naturally—they cannot sustain patterns over multiple evaluation periods. Verification is a property of collective persistence, not individual attestation.
 
-Trust grows when coordination persists. Trust decays when coordination breaks down.
+### Fail-Soft Design
+
+Incorrect or noisy signals do not collapse the system or unlock access. They fade from patterns unless reinforced by genuine, repeated coordination. The system degrades gracefully: weak signals reduce confidence scores but do not break the pipeline. Worst-case outcome is absence of bankable patterns, not exposure of personal data.
+
+### Trust Without Reputation
+
+ZENTARI evaluates coordination pattern persistence, not people or creditworthiness:
+- **High confidence score** = "this collective demand pattern is stable and bankable for infrastructure planning"
+- **NOT** = "these participants are trustworthy or reliable"
+
+Trust grows when coordination persists across multiple evaluation periods. Trust decays when patterns become erratic or disappear.
 
 ### Social Reserve Policy
 

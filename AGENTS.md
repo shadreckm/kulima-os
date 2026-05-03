@@ -124,6 +124,8 @@ LUNDAI reasons over infrastructure geometry, not people geography. It analyzes s
 - Identifies mismatches between coordination patterns and infrastructure coverage
 - Outputs: Zones of unmet but coordinated demand, infrastructure gap analysis
 
+**Scope Boundary**: LUNDAI operates exclusively at settlement and infrastructure scale. It does not map individual households, track behavioral histories, or reason about specific actors. All spatial analysis remains at zone-level aggregation, preserving the Zero-PII invariant.
+
 **Invariant Alignment**: LUNDAI sees infrastructure geometry and aggregate activity density. It identifies "here is where coordinated milling demand exists, but no three-phase power" without tracking where specific people live or work.
 
 #### 3. ZENTARI — Trust and Coordination Confidence Engine
@@ -135,6 +137,8 @@ ZENTARI derives trust from repetition, alignment, and resilience of coordination
 - Measures coordination alignment: do multiple activity types coordinate together?
 - Measures coordination resilience: do patterns persist through disruptions?
 - Outputs: Coordination confidence scores that indicate bankability of demand signals
+
+**Trust Logic Clarification**: ZENTARI evaluates *coordination pattern persistence*, not people, households, or identity. It does not create reputations or assess individual reliability. A high confidence score indicates "this collective demand pattern is stable and bankable for infrastructure planning," not "these participants are trustworthy." Trust emerges from sustained, aligned coordination across multiple evaluation periods—it is a property of the pattern, not the participants.
 
 **Invariant Alignment**: ZENTARI replaces credit scoring without creating reputations. It evaluates the trustworthiness of coordination patterns, not the creditworthiness of people. A high trust score means "this demand pattern is stable and bankable," not "these people are reliable."
 
@@ -287,6 +291,20 @@ These are hard architectural constraints, not policy guidelines. Violations must
 - Prioritize governance, ethics, and system integrity over speed
 - Design for long-term stability and trust
 - Every component must serve coordination, not extraction
+
+### Emergent Verification
+- KULIMA OS does not validate individual inputs or authenticate participants
+- Trust emerges from sustained, aligned coordination patterns across time
+- Fake or noisy signals decay naturally—they do not reinforce patterns unless backed by real coordination
+- Verification is a property of collective persistence, not individual attestation
+- This approach prevents gaming: fabricated signals cannot sustain coordination patterns over multiple evaluation periods
+
+### Fail-Soft Design
+- Incorrect or noisy signals do not collapse the system
+- They do not unlock access or trigger infrastructure deployment
+- They fade from the pattern unless reinforced by genuine, repeated coordination
+- System degrades gracefully: weak signals reduce confidence scores but do not break the pipeline
+- Worst-case outcome is absence of bankable patterns, not exposure of personal data
 
 ### Fail-Safe Defaults
 - When ambiguous, default toward:
