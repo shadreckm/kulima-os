@@ -2,22 +2,22 @@
 
 ## Verified Coordination Patterns for Infrastructure Planning
 
-**Generated:** 2026-05-02T11:10:35.783969Z  
+**Generated:** 2026-05-03T10:37:27.966839Z  
 **Region:** Pilot Region - Rural Energy Planning  
 **Period:** 7-cycle window (Week 1)  
-**System:** KULIMA OS Pilot v0.1
+**System:** KULIMA OS Pilot v0.2 (LUMOZA + LUNDAI + Critical Load Protection)
 
 ---
 
 ## Executive Summary
 
-Detected 5 stable coordination patterns across 3 zones, with 2 patterns showing high confidence for infrastructure investment.
+Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing high confidence for infrastructure investment.
 
-- **Total Coordination Patterns:** 5
+- **Total Coordination Patterns:** 10
 - **High Confidence Patterns:** 2
 - **Moderate Confidence Patterns:** 1
-- **Zones with Coordinated Demand:** zone_c, zone_a, zone_b
-- **Productive Activities Detected:** cold_storage, milling, irrigation
+- **Zones with Coordinated Demand:** zone_a, zone_c, zone_b
+- **Productive Activities Detected:** clinic, school, milling, water_system, cold_storage, irrigation, emergency_services
 
 ---
 
@@ -84,6 +84,140 @@ Detected 5 stable coordination patterns across 3 zones, with 2 patterns showing 
 - **Infrastructure Implication:** Requires reliable afternoon power for water pumping. Consider three-phase capacity. LOW PRIORITY. Requires further validation.
 
 
+### Pattern 6: zone_a_clinic_continuous
+
+- **Activity:** clinic
+- **Zone:** zone_a
+- **Time Window:** continuous
+- **Frequency:** 7 of 7 cycles
+- **Stability:** stable
+- **Coordination Confidence:** 0.0 (insufficient)
+- **Validation:** none - No human coordination signals
+- **Infrastructure Implication:** Productive use demand in continuous window. LOW PRIORITY. Requires further validation.
+
+
+### Pattern 7: zone_a_school_morning
+
+- **Activity:** school
+- **Zone:** zone_a
+- **Time Window:** morning
+- **Frequency:** 5 of 7 cycles
+- **Stability:** stable
+- **Coordination Confidence:** 0.0 (insufficient)
+- **Validation:** none - No human coordination signals
+- **Infrastructure Implication:** Productive use demand in morning window. LOW PRIORITY. Requires further validation.
+
+
+### Pattern 8: zone_b_water_system_morning
+
+- **Activity:** water_system
+- **Zone:** zone_b
+- **Time Window:** morning
+- **Frequency:** 7 of 7 cycles
+- **Stability:** stable
+- **Coordination Confidence:** 0.0 (insufficient)
+- **Validation:** none - No human coordination signals
+- **Infrastructure Implication:** Productive use demand in morning window. LOW PRIORITY. Requires further validation.
+
+
+### Pattern 9: zone_b_emergency_services_continuous
+
+- **Activity:** emergency_services
+- **Zone:** zone_b
+- **Time Window:** continuous
+- **Frequency:** 7 of 7 cycles
+- **Stability:** stable
+- **Coordination Confidence:** 0.0 (insufficient)
+- **Validation:** none - No human coordination signals
+- **Infrastructure Implication:** Productive use demand in continuous window. LOW PRIORITY. Requires further validation.
+
+
+### Pattern 10: zone_c_water_system_morning
+
+- **Activity:** water_system
+- **Zone:** zone_c
+- **Time Window:** morning
+- **Frequency:** 6 of 7 cycles
+- **Stability:** stable
+- **Coordination Confidence:** 0.0 (insufficient)
+- **Validation:** none - No human coordination signals
+- **Infrastructure Implication:** Productive use demand in morning window. LOW PRIORITY. Requires further validation.
+
+
+---
+
+## Critical Load Protection
+
+**Enforcement Status:** ACTIVE - Architecturally enforced, cannot be overridden
+
+**Essential Services Detected:** 5
+**Productive Activities Detected:** 5
+
+**Zones with Essential Services:** zone_a, zone_b, zone_c
+
+**Essential Service Types:** clinic, emergency_services, school, water_system
+
+### Capacity Reservation
+
+**Reserved Capacity:** 30%
+
+**Rationale:** High essential service density. 30% capacity reserved for critical loads.
+
+**Enforcement:** Reserved capacity is excluded from optimization, monetization, and load-shedding logic
+
+### Scenario Analysis
+
+
+**BASELINE Scenario:**
+- Description: Normal operation with all essential services active
+- Essential Load: 30%
+- Available for Productive Use: 70%
+
+**PEAK Scenario:**
+- Description: Peak demand when all services operate simultaneously
+- Essential Load: 40%
+- Available for Productive Use: 60%
+
+**SHOCK Scenario:**
+- Description: Emergency scenario requiring maximum essential service capacity
+- Essential Load: 50%
+- Available for Productive Use: 50%
+
+### Planning Requirements
+
+- Infrastructure MUST reserve 30% capacity for essential services
+- Essential service loads cannot be shed during peak demand periods
+- Productive use optimization must operate within remaining capacity only
+- Emergency scenarios require ability to scale essential capacity to 50%
+
+### Non-Negotiable Loads
+
+
+**clinic** (zone_a)
+- Time Window: continuous
+- Stability: stable
+- Priority: CRITICAL - Cannot be interrupted
+
+**school** (zone_a)
+- Time Window: morning
+- Stability: stable
+- Priority: CRITICAL - Cannot be interrupted
+
+**water_system** (zone_b)
+- Time Window: morning
+- Stability: stable
+- Priority: CRITICAL - Cannot be interrupted
+
+**emergency_services** (zone_b)
+- Time Window: continuous
+- Stability: stable
+- Priority: CRITICAL - Cannot be interrupted
+
+**water_system** (zone_c)
+- Time Window: morning
+- Stability: stable
+- Priority: CRITICAL - Cannot be interrupted
+
 ---
 
 ## Infrastructure Planning Guidance
@@ -96,7 +230,7 @@ Detected 5 stable coordination patterns across 3 zones, with 2 patterns showing 
 RECOMMENDED: Prioritize infrastructure deployment in 2 high-confidence zone(s). Coordination patterns are stable and validated, indicating bankable demand.
 
 **Capacity Planning Note:**  
-Infrastructure capacity must account for productive-use demand patterns, not just household consumption. Include 20% social reserve for communal assets.
+Infrastructure capacity must account for productive-use demand patterns, not just household consumption. Social reserve enforced for essential services.
 
 ---
 
