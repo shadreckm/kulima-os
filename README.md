@@ -123,27 +123,41 @@ kulima-os-hackathon/
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### For Hackathon Judges and Reviewers
 
-- Python 3.8 or higher
-- No external dependencies required (uses only Python standard library)
-
-### Running the Demo
+**RECOMMENDED**: Use the **PPSG Live Demo** as the authoritative demonstration.
 
 ```bash
-# Run the complete pilot demonstration
-python kulima_pilot_demo.py
+# Windows: One-click launcher
+start_ppsg_demo.bat
+
+# Or manually start the gateway
+cd ppsg
+pip install -r requirements.txt
+python -m gateway
 ```
 
-The demo will:
-1. Generate synthetic coordination signals (identity-free)
-2. Process signals through LUMOZA (7-cycle coordination logic)
-3. Evaluate coordination confidence through ZENTARI
-4. Generate a Demand-Signal Prospectus for infrastructure planners
+Then open `http://localhost:8000/docs` in your browser.
 
-### Generated Outputs
+**See DEMO.md for complete demonstration guide and evaluation criteria.**
 
-After running the demo, you'll find:
+---
+
+### Legacy Pilot Demo (Conceptual)
+
+The original hackathon pilot demo is retained for narrative completeness:
+
+```bash
+# Windows
+run_demo.bat
+
+# Mac/Linux
+chmod +x run_demo.sh && ./run_demo.sh
+```
+
+**Note**: This is a conceptual demonstration using synthetic data. For proof of privacy guarantees and architectural refusal, use the PPSG Live Demo above.
+
+The legacy demo generates:
 - `demand_signal_prospectus.json` - Machine-readable prospectus
 - `demand_signal_prospectus.md` - Human-readable prospectus
 

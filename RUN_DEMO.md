@@ -1,6 +1,12 @@
 # How to Run the KULIMA OS Pilot Demo
 
-This guide will help you run the KULIMA OS pilot demonstration on your computer.
+**STATUS: LEGACY / CONCEPTUAL DEMO**
+
+**For Hackathon Judges**: This is the original pilot demo retained for narrative completeness. For the authoritative demonstration of privacy guarantees and architectural refusal, please use the **PPSG Live Demo** instead. See `DEMO.md` for complete instructions.
+
+---
+
+This guide will help you run the legacy KULIMA OS pilot demonstration on your computer (conceptual, using synthetic data).
 
 ## Prerequisites
 
