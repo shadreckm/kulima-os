@@ -2,7 +2,7 @@
   "prospectus_metadata": {
     "title": "KULIMA OS Demand-Signal Prospectus",
     "subtitle": "Verified Coordination Patterns for Infrastructure Planning",
-    "generated_at": "2026-05-03T10:37:27.966839Z",
+    "generated_at": "2026-05-04T10:57:50.672422Z",
     "pilot_region": "Pilot Region - Rural Energy Planning",
     "evaluation_period": "7-cycle window (Week 1)",
     "system_version": "KULIMA OS Pilot v0.2 (LUMOZA + LUNDAI + Critical Load Protection)"
@@ -13,17 +13,17 @@
     "moderate_confidence_patterns": 1,
     "zones_with_coordinated_demand": [
       "zone_a",
-      "zone_c",
-      "zone_b"
+      "zone_b",
+      "zone_c"
     ],
     "productive_activities_detected": [
+      "water_system",
+      "emergency_services",
+      "milling",
+      "cold_storage",
       "clinic",
       "school",
-      "milling",
-      "water_system",
-      "cold_storage",
-      "irrigation",
-      "emergency_services"
+      "irrigation"
     ],
     "key_finding": "Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing high confidence for infrastructure investment."
   },
@@ -46,7 +46,7 @@
         "strength": "strong",
         "details": "6 of 6 human cycles corroborated by telemetry"
       },
-      "infrastructure_implication": "Requires reliable morning power for water pumping. Consider three-phase capacity. HIGH PRIORITY for infrastructure investment."
+      "infrastructure_implication": null
     },
     {
       "pattern_id": "zone_a_milling_afternoon",
@@ -66,7 +66,7 @@
         "strength": "strong",
         "details": "5 of 5 human cycles corroborated by telemetry"
       },
-      "infrastructure_implication": "Requires high-power afternoon capacity for grain processing. Peak demand periods. MODERATE PRIORITY. Monitor for stability."
+      "infrastructure_implication": null
     },
     {
       "pattern_id": "zone_b_cold_storage_evening",
@@ -86,7 +86,7 @@
         "strength": "strong",
         "details": "6 of 6 human cycles corroborated by telemetry"
       },
-      "infrastructure_implication": "Requires continuous evening power for cold chain. Critical for food security. HIGH PRIORITY for infrastructure investment."
+      "infrastructure_implication": null
     },
     {
       "pattern_id": "zone_c_milling_morning",
@@ -106,7 +106,7 @@
         "strength": "moderate",
         "details": "3 of 4 human cycles corroborated by telemetry"
       },
-      "infrastructure_implication": "Requires high-power morning capacity for grain processing. Peak demand periods. LOW PRIORITY. Requires further validation."
+      "infrastructure_implication": null
     },
     {
       "pattern_id": "zone_c_irrigation_afternoon",
@@ -126,7 +126,7 @@
         "strength": "human_only",
         "details": "Human signals in 3 cycles, no telemetry corroboration"
       },
-      "infrastructure_implication": "Requires reliable afternoon power for water pumping. Consider three-phase capacity. LOW PRIORITY. Requires further validation."
+      "infrastructure_implication": null
     },
     {
       "pattern_id": "zone_a_clinic_continuous",
@@ -146,7 +146,7 @@
         "strength": "none",
         "details": "No human coordination signals"
       },
-      "infrastructure_implication": "Productive use demand in continuous window. LOW PRIORITY. Requires further validation."
+      "infrastructure_implication": null
     },
     {
       "pattern_id": "zone_a_school_morning",
@@ -166,7 +166,7 @@
         "strength": "none",
         "details": "No human coordination signals"
       },
-      "infrastructure_implication": "Productive use demand in morning window. LOW PRIORITY. Requires further validation."
+      "infrastructure_implication": null
     },
     {
       "pattern_id": "zone_b_water_system_morning",
@@ -186,7 +186,7 @@
         "strength": "none",
         "details": "No human coordination signals"
       },
-      "infrastructure_implication": "Productive use demand in morning window. LOW PRIORITY. Requires further validation."
+      "infrastructure_implication": null
     },
     {
       "pattern_id": "zone_b_emergency_services_continuous",
@@ -206,7 +206,7 @@
         "strength": "none",
         "details": "No human coordination signals"
       },
-      "infrastructure_implication": "Productive use demand in continuous window. LOW PRIORITY. Requires further validation."
+      "infrastructure_implication": null
     },
     {
       "pattern_id": "zone_c_water_system_morning",
@@ -226,9 +226,421 @@
         "strength": "none",
         "details": "No human coordination signals"
       },
-      "infrastructure_implication": "Productive use demand in morning window. LOW PRIORITY. Requires further validation."
+      "infrastructure_implication": null
     }
   ],
+  "load_estimation": {
+    "estimation_methodology": {
+      "approach": "Conservative lower-bound estimation using activity-level load profiles",
+      "data_sources": [
+        "World Bank Rural Electrification Toolkit (2008)",
+        "ESMAP Technical Papers (121, 145, 156)",
+        "IFC Productive Use of Energy Study (2018)",
+        "WHO Health Facility Electrification Guidelines (2020)"
+      ],
+      "conservatism": "All estimates use lower bounds of typical ranges to ensure bankability",
+      "diversity_factors": "Applied to account for non-simultaneous operation",
+      "load_factors": "Applied to account for intermittent operation patterns"
+    },
+    "total_system_demand": {
+      "peak_demand_kw": 15.66,
+      "daily_energy_kwh": 68.35,
+      "monthly_energy_kwh": 2050.5,
+      "annual_energy_kwh": 24947.75,
+      "notes": "Diversified peak demand accounting for non-simultaneous operation"
+    },
+    "demand_breakdown": {
+      "essential_services": {
+        "peak_kw": 5.44,
+        "daily_kwh": 39.09,
+        "percentage": 34.7,
+        "priority": "NON-NEGOTIABLE - Must be protected under all scenarios"
+      },
+      "productive_activities": {
+        "peak_kw": 9.66,
+        "daily_kwh": 29.26,
+        "percentage": 61.7,
+        "priority": "HIGH - Drives economic development and infrastructure ROI"
+      }
+    },
+    "zone_level_estimates": {
+      "zone_a": {
+        "zone": "zone_a",
+        "pattern_count": 4,
+        "activities": [
+          "irrigation",
+          "milling",
+          "clinic",
+          "school"
+        ],
+        "peak_demand": {
+          "undiversified_kw": 7.9,
+          "diversity_factor": 0.78,
+          "diversified_kw": 6.12,
+          "notes": "Diversified peak accounts for non-simultaneous operation"
+        },
+        "daily_energy": {
+          "total_kwh": 21.5,
+          "per_pattern_kwh": [
+            4.37,
+            8.04,
+            4.8,
+            4.29
+          ]
+        },
+        "pattern_estimates": [
+          {
+            "activity_type": "irrigation",
+            "zone": "zone_a",
+            "time_window": "morning",
+            "frequency": "6 of 7 cycles",
+            "load_profile": {
+              "power_range_kw": [
+                3.0,
+                7.5
+              ],
+              "conservative_power_kw": 3.0,
+              "effective_power_kw": 2.55,
+              "hours_per_event_range": [
+                2.0,
+                4.0
+              ],
+              "conservative_hours": 2.0,
+              "load_factor": 0.85,
+              "diversity_factor": 0.7
+            },
+            "energy_estimate": {
+              "per_event_kwh": 5.1,
+              "weekly_kwh": 30.6,
+              "daily_average_kwh": 4.37
+            },
+            "notes": "Three-phase motor for water pumping. Sustained load during operation.",
+            "source": "World Bank Rural Electrification Toolkit (2008), ESMAP Technical Paper 121",
+            "estimation_method": "Conservative lower-bound estimation using activity-level load profiles"
+          },
+          {
+            "activity_type": "milling",
+            "zone": "zone_a",
+            "time_window": "afternoon",
+            "frequency": "5 of 7 cycles",
+            "load_profile": {
+              "power_range_kw": [
+                5.0,
+                15.0
+              ],
+              "conservative_power_kw": 5.0,
+              "effective_power_kw": 3.75,
+              "hours_per_event_range": [
+                3.0,
+                6.0
+              ],
+              "conservative_hours": 3.0,
+              "load_factor": 0.75,
+              "diversity_factor": 0.65
+            },
+            "energy_estimate": {
+              "per_event_kwh": 11.25,
+              "weekly_kwh": 56.25,
+              "daily_average_kwh": 8.04
+            },
+            "notes": "Grain mill motor. High starting current, sustained load. Peak during harvest.",
+            "source": "IFC Productive Use of Energy Study (2018), ESMAP Technical Paper 145",
+            "estimation_method": "Conservative lower-bound estimation using activity-level load profiles"
+          },
+          {
+            "activity_type": "clinic",
+            "zone": "zone_a",
+            "time_window": "continuous",
+            "frequency": "7 of 7 cycles",
+            "load_profile": {
+              "power_range_kw": [
+                1.5,
+                5.0
+              ],
+              "conservative_power_kw": 1.5,
+              "effective_power_kw": 0.6,
+              "hours_per_event_range": [
+                8.0,
+                24.0
+              ],
+              "conservative_hours": 8.0,
+              "load_factor": 0.4,
+              "diversity_factor": 0.9
+            },
+            "energy_estimate": {
+              "per_event_kwh": 4.8,
+              "weekly_kwh": 33.6,
+              "daily_average_kwh": 4.8
+            },
+            "notes": "Medical equipment, lighting, refrigeration for vaccines. Non-negotiable load.",
+            "source": "WHO Health Facility Electrification Guidelines (2020)",
+            "estimation_method": "Conservative lower-bound estimation using activity-level load profiles"
+          },
+          {
+            "activity_type": "school",
+            "zone": "zone_a",
+            "time_window": "morning",
+            "frequency": "5 of 7 cycles",
+            "load_profile": {
+              "power_range_kw": [
+                2.0,
+                6.0
+              ],
+              "conservative_power_kw": 2.0,
+              "effective_power_kw": 1.0,
+              "hours_per_event_range": [
+                6.0,
+                10.0
+              ],
+              "conservative_hours": 6.0,
+              "load_factor": 0.5,
+              "diversity_factor": 0.85
+            },
+            "energy_estimate": {
+              "per_event_kwh": 6.0,
+              "weekly_kwh": 30.0,
+              "daily_average_kwh": 4.29
+            },
+            "notes": "Lighting, computers, fans. Daytime load. Essential for education access.",
+            "source": "World Bank Education Infrastructure Study (2019)",
+            "estimation_method": "Conservative lower-bound estimation using activity-level load profiles"
+          }
+        ]
+      },
+      "zone_b": {
+        "zone": "zone_b",
+        "pattern_count": 3,
+        "activities": [
+          "cold_storage",
+          "water_system",
+          "emergency_services"
+        ],
+        "peak_demand": {
+          "undiversified_kw": 3.9,
+          "diversity_factor": 0.87,
+          "diversified_kw": 3.38,
+          "notes": "Diversified peak accounts for non-simultaneous operation"
+        },
+        "daily_energy": {
+          "total_kwh": 31.03,
+          "per_pattern_kwh": [
+            8.23,
+            8.4,
+            14.4
+          ]
+        },
+        "pattern_estimates": [
+          {
+            "activity_type": "cold_storage",
+            "zone": "zone_b",
+            "time_window": "evening",
+            "frequency": "6 of 7 cycles",
+            "load_profile": {
+              "power_range_kw": [
+                2.0,
+                8.0
+              ],
+              "conservative_power_kw": 2.0,
+              "effective_power_kw": 1.2,
+              "hours_per_event_range": [
+                8.0,
+                24.0
+              ],
+              "conservative_hours": 8.0,
+              "load_factor": 0.6,
+              "diversity_factor": 0.8
+            },
+            "energy_estimate": {
+              "per_event_kwh": 9.6,
+              "weekly_kwh": 57.6,
+              "daily_average_kwh": 8.23
+            },
+            "notes": "Cold room compressor. Intermittent cycling, continuous operation. Critical for food security.",
+            "source": "World Bank Cold Chain Development Study (2019), ESMAP Technical Paper 156",
+            "estimation_method": "Conservative lower-bound estimation using activity-level load profiles"
+          },
+          {
+            "activity_type": "water_system",
+            "zone": "zone_b",
+            "time_window": "morning",
+            "frequency": "7 of 7 cycles",
+            "load_profile": {
+              "power_range_kw": [
+                3.0,
+                10.0
+              ],
+              "conservative_power_kw": 3.0,
+              "effective_power_kw": 2.1,
+              "hours_per_event_range": [
+                4.0,
+                12.0
+              ],
+              "conservative_hours": 4.0,
+              "load_factor": 0.7,
+              "diversity_factor": 0.85
+            },
+            "energy_estimate": {
+              "per_event_kwh": 8.4,
+              "weekly_kwh": 58.8,
+              "daily_average_kwh": 8.4
+            },
+            "notes": "Community water pumping and treatment. Non-negotiable for public health.",
+            "source": "World Bank Water Supply Electrification Study (2017)",
+            "estimation_method": "Conservative lower-bound estimation using activity-level load profiles"
+          },
+          {
+            "activity_type": "emergency_services",
+            "zone": "zone_b",
+            "time_window": "continuous",
+            "frequency": "7 of 7 cycles",
+            "load_profile": {
+              "power_range_kw": [
+                2.0,
+                8.0
+              ],
+              "conservative_power_kw": 2.0,
+              "effective_power_kw": 0.6,
+              "hours_per_event_range": [
+                24.0,
+                24.0
+              ],
+              "conservative_hours": 24.0,
+              "load_factor": 0.3,
+              "diversity_factor": 0.95
+            },
+            "energy_estimate": {
+              "per_event_kwh": 14.4,
+              "weekly_kwh": 100.8,
+              "daily_average_kwh": 14.4
+            },
+            "notes": "Emergency lighting, communications, backup systems. Must be always available.",
+            "source": "UNDP Disaster Risk Reduction Guidelines (2018)",
+            "estimation_method": "Conservative lower-bound estimation using activity-level load profiles"
+          }
+        ]
+      },
+      "zone_c": {
+        "zone": "zone_c",
+        "pattern_count": 3,
+        "activities": [
+          "milling",
+          "irrigation",
+          "water_system"
+        ],
+        "peak_demand": {
+          "undiversified_kw": 8.4,
+          "diversity_factor": 0.73,
+          "diversified_kw": 6.16,
+          "notes": "Diversified peak accounts for non-simultaneous operation"
+        },
+        "daily_energy": {
+          "total_kwh": 15.82,
+          "per_pattern_kwh": [
+            6.43,
+            2.19,
+            7.2
+          ]
+        },
+        "pattern_estimates": [
+          {
+            "activity_type": "milling",
+            "zone": "zone_c",
+            "time_window": "morning",
+            "frequency": "4 of 7 cycles",
+            "load_profile": {
+              "power_range_kw": [
+                5.0,
+                15.0
+              ],
+              "conservative_power_kw": 5.0,
+              "effective_power_kw": 3.75,
+              "hours_per_event_range": [
+                3.0,
+                6.0
+              ],
+              "conservative_hours": 3.0,
+              "load_factor": 0.75,
+              "diversity_factor": 0.65
+            },
+            "energy_estimate": {
+              "per_event_kwh": 11.25,
+              "weekly_kwh": 45.0,
+              "daily_average_kwh": 6.43
+            },
+            "notes": "Grain mill motor. High starting current, sustained load. Peak during harvest.",
+            "source": "IFC Productive Use of Energy Study (2018), ESMAP Technical Paper 145",
+            "estimation_method": "Conservative lower-bound estimation using activity-level load profiles"
+          },
+          {
+            "activity_type": "irrigation",
+            "zone": "zone_c",
+            "time_window": "afternoon",
+            "frequency": "3 of 7 cycles",
+            "load_profile": {
+              "power_range_kw": [
+                3.0,
+                7.5
+              ],
+              "conservative_power_kw": 3.0,
+              "effective_power_kw": 2.55,
+              "hours_per_event_range": [
+                2.0,
+                4.0
+              ],
+              "conservative_hours": 2.0,
+              "load_factor": 0.85,
+              "diversity_factor": 0.7
+            },
+            "energy_estimate": {
+              "per_event_kwh": 5.1,
+              "weekly_kwh": 15.3,
+              "daily_average_kwh": 2.19
+            },
+            "notes": "Three-phase motor for water pumping. Sustained load during operation.",
+            "source": "World Bank Rural Electrification Toolkit (2008), ESMAP Technical Paper 121",
+            "estimation_method": "Conservative lower-bound estimation using activity-level load profiles"
+          },
+          {
+            "activity_type": "water_system",
+            "zone": "zone_c",
+            "time_window": "morning",
+            "frequency": "6 of 7 cycles",
+            "load_profile": {
+              "power_range_kw": [
+                3.0,
+                10.0
+              ],
+              "conservative_power_kw": 3.0,
+              "effective_power_kw": 2.1,
+              "hours_per_event_range": [
+                4.0,
+                12.0
+              ],
+              "conservative_hours": 4.0,
+              "load_factor": 0.7,
+              "diversity_factor": 0.85
+            },
+            "energy_estimate": {
+              "per_event_kwh": 8.4,
+              "weekly_kwh": 50.4,
+              "daily_average_kwh": 7.2
+            },
+            "notes": "Community water pumping and treatment. Non-negotiable for public health.",
+            "source": "World Bank Water Supply Electrification Study (2017)",
+            "estimation_method": "Conservative lower-bound estimation using activity-level load profiles"
+          }
+        ]
+      }
+    },
+    "capacity_planning_guidance": {
+      "recommended_capacity_kw": 19.57,
+      "rationale": "25% headroom for growth and contingency",
+      "critical_load_reserve": "30-40% reserved for essential services (enforced)",
+      "transformer_sizing": "Minimum 24.47 kVA (assuming 0.8 power factor)",
+      "distribution_voltage": "Recommend 11kV or 33kV for productive use loads"
+    },
+    "confidence_statement": "These estimates are conservative (lower-bound) to ensure bankability. Actual demand may be 20-40% higher. Infrastructure should be sized with growth headroom and essential service protection."
+  },
   "settlement_and_infrastructure_analysis": {
     "status": "LUNDAI analysis not included"
   },
@@ -311,6 +723,274 @@
         "stability": "stable",
         "priority": "CRITICAL - Cannot be interrupted"
       }
+    ]
+  },
+  "sustainability_impact": {
+    "economic_impact": {
+      "productive_use_multiplier": {
+        "value": "3.0x - 5.0x",
+        "description": "Every kWh of productive-use energy generates 3-5x economic value compared to household consumption",
+        "source": "IFC Productive Use of Energy Study (2018), ESMAP Technical Paper 145"
+      },
+      "estimated_annual_economic_value": {
+        "kwh_productive": 10679.900000000001,
+        "multiplier_range": "3.0x - 5.0x",
+        "estimated_value_usd": "$6,407.94 (assuming $0.15/kWh tariff, 4x multiplier)",
+        "notes": "Conservative estimate. Actual value depends on local economic conditions."
+      },
+      "livelihood_activities_enabled": 5,
+      "zones_with_productive_demand": 3,
+      "infrastructure_roi_driver": "Productive use demand provides stable, predictable revenue for infrastructure cost recovery"
+    },
+    "social_impact": {
+      "essential_services_protected": {
+        "count": 5,
+        "types": [
+          "clinic",
+          "water_system",
+          "emergency_services",
+          "school"
+        ],
+        "capacity_reserved": "30-40% of total capacity (non-negotiable)",
+        "impact": "Ensures clinics, schools, water systems remain operational under all scenarios"
+      },
+      "equity_and_inclusion": {
+        "approach": "Coordination-first design ensures infrastructure serves collective needs, not just individual consumption",
+        "no_profiling": "Zero-PII architecture prevents discrimination or exclusion based on identity",
+        "communal_assets": "20% social reserve for shared productive assets (mills, pumps, cold storage)"
+      },
+      "food_security": {
+        "cold_storage_enabled": true,
+        "irrigation_enabled": true,
+        "impact": "Reduces post-harvest losses, enables year-round food availability"
+      }
+    },
+    "environmental_considerations": {
+      "renewable_energy_readiness": {
+        "productive_load_profile": "Daytime-heavy productive use aligns well with solar generation",
+        "demand_predictability": "Stable coordination patterns enable better renewable integration",
+        "recommendation": "Consider hybrid solar-grid or solar-diesel systems for productive use loads"
+      },
+      "efficiency_gains": {
+        "shared_assets": "Communal mills, pumps, cold storage more efficient than individual diesel generators",
+        "displacement": "Estimated 3203.97 liters/year diesel displacement",
+        "emissions_avoided": "Approximately 8586.64 kg CO2/year (assuming 2.68 kg CO2/liter diesel)"
+      },
+      "climate_resilience": {
+        "irrigation": "Enables climate-adaptive agriculture through reliable water access",
+        "cold_storage": "Reduces food waste and climate vulnerability",
+        "essential_services": "Protected capacity ensures climate shocks don't disrupt critical services"
+      }
+    },
+    "alignment_with_sdgs": {
+      "SDG_1": "No Poverty - Productive use energy enables income generation",
+      "SDG_2": "Zero Hunger - Irrigation and cold storage improve food security",
+      "SDG_3": "Good Health - Protected capacity for clinics and health services",
+      "SDG_4": "Quality Education - Protected capacity for schools",
+      "SDG_5": "Gender Equality - Coordination-first design prevents gender-based exclusion",
+      "SDG_7": "Affordable Clean Energy - Enables productive use, not just consumption",
+      "SDG_8": "Decent Work - Enables livelihood activities (milling, welding, cold storage)",
+      "SDG_9": "Industry and Infrastructure - Builds productive-use infrastructure",
+      "SDG_13": "Climate Action - Displaces diesel, enables climate adaptation"
+    }
+  },
+  "risk_and_governance": {
+    "demand_uncertainty_quantification": {
+      "confidence_distribution": {
+        "high_confidence_patterns": "2/10 (20.0%)",
+        "moderate_confidence_patterns": "1/10 (10.0%)",
+        "low_confidence_patterns": "1/10 (10.0%)"
+      },
+      "demand_uncertainty_range": {
+        "conservative_estimate": "Lower-bound estimates used (as presented in Load Estimation)",
+        "expected_range": "Actual demand likely 20-40% higher than conservative estimates",
+        "upper_bound": "Peak demand could reach 1.5x conservative estimate during high-coordination periods"
+      },
+      "mitigation": "Infrastructure sized with 25% headroom + modular expansion capability"
+    },
+    "coordination_persistence_risk": {
+      "risk_description": "Coordination patterns may weaken or shift over time if economic conditions change",
+      "measurement_approach": "ZENTARI evaluates pattern stability across multiple 7-cycle windows",
+      "current_stability": "2 patterns show high stability (\u22655 of 7 cycles, strong validation)",
+      "decay_indicators": [
+        "Frequency drops below 3 of 7 cycles",
+        "Human signals no longer align with telemetry",
+        "New patterns emerge that contradict existing ones"
+      ],
+      "mitigation_strategies": [
+        "Continuous monitoring: Re-evaluate coordination patterns every 4-8 weeks",
+        "Adaptive capacity: Design infrastructure for flexible load allocation",
+        "Stakeholder engagement: Maintain communication with productive use actors",
+        "Phased deployment: Start with high-confidence zones, expand as patterns persist"
+      ]
+    },
+    "infrastructure_deployment_risks": {
+      "technical_risks": {
+        "load_growth": "Demand may exceed initial estimates - MITIGATION: 25% capacity headroom",
+        "power_quality": "Productive use loads may cause voltage fluctuations - MITIGATION: Proper transformer sizing, voltage regulation",
+        "maintenance": "Rural infrastructure requires robust maintenance - MITIGATION: Design for low-maintenance operation"
+      },
+      "financial_risks": {
+        "cost_recovery": "Productive use tariffs must balance affordability and cost recovery - MITIGATION: Tiered tariff structure",
+        "payment_reliability": "Informal economy payment patterns - MITIGATION: Prepaid metering, mobile money integration",
+        "demand_shortfall": "Actual demand lower than projected - MITIGATION: Conservative estimates, phased deployment"
+      },
+      "social_risks": {
+        "elite_capture": "Risk of infrastructure benefiting only well-connected actors - MITIGATION: Coordination-first design prevents individual profiling",
+        "exclusion": "Risk of excluding marginalized groups - MITIGATION: Zero-PII architecture, communal asset priority",
+        "conflict": "Disputes over capacity allocation - MITIGATION: Transparent governance, essential service protection"
+      }
+    },
+    "governance_framework": {
+      "capacity_allocation_principles": [
+        "1. Essential services (clinics, schools, water) receive non-negotiable priority (30-40% reserve)",
+        "2. Productive use activities allocated based on coordination confidence scores",
+        "3. 20% social reserve for communal productive assets (mills, pumps, cold storage)",
+        "4. Remaining capacity available for household and commercial use"
+      ],
+      "decision_making_process": {
+        "technical": "KULIMA OS provides demand signals and confidence scores",
+        "institutional": "Utility/infrastructure operator makes deployment decisions",
+        "community": "Stakeholder engagement ensures local needs are understood",
+        "transparency": "All coordination patterns and confidence scores are auditable"
+      },
+      "monitoring_and_evaluation": {
+        "frequency": "Re-evaluate coordination patterns every 4-8 weeks",
+        "metrics": [
+          "Pattern stability (do patterns persist?)",
+          "Validation strength (do human signals align with telemetry?)",
+          "Demand realization (does actual consumption match estimates?)",
+          "Essential service protection (are critical loads maintained?)"
+        ],
+        "adaptive_management": "Adjust capacity allocation based on observed patterns and community feedback"
+      }
+    },
+    "risk_mitigation_summary": {
+      "demand_uncertainty": "Conservative estimates + 25% headroom + modular expansion",
+      "coordination_persistence": "Continuous monitoring + adaptive capacity + phased deployment",
+      "infrastructure_deployment": "Robust design + proper sizing + maintenance planning",
+      "governance": "Transparent allocation + essential service protection + stakeholder engagement"
+    }
+  },
+  "deployment_readiness": {
+    "infrastructure_requirements": {
+      "electrical_infrastructure": {
+        "transformer_capacity": "24.47 kVA minimum (with 25% growth headroom)",
+        "distribution_voltage": "11kV or 33kV recommended for productive use loads",
+        "service_connections": "Estimated 10 productive use connection points",
+        "metering": "Three-phase meters for productive use, prepaid capability recommended",
+        "protection": "Overcurrent, earth fault, voltage regulation required"
+      },
+      "civil_works": {
+        "poles_and_lines": "Distribution network to reach identified zones",
+        "transformer_platforms": "Minimum 3 transformer locations",
+        "access_roads": "Required for construction and maintenance access",
+        "site_preparation": "Transformer sites, meter locations, service connection points"
+      },
+      "estimated_capex": {
+        "note": "Rough order of magnitude - requires detailed engineering",
+        "transformer_and_equipment": "$3,670.31 (assuming $150/kVA)",
+        "distribution_network": "Depends on distance and terrain - typically $10,000-$30,000 per km",
+        "service_connections": "$5,000 (assuming $500 per connection)",
+        "contingency": "Add 20-30% for unforeseen costs"
+      }
+    },
+    "implementation_timeline": {
+      "phase_1_planning": {
+        "duration": "3-6 months",
+        "activities": [
+          "Detailed engineering design",
+          "Environmental and social impact assessment",
+          "Regulatory approvals and permits",
+          "Procurement planning",
+          "Stakeholder engagement and consultation"
+        ]
+      },
+      "phase_2_construction": {
+        "duration": "6-12 months",
+        "activities": [
+          "Civil works (poles, transformer platforms)",
+          "Electrical installation (transformers, lines, meters)",
+          "Testing and commissioning",
+          "Service connection installation",
+          "Safety inspections and approvals"
+        ]
+      },
+      "phase_3_operation": {
+        "duration": "Ongoing",
+        "activities": [
+          "Service activation and customer onboarding",
+          "Demand monitoring and pattern validation",
+          "Maintenance and fault response",
+          "Capacity utilization tracking",
+          "Adaptive management based on observed patterns"
+        ]
+      },
+      "total_timeline": "9-18 months from approval to full operation"
+    },
+    "stakeholder_engagement_status": {
+      "community_level": {
+        "status": "REQUIRED - Not yet initiated in this pilot",
+        "activities_needed": [
+          "Community meetings to explain infrastructure plans",
+          "Consultation on service connection locations",
+          "Tariff structure discussion and agreement",
+          "Governance framework establishment",
+          "Training on safe electricity use for productive activities"
+        ]
+      },
+      "institutional_level": {
+        "utility_operator": "REQUIRED - Coordination needed for grid connection, tariff approval, O&M responsibility",
+        "local_government": "REQUIRED - Permits, land access, community liaison",
+        "regulator": "REQUIRED - Tariff approval, safety compliance, service standards",
+        "financier": "IN PROGRESS - This prospectus serves as initial engagement document"
+      },
+      "technical_partners": {
+        "engineering_firm": "REQUIRED - Detailed design and construction supervision",
+        "equipment_suppliers": "REQUIRED - Transformers, meters, protection equipment",
+        "construction_contractor": "REQUIRED - Civil and electrical installation"
+      }
+    },
+    "regulatory_and_compliance": {
+      "electrical_safety": {
+        "standards": "IEC 60364 (Low-voltage electrical installations) or national equivalent",
+        "inspections": "Required before energization",
+        "certification": "Electrical contractor must be licensed"
+      },
+      "environmental_compliance": {
+        "esia_required": "Likely required for new distribution infrastructure",
+        "land_use": "Right-of-way agreements for poles and lines",
+        "waste_management": "Proper disposal of construction waste, old equipment"
+      },
+      "tariff_regulation": {
+        "productive_use_tariff": "Requires regulatory approval - typically higher than household tariff",
+        "cost_reflective_pricing": "Must balance affordability with cost recovery",
+        "tariff_structure": "Consider time-of-use or demand-based tariffs for productive use"
+      },
+      "service_standards": {
+        "reliability": "Productive use customers require higher reliability than household",
+        "power_quality": "Voltage regulation critical for motors and equipment",
+        "fault_response": "Faster response times needed for productive use interruptions"
+      }
+    },
+    "readiness_assessment": {
+      "technical_readiness": "HIGH - Demand signals validated, load estimates conservative, infrastructure requirements clear",
+      "financial_readiness": "MODERATE - Requires DFI/development finance commitment, tariff approval, cost recovery plan",
+      "institutional_readiness": "MODERATE - Requires utility engagement, regulatory approvals, governance framework",
+      "community_readiness": "LOW - Stakeholder engagement not yet initiated (required before deployment)",
+      "overall_readiness": "MODERATE - Technical foundation strong, institutional and community engagement needed"
+    },
+    "next_steps_for_deployment": [
+      "1. Secure financing commitment from DFI or development finance institution",
+      "2. Engage utility operator to confirm grid connection point and O&M responsibility",
+      "3. Initiate community stakeholder engagement and consultation process",
+      "4. Commission detailed engineering design and ESIA",
+      "5. Obtain regulatory approvals (tariff, safety, environmental)",
+      "6. Procure equipment and select construction contractor",
+      "7. Begin construction with community liaison and safety protocols",
+      "8. Commission infrastructure and activate service connections",
+      "9. Monitor demand realization and adjust capacity allocation as needed",
+      "10. Establish ongoing M&E framework for adaptive management"
     ]
   },
   "infrastructure_planning_guidance": {

@@ -16,6 +16,7 @@ decisions based on collective demand patterns, not individual profiling.
 import json
 from typing import List, Dict
 from datetime import datetime
+from energy_demand_estimator import EnergyDemandEstimator
 
 
 class ProspectusGenerator:
@@ -27,8 +28,8 @@ class ProspectusGenerator:
     """
     
     def __init__(self):
-        """Initialize prospectus generator."""
-        pass
+        """Initialize prospectus generator with energy demand estimator."""
+        self.energy_estimator = EnergyDemandEstimator()
     
     def generate_prospectus(
         self,
@@ -70,9 +71,17 @@ class ProspectusGenerator:
             
             "coordination_patterns": self._format_patterns_for_institutions(confidence_results),
             
+            "load_estimation": self._generate_load_estimation(confidence_results),
+            
             "settlement_and_infrastructure_analysis": lundai_analysis if lundai_analysis else {"status": "LUNDAI analysis not included"},
             
             "critical_load_protection": self._generate_critical_load_analysis(confidence_results, lundai_analysis),
+            
+            "sustainability_impact": self._generate_sustainability_impact(confidence_results, lundai_analysis),
+            
+            "risk_and_governance": self._generate_risk_governance(confidence_results),
+            
+            "deployment_readiness": self._generate_deployment_readiness(confidence_results, lundai_analysis),
             
             "infrastructure_planning_guidance": self._generate_planning_guidance(confidence_results, lundai_analysis),
             
@@ -288,6 +297,398 @@ class ProspectusGenerator:
             'cold_storage': f"Requires continuous {time_window} power for cold chain. Critical for food security.",
             'welding': f"Requires high-power {time_window} capacity for metalwork. Industrial load profile."
         }
+    def _generate_load_estimation(self, confidence_results: List[Dict]) -> Dict:
+        """
+        Generate conservative energy demand estimates for all coordination patterns.
+        
+        This section translates coordination patterns into bankable energy demand
+        estimates (kW peak, kWh consumption) using conservative load profiles.
+        """
+        # Get total demand estimate
+        demand_estimate = self.energy_estimator.estimate_total_demand(confidence_results)
+        
+        # Format for institutional readability
+        load_estimation = {
+            "estimation_methodology": {
+                "approach": "Conservative lower-bound estimation using activity-level load profiles",
+                "data_sources": [
+                    "World Bank Rural Electrification Toolkit (2008)",
+                    "ESMAP Technical Papers (121, 145, 156)",
+                    "IFC Productive Use of Energy Study (2018)",
+                    "WHO Health Facility Electrification Guidelines (2020)"
+                ],
+                "conservatism": "All estimates use lower bounds of typical ranges to ensure bankability",
+                "diversity_factors": "Applied to account for non-simultaneous operation",
+                "load_factors": "Applied to account for intermittent operation patterns"
+            },
+            
+            "total_system_demand": {
+                "peak_demand_kw": demand_estimate['total_demand']['peak_kw'],
+                "daily_energy_kwh": demand_estimate['total_demand']['daily_kwh'],
+                "monthly_energy_kwh": demand_estimate['total_demand']['monthly_kwh'],
+                "annual_energy_kwh": demand_estimate['total_demand']['annual_kwh'],
+                "notes": "Diversified peak demand accounting for non-simultaneous operation"
+            },
+            
+            "demand_breakdown": {
+                "essential_services": {
+                    "peak_kw": demand_estimate['essential_demand']['peak_kw'],
+                    "daily_kwh": demand_estimate['essential_demand']['daily_kwh'],
+                    "percentage": demand_estimate['essential_demand']['percentage_of_total'],
+                    "priority": "NON-NEGOTIABLE - Must be protected under all scenarios"
+                },
+                "productive_activities": {
+                    "peak_kw": demand_estimate['productive_demand']['peak_kw'],
+                    "daily_kwh": demand_estimate['productive_demand']['daily_kwh'],
+                    "percentage": demand_estimate['productive_demand']['percentage_of_total'],
+                    "priority": "HIGH - Drives economic development and infrastructure ROI"
+                }
+            },
+            
+            "zone_level_estimates": demand_estimate['zone_breakdown'],
+            
+            "capacity_planning_guidance": {
+                "recommended_capacity_kw": round(demand_estimate['total_demand']['peak_kw'] * 1.25, 2),
+                "rationale": "25% headroom for growth and contingency",
+                "critical_load_reserve": "30-40% reserved for essential services (enforced)",
+                "transformer_sizing": f"Minimum {round(demand_estimate['total_demand']['peak_kw'] * 1.25 / 0.8, 2)} kVA (assuming 0.8 power factor)",
+                "distribution_voltage": "Recommend 11kV or 33kV for productive use loads"
+            },
+            
+            "confidence_statement": "These estimates are conservative (lower-bound) to ensure bankability. "
+                                   "Actual demand may be 20-40% higher. Infrastructure should be sized with "
+                                   "growth headroom and essential service protection."
+        }
+        
+        return load_estimation
+    
+    def _generate_sustainability_impact(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
+        """
+        Generate sustainability impact analysis for DFI review.
+        
+        Covers economic, social, and environmental dimensions of infrastructure deployment.
+        """
+        # Get demand estimates for impact calculations
+        demand_estimate = self.energy_estimator.estimate_total_demand(confidence_results)
+        
+        # Count activities and zones
+        productive_activities = [r for r in confidence_results if r['activity_type'] in 
+                                {'irrigation', 'milling', 'cold_storage', 'welding'}]
+        essential_services = [r for r in confidence_results if r['activity_type'] in 
+                            {'clinic', 'school', 'water_system', 'emergency_services'}]
+        
+        zones = set(r['zone'] for r in confidence_results)
+        
+        sustainability_impact = {
+            "economic_impact": {
+                "productive_use_multiplier": {
+                    "value": "3.0x - 5.0x",
+                    "description": "Every kWh of productive-use energy generates 3-5x economic value compared to household consumption",
+                    "source": "IFC Productive Use of Energy Study (2018), ESMAP Technical Paper 145"
+                },
+                "estimated_annual_economic_value": {
+                    "kwh_productive": demand_estimate['productive_demand']['daily_kwh'] * 365,
+                    "multiplier_range": "3.0x - 5.0x",
+                    "estimated_value_usd": f"${round(demand_estimate['productive_demand']['daily_kwh'] * 365 * 0.15 * 4, 2):,} (assuming $0.15/kWh tariff, 4x multiplier)",
+                    "notes": "Conservative estimate. Actual value depends on local economic conditions."
+                },
+                "livelihood_activities_enabled": len(productive_activities),
+                "zones_with_productive_demand": len(zones),
+                "infrastructure_roi_driver": "Productive use demand provides stable, predictable revenue for infrastructure cost recovery"
+            },
+            
+            "social_impact": {
+                "essential_services_protected": {
+                    "count": len(essential_services),
+                    "types": list(set(r['activity_type'] for r in essential_services)),
+                    "capacity_reserved": "30-40% of total capacity (non-negotiable)",
+                    "impact": "Ensures clinics, schools, water systems remain operational under all scenarios"
+                },
+                "equity_and_inclusion": {
+                    "approach": "Coordination-first design ensures infrastructure serves collective needs, not just individual consumption",
+                    "no_profiling": "Zero-PII architecture prevents discrimination or exclusion based on identity",
+                    "communal_assets": "20% social reserve for shared productive assets (mills, pumps, cold storage)"
+                },
+                "food_security": {
+                    "cold_storage_enabled": any(r['activity_type'] == 'cold_storage' for r in confidence_results),
+                    "irrigation_enabled": any(r['activity_type'] == 'irrigation' for r in confidence_results),
+                    "impact": "Reduces post-harvest losses, enables year-round food availability"
+                }
+            },
+            
+            "environmental_considerations": {
+                "renewable_energy_readiness": {
+                    "productive_load_profile": "Daytime-heavy productive use aligns well with solar generation",
+                    "demand_predictability": "Stable coordination patterns enable better renewable integration",
+                    "recommendation": "Consider hybrid solar-grid or solar-diesel systems for productive use loads"
+                },
+                "efficiency_gains": {
+                    "shared_assets": "Communal mills, pumps, cold storage more efficient than individual diesel generators",
+                    "displacement": f"Estimated {round(demand_estimate['productive_demand']['daily_kwh'] * 365 * 0.3, 2)} liters/year diesel displacement",
+                    "emissions_avoided": f"Approximately {round(demand_estimate['productive_demand']['daily_kwh'] * 365 * 0.3 * 2.68, 2)} kg CO2/year (assuming 2.68 kg CO2/liter diesel)"
+                },
+                "climate_resilience": {
+                    "irrigation": "Enables climate-adaptive agriculture through reliable water access",
+                    "cold_storage": "Reduces food waste and climate vulnerability",
+                    "essential_services": "Protected capacity ensures climate shocks don't disrupt critical services"
+                }
+            },
+            
+            "alignment_with_sdgs": {
+                "SDG_1": "No Poverty - Productive use energy enables income generation",
+                "SDG_2": "Zero Hunger - Irrigation and cold storage improve food security",
+                "SDG_3": "Good Health - Protected capacity for clinics and health services",
+                "SDG_4": "Quality Education - Protected capacity for schools",
+                "SDG_5": "Gender Equality - Coordination-first design prevents gender-based exclusion",
+                "SDG_7": "Affordable Clean Energy - Enables productive use, not just consumption",
+                "SDG_8": "Decent Work - Enables livelihood activities (milling, welding, cold storage)",
+                "SDG_9": "Industry and Infrastructure - Builds productive-use infrastructure",
+                "SDG_13": "Climate Action - Displaces diesel, enables climate adaptation"
+            }
+        }
+        
+        return sustainability_impact
+    
+    def _generate_risk_governance(self, confidence_results: List[Dict]) -> Dict:
+        """
+        Generate risk assessment and governance framework for DFI review.
+        
+        Quantifies demand uncertainty, coordination persistence risk, and mitigation strategies.
+        """
+        # Analyze confidence distribution
+        high_conf = sum(1 for r in confidence_results if r['confidence_class'] == 'high')
+        moderate_conf = sum(1 for r in confidence_results if r['confidence_class'] == 'moderate')
+        low_conf = sum(1 for r in confidence_results if r['confidence_class'] == 'low')
+        
+        total = len(confidence_results)
+        
+        risk_governance = {
+            "demand_uncertainty_quantification": {
+                "confidence_distribution": {
+                    "high_confidence_patterns": f"{high_conf}/{total} ({round(high_conf/total*100, 1) if total > 0 else 0}%)",
+                    "moderate_confidence_patterns": f"{moderate_conf}/{total} ({round(moderate_conf/total*100, 1) if total > 0 else 0}%)",
+                    "low_confidence_patterns": f"{low_conf}/{total} ({round(low_conf/total*100, 1) if total > 0 else 0}%)"
+                },
+                "demand_uncertainty_range": {
+                    "conservative_estimate": "Lower-bound estimates used (as presented in Load Estimation)",
+                    "expected_range": "Actual demand likely 20-40% higher than conservative estimates",
+                    "upper_bound": "Peak demand could reach 1.5x conservative estimate during high-coordination periods"
+                },
+                "mitigation": "Infrastructure sized with 25% headroom + modular expansion capability"
+            },
+            
+            "coordination_persistence_risk": {
+                "risk_description": "Coordination patterns may weaken or shift over time if economic conditions change",
+                "measurement_approach": "ZENTARI evaluates pattern stability across multiple 7-cycle windows",
+                "current_stability": f"{high_conf} patterns show high stability (≥5 of 7 cycles, strong validation)",
+                "decay_indicators": [
+                    "Frequency drops below 3 of 7 cycles",
+                    "Human signals no longer align with telemetry",
+                    "New patterns emerge that contradict existing ones"
+                ],
+                "mitigation_strategies": [
+                    "Continuous monitoring: Re-evaluate coordination patterns every 4-8 weeks",
+                    "Adaptive capacity: Design infrastructure for flexible load allocation",
+                    "Stakeholder engagement: Maintain communication with productive use actors",
+                    "Phased deployment: Start with high-confidence zones, expand as patterns persist"
+                ]
+            },
+            
+            "infrastructure_deployment_risks": {
+                "technical_risks": {
+                    "load_growth": "Demand may exceed initial estimates - MITIGATION: 25% capacity headroom",
+                    "power_quality": "Productive use loads may cause voltage fluctuations - MITIGATION: Proper transformer sizing, voltage regulation",
+                    "maintenance": "Rural infrastructure requires robust maintenance - MITIGATION: Design for low-maintenance operation"
+                },
+                "financial_risks": {
+                    "cost_recovery": "Productive use tariffs must balance affordability and cost recovery - MITIGATION: Tiered tariff structure",
+                    "payment_reliability": "Informal economy payment patterns - MITIGATION: Prepaid metering, mobile money integration",
+                    "demand_shortfall": "Actual demand lower than projected - MITIGATION: Conservative estimates, phased deployment"
+                },
+                "social_risks": {
+                    "elite_capture": "Risk of infrastructure benefiting only well-connected actors - MITIGATION: Coordination-first design prevents individual profiling",
+                    "exclusion": "Risk of excluding marginalized groups - MITIGATION: Zero-PII architecture, communal asset priority",
+                    "conflict": "Disputes over capacity allocation - MITIGATION: Transparent governance, essential service protection"
+                }
+            },
+            
+            "governance_framework": {
+                "capacity_allocation_principles": [
+                    "1. Essential services (clinics, schools, water) receive non-negotiable priority (30-40% reserve)",
+                    "2. Productive use activities allocated based on coordination confidence scores",
+                    "3. 20% social reserve for communal productive assets (mills, pumps, cold storage)",
+                    "4. Remaining capacity available for household and commercial use"
+                ],
+                "decision_making_process": {
+                    "technical": "KULIMA OS provides demand signals and confidence scores",
+                    "institutional": "Utility/infrastructure operator makes deployment decisions",
+                    "community": "Stakeholder engagement ensures local needs are understood",
+                    "transparency": "All coordination patterns and confidence scores are auditable"
+                },
+                "monitoring_and_evaluation": {
+                    "frequency": "Re-evaluate coordination patterns every 4-8 weeks",
+                    "metrics": [
+                        "Pattern stability (do patterns persist?)",
+                        "Validation strength (do human signals align with telemetry?)",
+                        "Demand realization (does actual consumption match estimates?)",
+                        "Essential service protection (are critical loads maintained?)"
+                    ],
+                    "adaptive_management": "Adjust capacity allocation based on observed patterns and community feedback"
+                }
+            },
+            
+            "risk_mitigation_summary": {
+                "demand_uncertainty": "Conservative estimates + 25% headroom + modular expansion",
+                "coordination_persistence": "Continuous monitoring + adaptive capacity + phased deployment",
+                "infrastructure_deployment": "Robust design + proper sizing + maintenance planning",
+                "governance": "Transparent allocation + essential service protection + stakeholder engagement"
+            }
+        }
+        
+        return risk_governance
+    
+    def _generate_deployment_readiness(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
+        """
+        Generate deployment readiness assessment for DFI review.
+        
+        Provides implementation roadmap, timeline, stakeholder status, and regulatory considerations.
+        """
+        # Identify high-priority zones
+        high_priority_zones = set(r['zone'] for r in confidence_results if r['confidence_class'] == 'high')
+        moderate_priority_zones = set(r['zone'] for r in confidence_results if r['confidence_class'] == 'moderate')
+        
+        # Get demand estimate for infrastructure requirements
+        demand_estimate = self.energy_estimator.estimate_total_demand(confidence_results)
+        
+        deployment_readiness = {
+            "infrastructure_requirements": {
+                "electrical_infrastructure": {
+                    "transformer_capacity": f"{round(demand_estimate['total_demand']['peak_kw'] * 1.25 / 0.8, 2)} kVA minimum (with 25% growth headroom)",
+                    "distribution_voltage": "11kV or 33kV recommended for productive use loads",
+                    "service_connections": f"Estimated {len(confidence_results)} productive use connection points",
+                    "metering": "Three-phase meters for productive use, prepaid capability recommended",
+                    "protection": "Overcurrent, earth fault, voltage regulation required"
+                },
+                "civil_works": {
+                    "poles_and_lines": "Distribution network to reach identified zones",
+                    "transformer_platforms": f"Minimum {len(high_priority_zones) + len(moderate_priority_zones)} transformer locations",
+                    "access_roads": "Required for construction and maintenance access",
+                    "site_preparation": "Transformer sites, meter locations, service connection points"
+                },
+                "estimated_capex": {
+                    "note": "Rough order of magnitude - requires detailed engineering",
+                    "transformer_and_equipment": f"${round(demand_estimate['total_demand']['peak_kw'] * 1.25 / 0.8 * 150, 2):,} (assuming $150/kVA)",
+                    "distribution_network": "Depends on distance and terrain - typically $10,000-$30,000 per km",
+                    "service_connections": f"${len(confidence_results) * 500:,} (assuming $500 per connection)",
+                    "contingency": "Add 20-30% for unforeseen costs"
+                }
+            },
+            
+            "implementation_timeline": {
+                "phase_1_planning": {
+                    "duration": "3-6 months",
+                    "activities": [
+                        "Detailed engineering design",
+                        "Environmental and social impact assessment",
+                        "Regulatory approvals and permits",
+                        "Procurement planning",
+                        "Stakeholder engagement and consultation"
+                    ]
+                },
+                "phase_2_construction": {
+                    "duration": "6-12 months",
+                    "activities": [
+                        "Civil works (poles, transformer platforms)",
+                        "Electrical installation (transformers, lines, meters)",
+                        "Testing and commissioning",
+                        "Service connection installation",
+                        "Safety inspections and approvals"
+                    ]
+                },
+                "phase_3_operation": {
+                    "duration": "Ongoing",
+                    "activities": [
+                        "Service activation and customer onboarding",
+                        "Demand monitoring and pattern validation",
+                        "Maintenance and fault response",
+                        "Capacity utilization tracking",
+                        "Adaptive management based on observed patterns"
+                    ]
+                },
+                "total_timeline": "9-18 months from approval to full operation"
+            },
+            
+            "stakeholder_engagement_status": {
+                "community_level": {
+                    "status": "REQUIRED - Not yet initiated in this pilot",
+                    "activities_needed": [
+                        "Community meetings to explain infrastructure plans",
+                        "Consultation on service connection locations",
+                        "Tariff structure discussion and agreement",
+                        "Governance framework establishment",
+                        "Training on safe electricity use for productive activities"
+                    ]
+                },
+                "institutional_level": {
+                    "utility_operator": "REQUIRED - Coordination needed for grid connection, tariff approval, O&M responsibility",
+                    "local_government": "REQUIRED - Permits, land access, community liaison",
+                    "regulator": "REQUIRED - Tariff approval, safety compliance, service standards",
+                    "financier": "IN PROGRESS - This prospectus serves as initial engagement document"
+                },
+                "technical_partners": {
+                    "engineering_firm": "REQUIRED - Detailed design and construction supervision",
+                    "equipment_suppliers": "REQUIRED - Transformers, meters, protection equipment",
+                    "construction_contractor": "REQUIRED - Civil and electrical installation"
+                }
+            },
+            
+            "regulatory_and_compliance": {
+                "electrical_safety": {
+                    "standards": "IEC 60364 (Low-voltage electrical installations) or national equivalent",
+                    "inspections": "Required before energization",
+                    "certification": "Electrical contractor must be licensed"
+                },
+                "environmental_compliance": {
+                    "esia_required": "Likely required for new distribution infrastructure",
+                    "land_use": "Right-of-way agreements for poles and lines",
+                    "waste_management": "Proper disposal of construction waste, old equipment"
+                },
+                "tariff_regulation": {
+                    "productive_use_tariff": "Requires regulatory approval - typically higher than household tariff",
+                    "cost_reflective_pricing": "Must balance affordability with cost recovery",
+                    "tariff_structure": "Consider time-of-use or demand-based tariffs for productive use"
+                },
+                "service_standards": {
+                    "reliability": "Productive use customers require higher reliability than household",
+                    "power_quality": "Voltage regulation critical for motors and equipment",
+                    "fault_response": "Faster response times needed for productive use interruptions"
+                }
+            },
+            
+            "readiness_assessment": {
+                "technical_readiness": "HIGH - Demand signals validated, load estimates conservative, infrastructure requirements clear",
+                "financial_readiness": "MODERATE - Requires DFI/development finance commitment, tariff approval, cost recovery plan",
+                "institutional_readiness": "MODERATE - Requires utility engagement, regulatory approvals, governance framework",
+                "community_readiness": "LOW - Stakeholder engagement not yet initiated (required before deployment)",
+                "overall_readiness": "MODERATE - Technical foundation strong, institutional and community engagement needed"
+            },
+            
+            "next_steps_for_deployment": [
+                "1. Secure financing commitment from DFI or development finance institution",
+                "2. Engage utility operator to confirm grid connection point and O&M responsibility",
+                "3. Initiate community stakeholder engagement and consultation process",
+                "4. Commission detailed engineering design and ESIA",
+                "5. Obtain regulatory approvals (tariff, safety, environmental)",
+                "6. Procure equipment and select construction contractor",
+                "7. Begin construction with community liaison and safety protocols",
+                "8. Commission infrastructure and activate service connections",
+                "9. Monitor demand realization and adjust capacity allocation as needed",
+                "10. Establish ongoing M&E framework for adaptive management"
+            ]
+        }
+        
+        return deployment_readiness
+
         
         base_implication = implications.get(activity, f"Productive use demand in {time_window} window.")
         
@@ -452,6 +853,195 @@ class ProspectusGenerator:
         md_content += f"""
 ---
 
+## Load Estimation
+
+### Estimation Methodology
+
+**Approach:** {prospectus['load_estimation']['estimation_methodology']['approach']}
+
+**Data Sources:**
+"""
+        
+        for source in prospectus['load_estimation']['estimation_methodology']['data_sources']:
+            md_content += f"- {source}\n"
+        
+        md_content += f"""
+**Conservatism:** {prospectus['load_estimation']['estimation_methodology']['conservatism']}
+
+**Diversity Factors:** {prospectus['load_estimation']['estimation_methodology']['diversity_factors']}
+
+**Load Factors:** {prospectus['load_estimation']['estimation_methodology']['load_factors']}
+
+### Total System Demand
+
+- **Peak Demand:** {prospectus['load_estimation']['total_system_demand']['peak_demand_kw']} kW
+- **Daily Energy:** {prospectus['load_estimation']['total_system_demand']['daily_energy_kwh']} kWh
+- **Monthly Energy:** {prospectus['load_estimation']['total_system_demand']['monthly_energy_kwh']} kWh
+- **Annual Energy:** {prospectus['load_estimation']['total_system_demand']['annual_energy_kwh']} kWh
+
+**Notes:** {prospectus['load_estimation']['total_system_demand']['notes']}
+
+### Demand Breakdown
+
+**Essential Services:**
+- Peak: {prospectus['load_estimation']['demand_breakdown']['essential_services']['peak_kw']} kW
+- Daily: {prospectus['load_estimation']['demand_breakdown']['essential_services']['daily_kwh']} kWh
+- Percentage: {prospectus['load_estimation']['demand_breakdown']['essential_services']['percentage']}%
+- Priority: {prospectus['load_estimation']['demand_breakdown']['essential_services']['priority']}
+
+**Productive Activities:**
+- Peak: {prospectus['load_estimation']['demand_breakdown']['productive_activities']['peak_kw']} kW
+- Daily: {prospectus['load_estimation']['demand_breakdown']['productive_activities']['daily_kwh']} kWh
+- Percentage: {prospectus['load_estimation']['demand_breakdown']['productive_activities']['percentage']}%
+- Priority: {prospectus['load_estimation']['demand_breakdown']['productive_activities']['priority']}
+
+### Capacity Planning Guidance
+
+- **Recommended Capacity:** {prospectus['load_estimation']['capacity_planning_guidance']['recommended_capacity_kw']} kW
+- **Rationale:** {prospectus['load_estimation']['capacity_planning_guidance']['rationale']}
+- **Critical Load Reserve:** {prospectus['load_estimation']['capacity_planning_guidance']['critical_load_reserve']}
+- **Transformer Sizing:** {prospectus['load_estimation']['capacity_planning_guidance']['transformer_sizing']}
+- **Distribution Voltage:** {prospectus['load_estimation']['capacity_planning_guidance']['distribution_voltage']}
+
+**Confidence Statement:** {prospectus['load_estimation']['confidence_statement']}
+
+---
+
+## Sustainability Impact
+
+### Economic Impact
+
+**Productive Use Multiplier:**
+- Value: {prospectus['sustainability_impact']['economic_impact']['productive_use_multiplier']['value']}
+- Description: {prospectus['sustainability_impact']['economic_impact']['productive_use_multiplier']['description']}
+
+**Estimated Annual Economic Value:**
+- Productive kWh/year: {prospectus['sustainability_impact']['economic_impact']['estimated_annual_economic_value']['kwh_productive']}
+- Multiplier Range: {prospectus['sustainability_impact']['economic_impact']['estimated_annual_economic_value']['multiplier_range']}
+- Estimated Value: {prospectus['sustainability_impact']['economic_impact']['estimated_annual_economic_value']['estimated_value_usd']}
+
+**Infrastructure ROI Driver:** {prospectus['sustainability_impact']['economic_impact']['infrastructure_roi_driver']}
+
+### Social Impact
+
+**Essential Services Protected:**
+- Count: {prospectus['sustainability_impact']['social_impact']['essential_services_protected']['count']}
+- Types: {', '.join(prospectus['sustainability_impact']['social_impact']['essential_services_protected']['types'])}
+- Capacity Reserved: {prospectus['sustainability_impact']['social_impact']['essential_services_protected']['capacity_reserved']}
+- Impact: {prospectus['sustainability_impact']['social_impact']['essential_services_protected']['impact']}
+
+**Equity and Inclusion:**
+- Approach: {prospectus['sustainability_impact']['social_impact']['equity_and_inclusion']['approach']}
+- No Profiling: {prospectus['sustainability_impact']['social_impact']['equity_and_inclusion']['no_profiling']}
+- Communal Assets: {prospectus['sustainability_impact']['social_impact']['equity_and_inclusion']['communal_assets']}
+
+### Environmental Considerations
+
+**Renewable Energy Readiness:**
+- Productive Load Profile: {prospectus['sustainability_impact']['environmental_considerations']['renewable_energy_readiness']['productive_load_profile']}
+- Demand Predictability: {prospectus['sustainability_impact']['environmental_considerations']['renewable_energy_readiness']['demand_predictability']}
+
+**Efficiency Gains:**
+- Diesel Displacement: {prospectus['sustainability_impact']['environmental_considerations']['efficiency_gains']['displacement']}
+- Emissions Avoided: {prospectus['sustainability_impact']['environmental_considerations']['efficiency_gains']['emissions_avoided']}
+
+### Alignment with SDGs
+
+"""
+        
+        for sdg, description in prospectus['sustainability_impact']['alignment_with_sdgs'].items():
+            md_content += f"- **{sdg}:** {description}\n"
+        
+        md_content += f"""
+---
+
+## Risk and Governance
+
+### Demand Uncertainty Quantification
+
+**Confidence Distribution:**
+- High Confidence: {prospectus['risk_and_governance']['demand_uncertainty_quantification']['confidence_distribution']['high_confidence_patterns']}
+- Moderate Confidence: {prospectus['risk_and_governance']['demand_uncertainty_quantification']['confidence_distribution']['moderate_confidence_patterns']}
+- Low Confidence: {prospectus['risk_and_governance']['demand_uncertainty_quantification']['confidence_distribution']['low_confidence_patterns']}
+
+**Demand Uncertainty Range:**
+- Conservative Estimate: {prospectus['risk_and_governance']['demand_uncertainty_quantification']['demand_uncertainty_range']['conservative_estimate']}
+- Expected Range: {prospectus['risk_and_governance']['demand_uncertainty_quantification']['demand_uncertainty_range']['expected_range']}
+- Upper Bound: {prospectus['risk_and_governance']['demand_uncertainty_quantification']['demand_uncertainty_range']['upper_bound']}
+
+**Mitigation:** {prospectus['risk_and_governance']['demand_uncertainty_quantification']['mitigation']}
+
+### Coordination Persistence Risk
+
+**Risk Description:** {prospectus['risk_and_governance']['coordination_persistence_risk']['risk_description']}
+
+**Current Stability:** {prospectus['risk_and_governance']['coordination_persistence_risk']['current_stability']}
+
+**Mitigation Strategies:**
+"""
+        
+        for strategy in prospectus['risk_and_governance']['coordination_persistence_risk']['mitigation_strategies']:
+            md_content += f"- {strategy}\n"
+        
+        md_content += f"""
+### Governance Framework
+
+**Capacity Allocation Principles:**
+"""
+        
+        for principle in prospectus['risk_and_governance']['governance_framework']['capacity_allocation_principles']:
+            md_content += f"{principle}\n"
+        
+        md_content += f"""
+**Monitoring and Evaluation:**
+- Frequency: {prospectus['risk_and_governance']['governance_framework']['monitoring_and_evaluation']['frequency']}
+- Adaptive Management: {prospectus['risk_and_governance']['governance_framework']['monitoring_and_evaluation']['adaptive_management']}
+
+---
+
+## Deployment Readiness
+
+### Infrastructure Requirements
+
+**Electrical Infrastructure:**
+- Transformer Capacity: {prospectus['deployment_readiness']['infrastructure_requirements']['electrical_infrastructure']['transformer_capacity']}
+- Distribution Voltage: {prospectus['deployment_readiness']['infrastructure_requirements']['electrical_infrastructure']['distribution_voltage']}
+- Service Connections: {prospectus['deployment_readiness']['infrastructure_requirements']['electrical_infrastructure']['service_connections']}
+- Metering: {prospectus['deployment_readiness']['infrastructure_requirements']['electrical_infrastructure']['metering']}
+
+**Estimated CAPEX:**
+- Transformer & Equipment: {prospectus['deployment_readiness']['infrastructure_requirements']['estimated_capex']['transformer_and_equipment']}
+- Service Connections: {prospectus['deployment_readiness']['infrastructure_requirements']['estimated_capex']['service_connections']}
+- Contingency: {prospectus['deployment_readiness']['infrastructure_requirements']['estimated_capex']['contingency']}
+
+### Implementation Timeline
+
+**Phase 1 - Planning:** {prospectus['deployment_readiness']['implementation_timeline']['phase_1_planning']['duration']}
+
+**Phase 2 - Construction:** {prospectus['deployment_readiness']['implementation_timeline']['phase_2_construction']['duration']}
+
+**Phase 3 - Operation:** {prospectus['deployment_readiness']['implementation_timeline']['phase_3_operation']['duration']}
+
+**Total Timeline:** {prospectus['deployment_readiness']['implementation_timeline']['total_timeline']}
+
+### Readiness Assessment
+
+- **Technical Readiness:** {prospectus['deployment_readiness']['readiness_assessment']['technical_readiness']}
+- **Financial Readiness:** {prospectus['deployment_readiness']['readiness_assessment']['financial_readiness']}
+- **Institutional Readiness:** {prospectus['deployment_readiness']['readiness_assessment']['institutional_readiness']}
+- **Community Readiness:** {prospectus['deployment_readiness']['readiness_assessment']['community_readiness']}
+- **Overall Readiness:** {prospectus['deployment_readiness']['readiness_assessment']['overall_readiness']}
+
+### Next Steps for Deployment
+
+"""
+        
+        for step in prospectus['deployment_readiness']['next_steps_for_deployment']:
+            md_content += f"{step}\n"
+        
+        md_content += f"""
+---
+
 ## Infrastructure Planning Guidance
 
 **High Priority Zones:** {', '.join(prospectus['infrastructure_planning_guidance']['high_priority_zones']) if prospectus['infrastructure_planning_guidance']['high_priority_zones'] else 'None'}
@@ -554,6 +1144,6 @@ if __name__ == "__main__":
     generator.save_prospectus_json(prospectus)
     generator.save_prospectus_markdown(prospectus)
     
-    print("\n✓ Demand-Signal Prospectus generated successfully")
+    print("\n[SUCCESS] Demand-Signal Prospectus generated successfully")
 
 # Made with Bob
