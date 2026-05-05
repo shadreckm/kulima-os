@@ -1,5 +1,7 @@
 # KULIMA OS - Pilot Implementation
 
+> **For institutional decision-makers, funders, and policymakers**: Start with [`OVERVIEW.md`](OVERVIEW.md) for a human-centered introduction to why this infrastructure exists and why it's inevitable.
+
 **Coordination-First Economic Substrate for Infrastructure Planning**
 
 KULIMA OS is Digital Public Infrastructure (DPI) that converts decentralized livelihood activity into verified, bankable coordination signals for infrastructure planning—without surveillance or individual profiling.

@@ -2,7 +2,7 @@
   "prospectus_metadata": {
     "title": "KULIMA OS Demand-Signal Prospectus",
     "subtitle": "Verified Coordination Patterns for Infrastructure Planning",
-    "generated_at": "2026-05-04T10:57:50.672422Z",
+    "generated_at": "2026-05-05T10:01:56.406790Z",
     "pilot_region": "Pilot Region - Rural Energy Planning",
     "evaluation_period": "7-cycle window (Week 1)",
     "system_version": "KULIMA OS Pilot v0.2 (LUMOZA + LUNDAI + Critical Load Protection)"
@@ -17,13 +17,13 @@
       "zone_c"
     ],
     "productive_activities_detected": [
+      "irrigation",
+      "school",
+      "clinic",
+      "cold_storage",
       "water_system",
       "emergency_services",
-      "milling",
-      "cold_storage",
-      "clinic",
-      "school",
-      "irrigation"
+      "milling"
     ],
     "key_finding": "Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing high confidence for infrastructure investment."
   },
@@ -746,10 +746,10 @@
       "essential_services_protected": {
         "count": 5,
         "types": [
-          "clinic",
-          "water_system",
           "emergency_services",
-          "school"
+          "school",
+          "water_system",
+          "clinic"
         ],
         "capacity_reserved": "30-40% of total capacity (non-negotiable)",
         "impact": "Ensures clinics, schools, water systems remain operational under all scenarios"
