@@ -2,10 +2,10 @@
 
 ## Verified Coordination Patterns for Infrastructure Planning
 
-**Generated:** 2026-05-05T10:01:56.406790Z  
+**Generated:** 2026-05-05T10:01:56Z  
 **Region:** Pilot Region - Rural Energy Planning  
 **Period:** 7-cycle window (Week 1)  
-**System:** KULIMA OS Pilot v0.2 (LUMOZA + LUNDAI + Critical Load Protection)
+**System:** KULIMA OS Pilot v0.2 (LUMOZA + ZENTARI + Critical Load Protection)
 
 ---
 
@@ -17,12 +17,12 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - **High Confidence Patterns:** 2
 - **Moderate Confidence Patterns:** 1
 - **Zones with Coordinated Demand:** zone_a, zone_b, zone_c
-- **Productive Activities Detected:** irrigation, school, clinic, cold_storage, water_system, emergency_services, milling
+- **Productive Activities Detected:** cold_storage, irrigation, milling
+- **Essential Services Detected:** clinic, emergency_services, school, water_system
 
 ---
 
 ## Coordination Patterns
-
 
 ### Pattern 1: zone_a_irrigation_morning
 
@@ -33,8 +33,7 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - **Stability:** stable
 - **Coordination Confidence:** 0.86 (high)
 - **Validation:** strong - 6 of 6 human cycles corroborated by telemetry
-- **Infrastructure Implication:** None
-
+- **Infrastructure Implication:** Requires reliable morning power for water pumping
 
 ### Pattern 2: zone_a_milling_afternoon
 
@@ -45,8 +44,7 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - **Stability:** stable
 - **Coordination Confidence:** 0.71 (moderate)
 - **Validation:** strong - 5 of 5 human cycles corroborated by telemetry
-- **Infrastructure Implication:** None
-
+- **Infrastructure Implication:** Requires afternoon capacity for grain processing
 
 ### Pattern 3: zone_b_cold_storage_evening
 
@@ -57,8 +55,7 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - **Stability:** stable
 - **Coordination Confidence:** 0.86 (high)
 - **Validation:** strong - 6 of 6 human cycles corroborated by telemetry
-- **Infrastructure Implication:** None
-
+- **Infrastructure Implication:** Requires evening capacity for cold storage operations
 
 ### Pattern 4: zone_c_milling_morning
 
@@ -69,8 +66,7 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - **Stability:** intermediate
 - **Coordination Confidence:** 0.48 (low)
 - **Validation:** moderate - 3 of 4 human cycles corroborated by telemetry
-- **Infrastructure Implication:** None
-
+- **Infrastructure Implication:** Monitor for pattern strengthening before infrastructure commitment
 
 ### Pattern 5: zone_c_irrigation_afternoon
 
@@ -81,8 +77,7 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - **Stability:** intermediate
 - **Coordination Confidence:** 0.26 (insufficient)
 - **Validation:** human_only - Human signals in 3 cycles, no telemetry corroboration
-- **Infrastructure Implication:** None
-
+- **Infrastructure Implication:** Insufficient coordination for infrastructure planning
 
 ### Pattern 6: zone_a_clinic_continuous
 
@@ -91,10 +86,9 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - **Time Window:** continuous
 - **Frequency:** 7 of 7 cycles
 - **Stability:** stable
-- **Coordination Confidence:** 0.0 (insufficient)
-- **Validation:** none - No human coordination signals
-- **Infrastructure Implication:** None
-
+- **Coordination Confidence:** N/A (essential service)
+- **Validation:** telemetry_only - Infrastructure telemetry confirms continuous operation
+- **Infrastructure Implication:** CRITICAL - Non-negotiable priority load, cannot be interrupted
 
 ### Pattern 7: zone_a_school_morning
 
@@ -103,10 +97,9 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - **Time Window:** morning
 - **Frequency:** 5 of 7 cycles
 - **Stability:** stable
-- **Coordination Confidence:** 0.0 (insufficient)
-- **Validation:** none - No human coordination signals
-- **Infrastructure Implication:** None
-
+- **Coordination Confidence:** N/A (essential service)
+- **Validation:** telemetry_only - Infrastructure telemetry confirms weekday operation
+- **Infrastructure Implication:** CRITICAL - Non-negotiable priority load, cannot be interrupted
 
 ### Pattern 8: zone_b_water_system_morning
 
@@ -115,10 +108,9 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - **Time Window:** morning
 - **Frequency:** 7 of 7 cycles
 - **Stability:** stable
-- **Coordination Confidence:** 0.0 (insufficient)
-- **Validation:** none - No human coordination signals
-- **Infrastructure Implication:** None
-
+- **Coordination Confidence:** N/A (essential service)
+- **Validation:** telemetry_only - Infrastructure telemetry confirms daily operation
+- **Infrastructure Implication:** CRITICAL - Non-negotiable priority load, cannot be interrupted
 
 ### Pattern 9: zone_b_emergency_services_continuous
 
@@ -127,10 +119,9 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - **Time Window:** continuous
 - **Frequency:** 7 of 7 cycles
 - **Stability:** stable
-- **Coordination Confidence:** 0.0 (insufficient)
-- **Validation:** none - No human coordination signals
-- **Infrastructure Implication:** None
-
+- **Coordination Confidence:** N/A (essential service)
+- **Validation:** telemetry_only - Infrastructure telemetry confirms continuous operation
+- **Infrastructure Implication:** CRITICAL - Non-negotiable priority load, cannot be interrupted
 
 ### Pattern 10: zone_c_water_system_morning
 
@@ -139,10 +130,9 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - **Time Window:** morning
 - **Frequency:** 6 of 7 cycles
 - **Stability:** stable
-- **Coordination Confidence:** 0.0 (insufficient)
-- **Validation:** none - No human coordination signals
-- **Infrastructure Implication:** None
-
+- **Coordination Confidence:** N/A (essential service)
+- **Validation:** telemetry_only - Infrastructure telemetry confirms regular operation
+- **Infrastructure Implication:** CRITICAL - Non-negotiable priority load, cannot be interrupted
 
 ---
 
@@ -150,8 +140,8 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 **Enforcement Status:** ACTIVE - Architecturally enforced, cannot be overridden
 
-**Essential Services Detected:** 5
-**Productive Activities Detected:** 5
+**Essential Services Detected:** 5  
+**Productive Activities Detected:** 3
 
 **Zones with Essential Services:** zone_a, zone_b, zone_c
 
@@ -159,24 +149,23 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 ### Capacity Reservation
 
-**Reserved Capacity:** 30%
+**Reserved Capacity:** 25%
 
-**Rationale:** High essential service density. 30% capacity reserved for critical loads.
+**Rationale:** Essential services (clinics, schools, water systems, emergency services) require guaranteed capacity. 25% baseline reservation ensures these critical loads are protected under normal and peak scenarios.
 
-**Enforcement:** Reserved capacity is excluded from optimization, monetization, and load-shedding logic
+**Enforcement:** Reserved capacity is excluded from optimization, monetization, and load-shedding logic. This is a non-negotiable architectural constraint.
 
 ### Scenario Analysis
 
-
 **BASELINE Scenario:**
 - Description: Normal operation with all essential services active
-- Essential Load: 30%
-- Available for Productive Use: 70%
+- Essential Load: 25%
+- Available for Productive Use: 75%
 
 **PEAK Scenario:**
 - Description: Peak demand when all services operate simultaneously
-- Essential Load: 40%
-- Available for Productive Use: 60%
+- Essential Load: 35%
+- Available for Productive Use: 65%
 
 **SHOCK Scenario:**
 - Description: Emergency scenario requiring maximum essential service capacity
@@ -185,13 +174,13 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 ### Planning Requirements
 
-- Infrastructure MUST reserve 30% capacity for essential services
+- Infrastructure MUST reserve 25% baseline capacity for essential services
 - Essential service loads cannot be shed during peak demand periods
 - Productive use optimization must operate within remaining capacity only
 - Emergency scenarios require ability to scale essential capacity to 50%
+- Infrastructure design must accommodate peak essential load of 35% under normal conditions
 
 ### Non-Negotiable Loads
-
 
 **clinic** (zone_a)
 - Time Window: continuous
@@ -242,8 +231,8 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 - **Peak Demand:** 15.66 kW
 - **Daily Energy:** 68.35 kWh
-- **Monthly Energy:** 2050.5 kWh
-- **Annual Energy:** 24947.75 kWh
+- **Monthly Energy:** 2,050.5 kWh
+- **Annual Energy:** 24,947.75 kWh
 
 **Notes:** Diversified peak demand accounting for non-simultaneous operation
 
@@ -265,7 +254,7 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 - **Recommended Capacity:** 19.57 kW
 - **Rationale:** 25% headroom for growth and contingency
-- **Critical Load Reserve:** 30-40% reserved for essential services (enforced)
+- **Critical Load Reserve:** 25% baseline reserved for essential services (enforced)
 - **Transformer Sizing:** Minimum 24.47 kVA (assuming 0.8 power factor)
 - **Distribution Voltage:** Recommend 11kV or 33kV for productive use loads
 
@@ -282,7 +271,7 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - Description: Every kWh of productive-use energy generates 3-5x economic value compared to household consumption
 
 **Estimated Annual Economic Value:**
-- Productive kWh/year: 10679.900000000001
+- Productive kWh/year: 10,679.9
 - Multiplier Range: 3.0x - 5.0x
 - Estimated Value: $6,407.94 (assuming $0.15/kWh tariff, 4x multiplier)
 
@@ -292,14 +281,14 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 **Essential Services Protected:**
 - Count: 5
-- Types: emergency_services, school, water_system, clinic
-- Capacity Reserved: 30-40% of total capacity (non-negotiable)
+- Types: clinic, emergency_services, school, water_system
+- Capacity Reserved: 25% baseline (35% peak, 50% shock scenarios)
 - Impact: Ensures clinics, schools, water systems remain operational under all scenarios
 
 **Equity and Inclusion:**
 - Approach: Coordination-first design ensures infrastructure serves collective needs, not just individual consumption
 - No Profiling: Zero-PII architecture prevents discrimination or exclusion based on identity
-- Communal Assets: 20% social reserve for shared productive assets (mills, pumps, cold storage)
+- Communal Assets: Infrastructure capacity includes shared productive assets (mills, pumps, cold storage)
 
 ### Environmental Considerations
 
@@ -308,20 +297,20 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - Demand Predictability: Stable coordination patterns enable better renewable integration
 
 **Efficiency Gains:**
-- Diesel Displacement: Estimated 3203.97 liters/year diesel displacement
-- Emissions Avoided: Approximately 8586.64 kg CO2/year (assuming 2.68 kg CO2/liter diesel)
+- Diesel Displacement: Estimated 3,203.97 liters/year diesel displacement
+- Emissions Avoided: Approximately 8,586.64 kg CO2/year (assuming 2.68 kg CO2/liter diesel)
 
 ### Alignment with SDGs
 
-- **SDG_1:** No Poverty - Productive use energy enables income generation
-- **SDG_2:** Zero Hunger - Irrigation and cold storage improve food security
-- **SDG_3:** Good Health - Protected capacity for clinics and health services
-- **SDG_4:** Quality Education - Protected capacity for schools
-- **SDG_5:** Gender Equality - Coordination-first design prevents gender-based exclusion
-- **SDG_7:** Affordable Clean Energy - Enables productive use, not just consumption
-- **SDG_8:** Decent Work - Enables livelihood activities (milling, welding, cold storage)
-- **SDG_9:** Industry and Infrastructure - Builds productive-use infrastructure
-- **SDG_13:** Climate Action - Displaces diesel, enables climate adaptation
+- **SDG 1:** No Poverty - Productive use energy enables income generation
+- **SDG 2:** Zero Hunger - Irrigation and cold storage improve food security
+- **SDG 3:** Good Health - Protected capacity for clinics and health services
+- **SDG 4:** Quality Education - Protected capacity for schools
+- **SDG 5:** Gender Equality - Coordination-first design prevents gender-based exclusion
+- **SDG 7:** Affordable Clean Energy - Enables productive use, not just consumption
+- **SDG 8:** Decent Work - Enables livelihood activities (milling, cold storage)
+- **SDG 9:** Industry and Infrastructure - Builds productive-use infrastructure
+- **SDG 13:** Climate Action - Displaces diesel, enables climate adaptation
 
 ---
 
@@ -333,6 +322,8 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - High Confidence: 2/10 (20.0%)
 - Moderate Confidence: 1/10 (10.0%)
 - Low Confidence: 1/10 (10.0%)
+- Essential Services: 5/10 (50.0%) - Telemetry-validated, non-negotiable loads
+- Insufficient: 1/10 (10.0%)
 
 **Demand Uncertainty Range:**
 - Conservative Estimate: Lower-bound estimates used (as presented in Load Estimation)
@@ -356,10 +347,10 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 ### Governance Framework
 
 **Capacity Allocation Principles:**
-1. Essential services (clinics, schools, water) receive non-negotiable priority (30-40% reserve)
+1. Essential services (clinics, schools, water, emergency) receive non-negotiable priority (25% baseline reserve)
 2. Productive use activities allocated based on coordination confidence scores
-3. 20% social reserve for communal productive assets (mills, pumps, cold storage)
-4. Remaining capacity available for household and commercial use
+3. Remaining capacity available for household and commercial use
+4. Emergency scenarios can scale essential capacity to 50%
 
 **Monitoring and Evaluation:**
 - Frequency: Re-evaluate coordination patterns every 4-8 weeks
@@ -419,23 +410,13 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 **High Priority Zones:** zone_a, zone_b
 
-**Moderate Priority Zones:** zone_a
+**Moderate Priority Zones:** zone_c
 
 **Investment Recommendation:**  
 RECOMMENDED: Prioritize infrastructure deployment in 2 high-confidence zone(s). Coordination patterns are stable and validated, indicating bankable demand.
 
 **Capacity Planning Note:**  
-Infrastructure capacity must account for productive-use demand patterns, not just household consumption. Social reserve enforced for essential services.
-
----
-
-## Social Reserve Policy
-
-**Description:** 20% capacity reserved for communal productive assets
-
-**Rationale:** Ensures infrastructure serves collective economic activity, not just individual consumption
-
-**Implementation:** Infrastructure design must include capacity for shared assets (mills, pumps, cold storage)
+Infrastructure capacity must account for productive-use demand patterns, not just household consumption. 25% baseline capacity reserved for essential services (non-negotiable).
 
 ---
 
@@ -443,10 +424,11 @@ Infrastructure capacity must account for productive-use demand patterns, not jus
 
 ### System Invariants
 
-- Zero-PII: No personal identifiers in any data or outputs
-- Temporal Moat: All processing in time-batched windows (no real-time tracking)
-- Coordination > Identity: System reasons over collective patterns only
-- Semantic Guard: No surveillance, credit scoring, or individual profiling
+- **Zero-PII:** No personal identifiers in any data or outputs
+- **Temporal Moat:** All processing in time-batched windows (no real-time tracking)
+- **Coordination > Identity:** System reasons over collective patterns only
+- **Semantic Guard:** No surveillance, credit scoring, or individual profiling
+- **Critical Load Protection:** Essential services receive non-negotiable priority
 
 **Verification:** All outputs are auditable against AGENTS.md system invariants
 
@@ -472,10 +454,31 @@ Infrastructure capacity must account for productive-use demand patterns, not jus
 
 ### Coordination Thresholds
 
-- **Stable Pattern:** >=5 of 7 cycles
+- **Stable Pattern:** ≥5 of 7 cycles
 - **Noise Threshold:** <3 of 7 cycles
-- **Validation:** Human signals cross-validated with telemetry
+- **Validation:** Human signals cross-validated with telemetry where available
+
+### Pilot Constraints
+
+**What This Pilot Demonstrates:**
+- Coordination pattern detection from identity-free signals
+- Trust derived from pattern persistence, not participant reputation
+- Essential service protection through architectural constraints
+- Institutional-grade outputs for infrastructure planning
+
+**What This Pilot Simulates:**
+- Telemetry validation (synthetic telemetry signals used for demonstration)
+- Essential service signals (telemetry-only, no human coordination signals in pilot)
+- Spatial analysis (zone metadata manually specified, not computed)
+
+**What This Pilot Excludes:**
+- Real SMS/WhatsApp transport layer (signals pre-generated)
+- Steward review interface (patterns auto-approved)
+- Multi-cycle longitudinal tracking (single 7-week window only)
+- Real-world hardware integration (telemetry is simulated)
 
 ---
 
 *This prospectus is generated by KULIMA OS, a coordination-first economic substrate designed as Digital Public Infrastructure (DPI). It enables infrastructure planning based on verified collective demand, without surveillance or individual profiling.*
+
+*This is a pilot demonstration using synthetic signals. Production deployment requires real signal ingestion, steward review, and community engagement.*
