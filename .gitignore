@@ -6,3 +6,11 @@ __pycache__/
 *.egg-info/ 
 .venv/ 
 venv/ 
+
+# Generated artifacts
+artifacts/
+# Generated prospectus files
+lumoza_prospectus_*.json
+lumoza_prospectus_*.pdf
+demand_signal_prospectus*.json
+demand_signal_prospectus*.pdf
