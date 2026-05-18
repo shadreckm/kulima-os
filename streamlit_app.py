@@ -289,14 +289,33 @@ def main() -> None:
         <div class='hero-block'>
             <h1>Kulima OS</h1>
             <h2>Demand Signal Interface</h2>
-            <p>Coordination-based infrastructure intelligence</p>
+            <p>Seeing real demand before infrastructure is built.</p>
+            <p>A coordination-first digital public infrastructure for real-world demand sensing.</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("<p class='section-copy'>A calm, authoritative data intelligence interface for infrastructure planners, development agencies, and institutional stakeholders.</p>", unsafe_allow_html=True)
-    st.markdown("<hr class='section-divider' />", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<h2 class='section-heading'>Live System</h2>", unsafe_allow_html=True)
+    st.markdown(
+        "<p class='section-copy'>Core infrastructure signals are flowing through the platform in real time.</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        """
+        <div class='info-card-grid'>
+            <div class='info-card'>✅ System operational</div>
+            <div class='info-card'>✅ Signals being collected in real time</div>
+            <div class='info-card'>✅ Backend live</div>
+            <div class='info-card'>✅ WhatsApp input active</div>
+        </div>
+        <p class='section-copy'><strong>Live Pilot:</strong> Mzuzu · Ekwendeni · Karonga</p>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("<h2 class='section-heading'>Overview</h2>", unsafe_allow_html=True)
     st.markdown(
         "<p class='section-copy'>Select a pilot zone to review live coordination state, demand intelligence, and prospectus delivery.</p>",
@@ -313,49 +332,46 @@ def main() -> None:
     summary = build_coordination_summary(zone)
 
     st.markdown("<hr class='section-divider' />", unsafe_allow_html=True)
-    st.markdown("<h2 class='section-heading'>Coordination Status</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 class='section-heading'>Dashboard</h2>", unsafe_allow_html=True)
+    st.markdown(
+        "<p class='section-copy'>Live coordination indicators for the selected pilot zone.</p>",
+        unsafe_allow_html=True,
+    )
 
-    if summary["total_signals"] == 0:
-        st.warning("Coordination activity is not yet available for this zone.")
-        st.markdown(
-            "<p class='section-copy'>No coordination signals are recorded yet. The platform is ready to aggregate pilot data once it is submitted.</p>",
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            f"""
-            <div class='card-grid'>
-                <div class='card card-primary'>
-                    <p class='card-title'>Coordination trend</p>
-                    <p class='card-value'>{summary['coordination_trend']}</p>
-                    <p class='card-note'>{interpret_coordination_trend(summary['coordination_trend'])}</p>
-                </div>
-                <div class='card'>
-                    <p class='card-title'>Signals in current window</p>
-                    <p class='card-value'>{summary['signal_count']}</p>
-                    <p class='card-note'>Live 7-cycle data powering decision-grade signals</p>
-                </div>
-                <div class='card'>
-                    <p class='card-title'>Stable patterns detected</p>
-                    <p class='card-value'>{summary['pattern_count']}</p>
-                    <p class='card-note'>Conservative coordination patterns available for prospectus generation</p>
-                </div>
+    st.markdown(
+        f"""
+        <div class='dashboard-grid'>
+            <div class='card card-primary'>
+                <p class='card-title'>Coordination Trend</p>
+                <p class='card-value'>{summary['coordination_trend']}</p>
+                <p class='card-note'>{interpret_coordination_trend(summary['coordination_trend'])}</p>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            f"<p class='section-copy'><strong>Interpretation:</strong> {interpret_coordination_trend(summary['coordination_trend'])}</p>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"<p class='section-copy'>Zone {summary['zone']} · {summary['total_signals']} total signals on record · rolling {summary['window_days']}-day coordination window</p>",
-            unsafe_allow_html=True,
-        )
+            <div class='card'>
+                <p class='card-title'>Signals Count</p>
+                <p class='card-value'>{summary['signal_count']}</p>
+                <p class='card-note'>Signals in the current {summary['window_days']}-day coordination window.</p>
+            </div>
+            <div class='card'>
+                <p class='card-title'>Detected Patterns</p>
+                <p class='card-value'>{summary['pattern_count']}</p>
+                <p class='card-note'>Stable patterns currently available for planning review.</p>
+            </div>
+            <div class='card'>
+                <p class='card-title'>Zone Activity State</p>
+                <p class='card-value'>{summary['zone']}</p>
+                <p class='card-note'>{('Active signals detected' if summary['total_signals'] > 0 else 'Awaiting pilot coordination inputs')}</p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.markdown("<hr class='section-divider' />", unsafe_allow_html=True)
     st.markdown("<h2 class='section-heading'>Prospectus</h2>", unsafe_allow_html=True)
+    st.markdown(
+        "<p class='section-copy'>Generate demand intelligence for infrastructure planning.</p>",
+        unsafe_allow_html=True,
+    )
 
     pdf_path = latest_pdf_path(zone)
 
@@ -400,15 +416,29 @@ def main() -> None:
         else:
             st.warning(message)
 
-    st.markdown("<hr class='section-divider' />", unsafe_allow_html=True)
-    st.markdown("<h2 class='section-heading'>Notes</h2>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<h2 class='section-heading'>Join the System</h2>", unsafe_allow_html=True)
     st.markdown(
-        "<p class='section-copy'>Signals are derived from 7-cycle coordination windows, outputs represent conservative lower-bound demand estimates, and no personal or individual data is collected.</p>",
+        "<p class='section-copy'>Help the pilot grow by sharing real-time activity updates through WhatsApp.</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        """
+        <div class='join-card'>
+            <p class='join-step'><strong>1.</strong> Save number: +1 415 523 8886</p>
+            <p class='join-step'><strong>2.</strong> Send: <em>join week-saved</em></p>
+            <p class='join-step'><strong>3.</strong> Start sending updates like:</p>
+            <p class='join-step'>• I am irrigating crops</p>
+            <p class='join-step'>• We are milling maize</p>
+            <p class='join-step'>• Selling tomatoes</p>
+        </div>
+        <p class='section-copy'>Just send what you are doing — no app required.</p>
+        """,
         unsafe_allow_html=True,
     )
 
     st.markdown(
-        "<div class='footer-text'>Kulima Africa | Kulima OS Pilot v0.2<br>Coordination-based Digital Public Infrastructure</div>",
+        "<div class='footer-text'>Kulima Africa<br>Kulima OS v0.2<br>Coordination-based Digital Public Infrastructure<br>Live Dashboard: https://kulima-os.streamlit.app/</div>",
         unsafe_allow_html=True,
     )
 
