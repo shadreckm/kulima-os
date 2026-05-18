@@ -150,24 +150,145 @@ def interpret_coordination_trend(trend: str) -> str:
 def main() -> None:
     st.set_page_config(page_title="Kulima OS — Demand Signal Interface", layout="wide")
 
-    st.image("assets/kulima_africa_logo.png", width=140)
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.title("Kulima OS — Demand Signal Interface")
-    st.caption("Coordination-based infrastructure intelligence")
-    st.write(
-        "A focused interface for infrastructure planners, funders, and development partners to review verified demand signals."
+    st.markdown(
+        """
+        <style>
+        div.block-container {
+            padding: 1.75rem 2rem 3rem;
+            max-width: 1180px;
+            margin: auto;
+            background: #F8FAFC;
+        }
+        .title-block {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem 1.5rem 1rem;
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 24px;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+            margin-bottom: 1.25rem;
+        }
+        .title-block img {
+            border-radius: 18px;
+            box-shadow: 0 18px 35px rgba(46, 125, 50, 0.12);
+        }
+        .title-block h1 {
+            margin: 0;
+            color: #263238;
+            font-size: 3rem;
+            letter-spacing: -0.04em;
+        }
+        .title-block h2 {
+            margin: 0.2rem 0 0;
+            color: #263238;
+            font-size: 1.4rem;
+            font-weight: 500;
+        }
+        .title-block p {
+            margin: 0.75rem 0 0;
+            color: #4B5563;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        .section-heading {
+            color: #263238;
+            margin: 0;
+            font-size: 1.45rem;
+            font-weight: 700;
+        }
+        .section-copy {
+            color: #4B5563;
+            margin-top: 0.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.75;
+            max-width: 820px;
+        }
+        .section-divider {
+            height: 1px;
+            background: #E2E8F0;
+            margin: 1.5rem 0 2rem;
+            border: none;
+        }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-top: 1.25rem;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.4rem 1.5rem;
+            box-shadow: 0 24px 45px rgba(15, 23, 42, 0.08);
+            min-height: 150px;
+        }
+        .card-title {
+            margin: 0;
+            color: #263238;
+            font-size: 0.85rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            opacity: 0.75;
+        }
+        .card-value {
+            margin: 0.8rem 0 0;
+            color: #263238;
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.05;
+        }
+        .card-note {
+            margin: 0.65rem 0 0;
+            color: #2E7D32;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+        .footer-text {
+            color: #64748B;
+            font-size: 0.94rem;
+            line-height: 1.7;
+            text-align: center;
+            margin-top: 2.5rem;
+        }
+        button {
+            background: #F57C00 !important;
+            color: #ffffff !important;
+            border-radius: 999px !important;
+            border: none !important;
+            padding: 0.95rem 1.25rem !important;
+            font-weight: 700 !important;
+            box-shadow: 0 18px 40px rgba(245, 124, 0, 0.22) !important;
+        }
+        button:hover {
+            background: #dd6d03 !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
     )
 
-    with st.expander("How this works"):
-        st.write(
-            "This system translates daily community activity into coordination-based demand signals to support infrastructure planning."
-        )
+    st.image("assets/kulima_africa_logo.png", width=130)
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class='title-block'>
+            <div>
+                <h1>Kulima OS</h1>
+                <h2>Demand Signal Interface</h2>
+                <p>Coordination-based infrastructure intelligence</p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    st.divider()
-
-    st.markdown("## Overview")
-    st.write(
-        "Select a pilot zone and review the current coordination state, demand prospectus access, and institutional notes."
+    st.markdown("<p class='section-copy'>A high-integrity interface for infrastructure planners, development partners, and institutional decision-makers.</p>", unsafe_allow_html=True)
+    st.markdown("<hr class='section-divider' />", unsafe_allow_html=True)
+    st.markdown("<h2 class='section-heading'>Overview</h2>", unsafe_allow_html=True)
+    st.markdown(
+        "<p class='section-copy'>Select a pilot zone to review live coordination state, demand intelligence, and prospectus delivery.</p>",
+        unsafe_allow_html=True,
     )
     zone = st.radio(
         "Select pilot zone",
@@ -178,33 +299,58 @@ def main() -> None:
 
     summary = build_coordination_summary(zone)
 
-    st.divider()
-    st.markdown("## Coordination Status")
+    st.markdown("<hr class='section-divider' />", unsafe_allow_html=True)
+    st.markdown("<h2 class='section-heading'>Coordination Status</h2>", unsafe_allow_html=True)
 
     if summary["total_signals"] == 0:
-        st.warning("No coordination signals are recorded yet in this zone.")
-        st.write(
-            "The interface is ready to receive and aggregate signals once they are submitted through the pilot reporting channels."
+        st.warning("No validated coordination patterns detected in this zone.")
+        st.markdown(
+            "<p class='section-copy'>No coordination signals are recorded yet. The platform is ready to aggregate pilot data once it is submitted.</p>",
+            unsafe_allow_html=True,
         )
     else:
-        col1, col2, col3 = st.columns([2, 2, 2])
-        col1.metric("Coordination trend", summary["coordination_trend"])
-        col2.metric("Signals in current window", summary["signal_count"])
-        col3.metric("Stable patterns detected", summary["pattern_count"])
-
-        st.markdown(f"**Interpretation:** {interpret_coordination_trend(summary['coordination_trend'])}")
-        st.caption(
-            f"Zone {summary['zone']} · {summary['total_signals']} total signals on record · "
-            f"rolling {summary['window_days']}-day coordination window"
+        st.markdown(
+            f"""
+            <div class='card-grid'>
+                <div class='card'>
+                    <p class='card-title'>Coordination trend</p>
+                    <p class='card-value'>{summary['coordination_trend']}</p>
+                    <p class='card-note'>{interpret_coordination_trend(summary['coordination_trend'])}</p>
+                </div>
+                <div class='card'>
+                    <p class='card-title'>Signals in current window</p>
+                    <p class='card-value'>{summary['signal_count']}</p>
+                    <p class='card-note'>Live 7-cycle data powering decision-grade signals</p>
+                </div>
+                <div class='card'>
+                    <p class='card-title'>Stable patterns detected</p>
+                    <p class='card-value'>{summary['pattern_count']}</p>
+                    <p class='card-note'>Conservative coordination patterns available for prospectus generation</p>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
-    st.divider()
-    st.markdown("## Prospectus Access")
+        st.markdown(
+            f"<p class='section-copy'><strong>Interpretation:</strong> {interpret_coordination_trend(summary['coordination_trend'])}</p>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f"<p class='section-copy'>Zone {summary['zone']} · {summary['total_signals']} total signals on record · rolling {summary['window_days']}-day coordination window</p>",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<hr class='section-divider' />", unsafe_allow_html=True)
+    st.markdown("<h2 class='section-heading'>Prospectus</h2>", unsafe_allow_html=True)
 
     pdf_path = latest_pdf_path(zone)
 
     if pdf_path and pdf_path.is_file():
-        st.caption(f"Latest prospectus generated from folder: `{pdf_path.parent.name}`")
+        st.markdown(
+            f"<p class='section-copy'>Latest prospectus generated from folder: <strong>{pdf_path.parent.name}</strong></p>",
+            unsafe_allow_html=True,
+        )
         with open(pdf_path, "rb") as pdf_file:
             st.download_button(
                 label="Download Latest Demand Prospectus",
@@ -215,10 +361,11 @@ def main() -> None:
                 key=f"download_{summary['zone']}",
             )
     else:
-        st.info("No prospectus available yet for this zone.")
+        st.info("No validated coordination patterns detected in this zone.")
 
+    st.markdown("<br>", unsafe_allow_html=True)
     if st.button(
-        "Generate Prospectus",
+        "Generate Demand Prospectus",
         type="primary",
         use_container_width=True,
     ):
@@ -240,20 +387,16 @@ def main() -> None:
         else:
             st.warning(message)
 
-    st.divider()
-    st.markdown("## Notes")
-    st.markdown("""
-- Signals are derived from 7-cycle coordination windows  
-- Outputs represent conservative lower-bound demand estimates  
-- No personal or individual data is collected
-""")
+    st.markdown("<hr class='section-divider' />", unsafe_allow_html=True)
+    st.markdown("<h2 class='section-heading'>Notes</h2>", unsafe_allow_html=True)
+    st.markdown(
+        "<p class='section-copy'>Signals are derived from 7-cycle coordination windows, outputs represent conservative lower-bound demand estimates, and no personal or individual data is collected.</p>",
+        unsafe_allow_html=True,
+    )
 
-    st.divider()
-    st.caption(
-        """
-Kulima Africa | Kulima OS Pilot v0.2  
-Coordination-based Digital Public Infrastructure
-"""
+    st.markdown(
+        "<div class='footer-text'>Kulima Africa | Kulima OS Pilot v0.2<br>Coordination-based Digital Public Infrastructure</div>",
+        unsafe_allow_html=True,
     )
 
 
