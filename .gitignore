@@ -1,4 +1,5 @@
-__pycache__/ 
+# Python
+__pycache__/
 *.pyc 
 *.pyo 
 *.pyd 
@@ -7,10 +8,23 @@ __pycache__/
 .venv/ 
 venv/ 
 
+# Runtime data
+lumoza_signals.json
+lumoza_processing_*.json
+
 # Generated artifacts
 artifacts/
+*.pdf
+
 # Generated prospectus files
 lumoza_prospectus_*.json
 lumoza_prospectus_*.pdf
 demand_signal_prospectus*.json
 demand_signal_prospectus*.pdf
+
+# Environment variables
+.env
+
+# OS files
+.DS_Store
+Thumbs.db

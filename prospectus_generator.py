@@ -15,13 +15,18 @@ decisions based on collective demand patterns, not individual profiling.
 
 import json
 import os
-from typing import List, Dict
+from pathlib import Path
+from typing import List, Dict, Optional, Any
 from datetime import datetime
 from energy_demand_estimator import EnergyDemandEstimator
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
+
+_PDF_MARGIN = 72
+_PDF_FOOTER_Y = 40
+_PDF_CONTENT_WIDTH = letter[0] - 2 * _PDF_MARGIN
 
 
 class ProspectusGenerator:
@@ -40,10 +45,11 @@ class ProspectusGenerator:
         "storage": {"min_kwh": 5, "max_kwh": 20}
     }
     
-    def __init__(self, logo_path: str = "assets/kulima_africa_logo.png"):
+    def __init__(self, logo_path: Optional[str] = None):
         """Initialize prospectus generator with energy demand estimator."""
         self.energy_estimator = EnergyDemandEstimator()
-        self.logo_path = logo_path
+        default_logo = Path(__file__).resolve().parent / "assets" / "kulima_africa_logo.png"
+        self.logo_path = str(Path(logo_path) if logo_path else default_logo)
     
     def generate_prospectus(
         self,
@@ -158,7 +164,126 @@ class ProspectusGenerator:
         }
         
         return prospectus
-    
+
+    def _resolve_logo(self) -> Optional[Image]:
+        """Load centered logo at fixed aspect (80×80 pt)."""
+        path = Path(self.logo_path)
+        if not path.is_file():
+            alt = Path("assets/kulima_africa_logo.png")
+            if alt.is_file():
+                path = alt
+            else:
+                return None
+        try:
+            logo = Image(str(path))
+            logo.drawWidth = 80
+            logo.drawHeight = 80
+            logo.hAlign = "CENTER"
+            return logo
+        except Exception:
+            return None
+
+    def _pdf_styles(self) -> Dict[str, ParagraphStyle]:
+        base = getSampleStyleSheet()
+        return {
+            "title": ParagraphStyle(
+                "ProspectusTitle",
+                parent=base["Title"],
+                fontName="Helvetica-Bold",
+                fontSize=24,
+                leading=30,
+                alignment=1,
+                spaceAfter=6,
+                textColor=colors.HexColor("#003366"),
+            ),
+            "subtitle": ParagraphStyle(
+                "ProspectusSubtitle",
+                parent=base["Heading1"],
+                fontName="Helvetica",
+                fontSize=16,
+                leading=20,
+                alignment=1,
+                spaceAfter=4,
+                textColor=colors.HexColor("#003366"),
+            ),
+            "section": ParagraphStyle(
+                "ProspectusSection",
+                parent=base["Heading2"],
+                fontName="Helvetica-Bold",
+                fontSize=14,
+                leading=18,
+                spaceBefore=8,
+                spaceAfter=12,
+                textColor=colors.HexColor("#003366"),
+            ),
+            "body": ParagraphStyle(
+                "ProspectusBody",
+                parent=base["BodyText"],
+                fontName="Helvetica",
+                fontSize=11,
+                leading=16,
+                spaceAfter=6,
+            ),
+            "note": ParagraphStyle(
+                "ProspectusNote",
+                parent=base["BodyText"],
+                fontName="Helvetica",
+                fontSize=9,
+                leading=13,
+                textColor=colors.HexColor("#555555"),
+                spaceAfter=4,
+            ),
+            "high_conf": ParagraphStyle(
+                "ProspectusHighConf",
+                parent=base["Normal"],
+                fontName="Helvetica-Bold",
+                fontSize=11,
+                leading=16,
+                textColor=colors.HexColor("#2E8B57"),
+            ),
+        }
+
+    def _standard_table_style(self) -> TableStyle:
+        return TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#003366")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 10),
+            ("FONTSIZE", (0, 1), (-1, -1), 10),
+            ("TOPPADDING", (0, 0), (-1, -1), 10),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#F5F7FA"), colors.white]),
+            ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CCCCCC")),
+            ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor("#003366")),
+        ])
+
+    def _make_table(
+        self,
+        rows: List[List[Any]],
+        col_widths: Optional[List[float]] = None,
+    ) -> Table:
+        if col_widths is None:
+            n = len(rows[0])
+            col_widths = [_PDF_CONTENT_WIDTH / n] * n
+        table = Table(rows, colWidths=col_widths, hAlign="LEFT", repeatRows=1)
+        table.setStyle(self._standard_table_style())
+        return table
+
+    def _section_break(self, height: float = 20) -> Spacer:
+        return Spacer(1, height)
+
+    def _add_footer(self, canvas, doc) -> None:
+        canvas.saveState()
+        canvas.setFont("Helvetica", 9)
+        canvas.setFillColor(colors.HexColor("#666666"))
+        footer_text = f"Kulima Africa | Kulima OS Pilot v0.2 | Page {doc.page}"
+        canvas.drawCentredString(letter[0] / 2, _PDF_FOOTER_Y, footer_text)
+        canvas.restoreState()
+
     def generate_pdf(self, prospectus: Dict, output_path: str):
         """
         Generate a PDF version of the Demand-Signal Prospectus.
@@ -167,258 +292,237 @@ class ProspectusGenerator:
             prospectus: The prospectus dictionary generated by generate_prospectus
             output_path: Path to save the PDF file
         """
-        doc = SimpleDocTemplate(output_path, pagesize=letter,
-                                leftMargin=40, rightMargin=40,
-                                topMargin=50, bottomMargin=55)
-        styles = getSampleStyleSheet()
-        
-        title_style = ParagraphStyle(
-            'Title', parent=styles['Title'], fontName='Helvetica-Bold', fontSize=20,
-            leading=24, alignment=1, textColor=colors.HexColor('#003366'))
-        subtitle_style = ParagraphStyle(
-            'Subtitle', parent=styles['Heading2'], fontName='Helvetica', fontSize=14,
-            leading=18, alignment=1, textColor=colors.HexColor('#003366'))
-        section_style = ParagraphStyle(
-            'Section', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=14,
-            leading=18, spaceAfter=10, textColor=colors.HexColor('#003366'))
-        body_style = ParagraphStyle(
-            'Body', parent=styles['BodyText'], fontName='Helvetica', fontSize=11,
-            leading=14)
-        note_style = ParagraphStyle(
-            'Note', parent=styles['BodyText'], fontName='Helvetica', fontSize=9,
-            leading=12, textColor=colors.grey)
-        high_conf_style = ParagraphStyle(
-            'HighConf', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=11,
-            textColor=colors.HexColor('#2E8B57'))
-        italic_style = ParagraphStyle(
-            'Italic', parent=styles['Italic'], fontName='Helvetica-Oblique', fontSize=10,
-            leading=12)
-
+        doc = SimpleDocTemplate(
+            output_path,
+            pagesize=letter,
+            leftMargin=_PDF_MARGIN,
+            rightMargin=_PDF_MARGIN,
+            topMargin=_PDF_MARGIN,
+            bottomMargin=_PDF_MARGIN + 12,
+        )
+        st = self._pdf_styles()
+        body = st["body"]
+        note = st["note"]
+        high_conf = st["high_conf"]
+        half_w = _PDF_CONTENT_WIDTH / 2
         story = []
 
-        if self.logo_path and os.path.exists(self.logo_path):
-            try:
-                logo = Image(self.logo_path, width=80, height=80)
-                logo.hAlign = 'CENTER'
-                story.append(logo)
-                story.append(Spacer(1, 18))
-            except Exception:
-                pass
+        logo = self._resolve_logo()
+        if logo:
+            story.append(logo)
+            story.append(self._section_break(24))
 
-        story.append(Paragraph('KULIMA OS', title_style))
-        story.append(Spacer(1, 8))
-        story.append(Paragraph('Demand-Signal Prospectus', subtitle_style))
-        story.append(Spacer(1, 12))
-        story.append(Paragraph('Institutional Planning Artifact', ParagraphStyle('ArtifactLabel', parent=body_style, fontName='Helvetica-Bold', fontSize=11, alignment=1)))
-        story.append(Spacer(1, 4))
-        story.append(Paragraph('Pilot Demonstration', body_style))
-        story.append(Paragraph('Not a Financing Approval', note_style))
-        story.append(Spacer(1, 20))
-        story.append(Paragraph(f"Generated: {prospectus['prospectus_metadata']['generated_at']}", body_style))
-        story.append(Paragraph(f"Pilot Region: {prospectus['prospectus_metadata']['pilot_region']}", body_style))
-        story.append(Paragraph(f"Evaluation Period: {prospectus['prospectus_metadata']['evaluation_period']}", body_style))
-        story.append(Paragraph(f"System Version: {prospectus['prospectus_metadata']['system_version']}", body_style))
-        story.append(Spacer(1, 28))
+        meta = prospectus["prospectus_metadata"]
+        story.append(Paragraph("KULIMA OS", st["title"]))
+        story.append(self._section_break(10))
+        story.append(Paragraph("Demand-Signal Prospectus", st["subtitle"]))
+        story.append(self._section_break(16))
+        story.append(Paragraph(
+            '<b>Institutional Planning Artifact</b> &nbsp;|&nbsp; Pilot Demonstration',
+            ParagraphStyle("CoverLine", parent=body, fontSize=11, alignment=1, leading=15),
+        ))
+        story.append(Paragraph("Not a Financing Approval", note))
+        story.append(self._section_break(24))
+        story.append(self._make_table([
+            ["Field", "Value"],
+            ["Generated", meta["generated_at"]],
+            ["Pilot Region", meta["pilot_region"]],
+            ["Evaluation Period", meta["evaluation_period"]],
+            ["System Version", meta["system_version"]],
+        ], [180, _PDF_CONTENT_WIDTH - 180]))
+        story.append(self._section_break(28))
 
-        story.append(Paragraph('What This Document Enables / What It Does Not Do', section_style))
-        scope = prospectus['document_scope']
-        scope_data = [
-            ['Enables', 'Does Not Do'],
-            [Paragraph('• ' + '<br/>• '.join(scope['enables']), body_style),
-             Paragraph('• ' + '<br/>• '.join(scope['does_not_do']), body_style)]
-        ]
-        scope_table = Table(scope_data, colWidths=[250, 250], hAlign='LEFT')
-        scope_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#003366')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
-            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('BOX', (0, 0), (-1, -1), 0.75, colors.grey)
-        ]))
-        story.append(scope_table)
-        story.append(Spacer(1, 28))
+        scope = prospectus["document_scope"]
+        story.append(Paragraph("Document Scope", st["section"]))
+        story.append(self._make_table([
+            ["Enables", "Does Not Do"],
+            [
+                Paragraph("<br/>".join(f"• {x}" for x in scope["enables"]), body),
+                Paragraph("<br/>".join(f"• {x}" for x in scope["does_not_do"]), body),
+            ],
+        ], [half_w, half_w]))
+        story.append(self._section_break(8))
+        story.append(Paragraph(scope["estimate_nature"], note))
+        story.append(self._section_break(28))
 
-        story.append(Paragraph('Executive Overview', section_style))
-        summary = prospectus['executive_summary']
-        summary_data = [
-            ['Metric', 'Value'],
-            ['Total Coordination Patterns', str(summary['total_coordination_patterns'])],
-            ['High Confidence Patterns', str(summary['high_confidence_patterns'])],
-            ['Moderate Confidence Patterns', str(summary['moderate_confidence_patterns'])],
-            ['Zones with Coordinated Demand', ', '.join(summary['zones_with_coordinated_demand'])],
-            ['Productive Activities Detected', ', '.join(summary['productive_activities_detected'])]
-        ]
-        summary_table = Table(summary_data, colWidths=[200, 300], hAlign='LEFT')
-        summary_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#003366')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
-            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('BOX', (0, 0), (-1, -1), 0.75, colors.grey)
-        ]))
-        story.append(summary_table)
-        story.append(Spacer(1, 12))
-        story.append(Paragraph(summary['key_finding'], body_style))
-        story.append(Spacer(1, 24))
+        summary = prospectus["executive_summary"]
+        story.append(Paragraph("Executive Overview", st["section"]))
+        story.append(self._make_table([
+            ["Metric", "Value"],
+            ["Total Coordination Patterns", str(summary["total_coordination_patterns"])],
+            ["High Confidence Patterns", str(summary["high_confidence_patterns"])],
+            ["Moderate Confidence Patterns", str(summary["moderate_confidence_patterns"])],
+            ["Zones with Coordinated Demand", ", ".join(summary["zones_with_coordinated_demand"]) or "—"],
+            ["Productive Activities", ", ".join(summary["productive_activities_detected"]) or "—"],
+        ], [200, _PDF_CONTENT_WIDTH - 200]))
+        story.append(self._section_break(12))
+        story.append(Paragraph(summary["key_finding"], body))
+        story.append(self._section_break(28))
 
-        story.append(Paragraph('Coordination Summary', section_style))
-        coordination_data = [
-            ['Metric', 'Summary'],
-            ['Zones with Coordinated Demand', ', '.join(summary['zones_with_coordinated_demand'])],
-            ['Productive Activities', ', '.join(summary['productive_activities_detected'])],
-            ['High Confidence Patterns', str(summary['high_confidence_patterns'])],
-            ['Moderate Confidence Patterns', str(summary['moderate_confidence_patterns'])],
-        ]
-        coordination_table = Table(coordination_data, colWidths=[200, 300], hAlign='LEFT')
-        coordination_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#003366')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
-            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('BOX', (0, 0), (-1, -1), 0.75, colors.grey)
-        ]))
-        story.append(coordination_table)
-        story.append(Spacer(1, 24))
-
-        story.append(Paragraph('Verified Coordination Patterns', section_style))
-        patterns = prospectus['coordination_patterns']
+        patterns = prospectus["coordination_patterns"]
+        story.append(Paragraph("Verified Coordination Patterns", st["section"]))
         if patterns:
-            data = [['Activity Type', 'Zone', 'Confidence Class', 'Stability Score']]
+            pat_rows = [["Activity", "Zone", "Time Window", "Confidence", "Stability"]]
             for p in patterns:
-                conf_style = high_conf_style if p['confidence_class'] == 'high' else body_style
-                data.append([Paragraph(p['activity_type'], conf_style), p['zone'], p['confidence_class'], str(p['stability_score'])])
-            pattern_table = Table(data, colWidths=[150, 100, 140, 100], hAlign='LEFT')
-            pattern_table.setStyle(TableStyle([
-                ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#003366')),
-                ('TEXTCOLOR',(0,0),(-1,0),colors.white),
-                ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-                ('VALIGN', (0,0),(-1,-1), 'MIDDLE'),
-                ('ALIGN',(0,0),(-1,-1),'CENTER'),
-                ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.whitesmoke]),
-                ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('BOX', (0, 0), (-1, -1), 0.75, colors.grey)
-            ]))
-            story.append(pattern_table)
-        story.append(Spacer(1, 24))
-
-        story.append(Paragraph('Energy Signal Output', section_style))
-        signals = prospectus['energy_signals']
-        if signals:
-            data = [['Zone', 'Activities', 'Min kWh', 'Max kWh', 'Peak kW', 'Confidence', 'Buffer kW']]
-            for s in signals:
-                activities_str = ', '.join(s['activities'])
-                buffered = s['peak_kw_estimate'] * 1.25
-                conf_style = high_conf_style if s['confidence_score'] == 'HIGH' else body_style
-                data.append([
-                    s['zone'],
-                    Paragraph(activities_str, body_style),
-                    str(s['estimated_min_kwh']),
-                    str(s['estimated_max_kwh']),
-                    f"{s['peak_kw_estimate']:.1f}",
-                    Paragraph(s['confidence_score'], conf_style),
-                    f"{buffered:.1f}"
+                act_style = high_conf if p.get("confidence_class") == "high" else body
+                rhythm = p.get("demand_rhythm", {})
+                pat_rows.append([
+                    Paragraph(p["activity_type"], act_style),
+                    p["zone"],
+                    rhythm.get("time_window", "—"),
+                    p.get("confidence_class", "—"),
+                    str(p.get("stability_score", "—")),
                 ])
-            energy_table = Table(data, colWidths=[70, 190, 60, 60, 60, 70, 70], hAlign='LEFT')
-            energy_table.setStyle(TableStyle([
-                ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#003366')),
-                ('TEXTCOLOR',(0,0),(-1,0),colors.white),
-                ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-                ('VALIGN', (0,0),(-1,-1), 'MIDDLE'),
-                ('ALIGN',(2,0),(-1,-1),'CENTER'),
-                ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.whitesmoke]),
-                ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('BOX', (0, 0), (-1, -1), 0.75, colors.grey)
-            ]))
-            story.append(energy_table)
-            story.append(Spacer(1, 6))
-            story.append(Paragraph('Recommended installed capacity includes a 25% planning buffer.', note_style))
-        story.append(Spacer(1, 24))
+            cw = _PDF_CONTENT_WIDTH / 5
+            story.append(self._make_table(pat_rows, [cw * 1.2, cw * 0.8, cw * 1.1, cw * 1.0, cw * 0.9]))
+        else:
+            story.append(Paragraph("No stable patterns in this evaluation window.", note))
+        story.append(self._section_break(28))
 
-        story.append(Paragraph('Confidence, Risk & Governance', section_style))
-        story.append(Paragraph('Confidence scores are based on stability, frequency, and coordination density to support conservative infrastructure planning.', body_style))
-        story.append(Spacer(1, 12))
-        confidence_data = [
-            ['Confidence Tier', 'Interpretation'],
-            ['HIGH (>0.7)', 'Strong coordination signals, recommended for planning and phased deployment.'],
-            ['MEDIUM (0.4-0.7)', 'Moderate coordination signals, requires ongoing monitoring.'],
-            ['LOW (<0.4)', 'Emerging signals, not yet suitable for infrastructure sizing.']
-        ]
-        confidence_table = Table(confidence_data, colWidths=[120, 380], hAlign='LEFT')
-        confidence_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#003366')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
-            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('BOX', (0, 0), (-1, -1), 0.75, colors.grey)
-        ]))
-        story.append(confidence_table)
-        story.append(Spacer(1, 24))
+        story.append(Paragraph("Energy Signal Output", st["section"]))
+        energy_signals = prospectus["energy_signals"]
+        if energy_signals:
+            e_rows = [["Zone", "Activities", "Min kWh", "Max kWh", "Peak kW", "Confidence", "Buffered kW"]]
+            for s in energy_signals:
+                conf_style = high_conf if s["confidence_score"] == "HIGH" else body
+                e_rows.append([
+                    s["zone"],
+                    Paragraph(", ".join(s["activities"]), body),
+                    str(s["estimated_min_kwh"]),
+                    str(s["estimated_max_kwh"]),
+                    f"{s['peak_kw_estimate']:.1f}",
+                    Paragraph(s["confidence_score"], conf_style),
+                    f"{s['peak_kw_estimate'] * 1.25:.1f}",
+                ])
+            ew = _PDF_CONTENT_WIDTH / 7
+            story.append(self._make_table(e_rows, [ew] * 7))
+            story.append(self._section_break(8))
+            story.append(Paragraph(
+                "Recommended installed capacity includes a 25% planning buffer (conservative lower bound).",
+                note,
+            ))
+        story.append(self._section_break(28))
 
-        risk = prospectus['risk_and_governance']
-        risk_data = [
-            ['Risk Area', 'Summary'],
-            ['Confidence Distribution', f"High: {risk['demand_uncertainty_quantification']['confidence_distribution']['high_confidence_patterns']}; Moderate: {risk['demand_uncertainty_quantification']['confidence_distribution']['moderate_confidence_patterns']}; Low: {risk['demand_uncertainty_quantification']['confidence_distribution']['low_confidence_patterns']}"] ,
-            ['Demand Uncertainty', risk['demand_uncertainty_quantification']['demand_uncertainty_range']['conservative_estimate']],
-            ['Governance Approach', 'Transparent allocation, essential service protection, and phased deployment']
-        ]
-        risk_table = Table(risk_data, colWidths=[160, 340], hAlign='LEFT')
-        risk_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#003366')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
-            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('BOX', (0, 0), (-1, -1), 0.75, colors.grey)
-        ]))
-        story.append(risk_table)
-        story.append(Spacer(1, 24))
+        load_est = prospectus.get("load_estimation", {})
+        if load_est.get("total_system_demand"):
+            story.append(Paragraph("Load Estimation Summary", st["section"]))
+            total = load_est["total_system_demand"]
+            ess = load_est.get("demand_breakdown", {}).get("essential_services", {})
+            prod = load_est.get("demand_breakdown", {}).get("productive_activities", {})
+            cap = load_est.get("capacity_planning_guidance", {})
+            story.append(self._make_table([
+                ["Measure", "Value"],
+                ["Peak Demand (kW)", f"{total.get('peak_demand_kw', '—')}"],
+                ["Daily Energy (kWh)", f"{total.get('daily_energy_kwh', '—')}"],
+                ["Essential Services Peak (kW)", f"{ess.get('peak_kw', '—')}"],
+                ["Productive Activities Peak (kW)", f"{prod.get('peak_kw', '—')}"],
+                ["Recommended Capacity (kW)", f"{cap.get('recommended_capacity_kw', '—')}"],
+            ], [220, _PDF_CONTENT_WIDTH - 220]))
+            story.append(self._section_break(28))
 
-        story.append(Paragraph('Critical Load Protection', section_style))
-        clp = prospectus['critical_load_protection']
-        story.append(Paragraph(f"Capacity Reservation: {clp['capacity_reservation']['percentage']}%", body_style))
-        story.append(Paragraph(clp['capacity_reservation']['rationale'], body_style))
-        story.append(Spacer(1, 24))
+        story.append(Paragraph("Confidence & Risk", st["section"]))
+        story.append(self._make_table([
+            ["Confidence Tier", "Interpretation"],
+            ["HIGH (>0.7)", "Strong coordination — suitable for phased infrastructure planning."],
+            ["MEDIUM (0.4–0.7)", "Moderate coordination — monitor and corroborate before sizing."],
+            ["LOW (<0.4)", "Emerging signals — not yet suitable for capacity commitment."],
+        ], [130, _PDF_CONTENT_WIDTH - 130]))
+        story.append(self._section_break(16))
+        risk = prospectus["risk_and_governance"]
+        dist = risk["demand_uncertainty_quantification"]["confidence_distribution"]
+        story.append(self._make_table([
+            ["Risk Area", "Summary"],
+            ["Confidence Distribution",
+             f"High: {dist['high_confidence_patterns']}; "
+             f"Moderate: {dist['moderate_confidence_patterns']}; "
+             f"Low: {dist['low_confidence_patterns']}"],
+            ["Demand Uncertainty",
+             risk["demand_uncertainty_quantification"]["demand_uncertainty_range"]["conservative_estimate"]],
+            ["Governance", "Transparent allocation, essential-service protection, phased deployment"],
+        ], [160, _PDF_CONTENT_WIDTH - 160]))
+        story.append(self._section_break(28))
 
-        story.append(Paragraph('System Invariants', section_style))
-        ethics = prospectus['ethics_compliance']
-        for invariant in ethics['system_invariants']:
-            story.append(Paragraph(f"• {invariant}", body_style))
-        story.append(Spacer(1, 12))
-        story.append(Paragraph('Verification: ' + ethics['verification'], body_style))
-        story.append(Spacer(1, 12))
-        story.append(Paragraph('Processing Pipeline', section_style))
-        for step in prospectus['methodology']['processing_pipeline']:
-            story.append(Paragraph(f"• {step}", body_style))
-        story.append(Spacer(1, 24))
+        clp = prospectus["critical_load_protection"]
+        story.append(Paragraph("Critical Load Protection", st["section"]))
+        story.append(self._make_table([
+            ["Parameter", "Detail"],
+            ["Capacity Reservation", f"{clp['capacity_reservation']['percentage']}%"],
+            ["Rationale", Paragraph(clp["capacity_reservation"]["rationale"], body)],
+            ["Enforcement", clp["capacity_reservation"]["enforcement"]],
+            ["Essential Patterns", str(clp.get("essential_service_count", 0))],
+            ["Productive Patterns", str(clp.get("productive_activity_count", 0))],
+        ], [160, _PDF_CONTENT_WIDTH - 160]))
+        scenarios = clp.get("scenario_analysis", {})
+        if scenarios:
+            story.append(self._section_break(12))
+            scen_rows = [["Scenario", "Essential Load %", "Available for Productive %"]]
+            for name, data in scenarios.items():
+                scen_rows.append([
+                    name.capitalize(),
+                    f"{data.get('essential_load_percentage', '—')}%",
+                    f"{data.get('available_for_productive_use', '—')}%",
+                ])
+            story.append(self._make_table(scen_rows, [120, 174, 174]))
+        story.append(self._section_break(28))
 
-        story.append(Paragraph('Technical Notes', section_style))
-        story.append(Paragraph('This document is intended as a decision-support artifact for planners and does not replace detailed engineering studies or financing approvals.', note_style))
-        story.append(Spacer(1, 28))
+        deploy = prospectus.get("deployment_readiness", {})
+        readiness = deploy.get("readiness_assessment", {}) if deploy else {}
+        if readiness:
+            story.append(Paragraph("Deployment Readiness", st["section"]))
+            story.append(self._make_table([
+                ["Criterion", "Assessment"],
+                ["Overall Readiness", readiness.get("overall_readiness", "—")],
+                ["Technical Readiness", readiness.get("technical_readiness", "—")],
+                ["Financial Readiness", readiness.get("financial_readiness", "—")],
+                ["Institutional Readiness", readiness.get("institutional_readiness", "—")],
+                ["Community Readiness", readiness.get("community_readiness", "—")],
+            ], [160, _PDF_CONTENT_WIDTH - 160]))
+            next_steps = deploy.get("next_steps_for_deployment", [])[:5]
+            if next_steps:
+                story.append(self._section_break(12))
+                step_rows = [["Step", "Action"]]
+                for i, step in enumerate(next_steps, 1):
+                    step_rows.append([str(i), Paragraph(step, body)])
+                story.append(self._make_table(step_rows, [40, _PDF_CONTENT_WIDTH - 40]))
+            story.append(self._section_break(28))
+
+        guidance = prospectus.get("infrastructure_planning_guidance", {})
+        if guidance:
+            story.append(Paragraph("Infrastructure Planning Guidance", st["section"]))
+            story.append(self._make_table([
+                ["Category", "Detail"],
+                ["High Priority Zones", ", ".join(guidance.get("high_priority_zones", [])) or "—"],
+                ["Moderate Priority Zones", ", ".join(guidance.get("moderate_priority_zones", [])) or "—"],
+                ["Investment Recommendation", Paragraph(guidance.get("investment_recommendation", "—"), body)],
+                ["Capacity Planning", Paragraph(guidance.get("capacity_planning_note", "—"), body)],
+            ], [160, _PDF_CONTENT_WIDTH - 160]))
+            story.append(self._section_break(28))
+
+        story.append(Paragraph("Ethics & Methodology", st["section"]))
+        ethics = prospectus["ethics_compliance"]
+        inv_rows = [["System Invariant", "Status"]]
+        for invariant in ethics["system_invariants"]:
+            inv_rows.append([Paragraph(invariant, body), "Enforced"])
+        story.append(self._make_table(inv_rows, [340, _PDF_CONTENT_WIDTH - 340]))
+        story.append(self._section_break(12))
+        story.append(Paragraph(ethics["verification"], note))
+        story.append(self._section_break(12))
+        pipe_rows = [["Step", "Process Stage"]]
+        for i, step in enumerate(prospectus["methodology"]["processing_pipeline"], 1):
+            pipe_rows.append([str(i), step])
+        story.append(self._make_table(pipe_rows, [50, _PDF_CONTENT_WIDTH - 50]))
+        story.append(self._section_break(28))
+
+        story.append(Paragraph("Technical Notes", st["section"]))
+        story.append(Paragraph(
+            "This document is a decision-support artifact for utilities and development finance institutions. "
+            "It does not replace detailed engineering studies, environmental assessments, or financing approvals.",
+            note,
+        ))
+        story.append(self._section_break(20))
 
         doc.build(story, onFirstPage=self._add_footer, onLaterPages=self._add_footer)
 
-    def _add_footer(self, canvas, doc):
-        footer_text = f"Kulima Africa | Kulima OS Pilot v0.2 | Page {doc.page}"
-        canvas.saveState()
-        canvas.setFont('Helvetica', 8)
-        canvas.setFillColor(colors.grey)
-        canvas.drawString(40, 20, footer_text)
-        canvas.restoreState()
-    
     def compute_energy_signal(self, coordination_patterns: List[Dict]) -> List[Dict]:
         """
         Compute energy demand signals from coordination patterns.
@@ -690,6 +794,11 @@ class ProspectusGenerator:
             'cold_storage': f"Requires continuous {time_window} power for cold chain. Critical for food security.",
             'welding': f"Requires high-power {time_window} capacity for metalwork. Industrial load profile."
         }
+        return implications.get(
+            activity,
+            f"Coordination pattern ({confidence} confidence) in {time_window} window — site-specific sizing required.",
+        )
+
     def _generate_load_estimation(self, confidence_results: List[Dict]) -> Dict:
         """
         Generate conservative energy demand estimates for all coordination patterns.
@@ -1082,16 +1191,6 @@ class ProspectusGenerator:
         
         return deployment_readiness
 
-        
-        base_implication = implications.get(activity, f"Productive use demand in {time_window} window.")
-        
-        if confidence == 'high':
-            return f"{base_implication} HIGH PRIORITY for infrastructure investment."
-        elif confidence == 'moderate':
-            return f"{base_implication} MODERATE PRIORITY. Monitor for stability."
-        else:
-            return f"{base_implication} LOW PRIORITY. Requires further validation."
-    
     def _generate_planning_guidance(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
         """Generate infrastructure planning guidance with LUNDAI integration."""
         
@@ -1536,7 +1635,8 @@ if __name__ == "__main__":
     # Save in both formats
     generator.save_prospectus_json(prospectus)
     generator.save_prospectus_markdown(prospectus)
+    generator.generate_pdf(prospectus, "demand_signal_prospectus.pdf")
     
-    print("\n[SUCCESS] Demand-Signal Prospectus generated successfully")
+    print("\n[SUCCESS] Demand-Signal Prospectus generated successfully (JSON, Markdown, PDF)")
 
 # Made with Bob

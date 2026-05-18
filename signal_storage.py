@@ -40,6 +40,9 @@ class SignalStorage:
     
     def get_signals(self, zone: Optional[str] = None, processed: bool = False) -> List[Signal]:
         raise NotImplementedError
+
+    def get_all_signals(self) -> List[Signal]:
+        raise NotImplementedError
     
     def mark_processed(self, signal_id: str) -> bool:
         raise NotImplementedError
@@ -68,17 +71,26 @@ class JsonSignalStorage(SignalStorage):
             print(f"Error adding signal: {e}")
             return False
     
+    def get_all_signals(self) -> List[Signal]:
+        """Retrieve every stored signal (for time-window aggregation)."""
+        try:
+            signals_data = self._read_signals()
+            return [Signal(**s) for s in signals_data]
+        except Exception as e:
+            print(f"Error retrieving signals: {e}")
+            return []
+
     def get_signals(self, zone: Optional[str] = None, processed: bool = False) -> List[Signal]:
         """Retrieve signals from storage."""
         try:
-            signals_data = self._read_signals()
-            signals = [Signal(**s) for s in signals_data]
+            from zone_utils import normalize_zone
+
+            signals = self.get_all_signals()
             
-            # Filter by zone if specified
             if zone:
-                signals = [s for s in signals if s.zone == zone.upper().replace(" ", "_")]
+                zone_key = normalize_zone(zone)
+                signals = [s for s in signals if normalize_zone(s.zone) == zone_key]
             
-            # Filter by processed status
             signals = [s for s in signals if s.processed == processed]
             
             return signals
@@ -153,15 +165,28 @@ class SqliteSignalStorage(SignalStorage):
             print(f"Error adding signal: {e}")
             return False
     
+    def get_all_signals(self) -> List[Signal]:
+        """Retrieve every stored signal."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.execute("SELECT * FROM signals")
+                columns = [desc[0] for desc in cursor.description]
+                return [Signal(**dict(zip(columns, row))) for row in cursor.fetchall()]
+        except Exception as e:
+            print(f"Error retrieving signals: {e}")
+            return []
+
     def get_signals(self, zone: Optional[str] = None, processed: bool = False) -> List[Signal]:
         """Retrieve signals from database."""
         try:
+            from zone_utils import normalize_zone
+
             query = "SELECT * FROM signals WHERE processed = ?"
             params = [processed]
             
             if zone:
                 query += " AND zone = ?"
-                params.append(zone.upper().replace(" ", "_"))
+                params.append(normalize_zone(zone))
             
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.execute(query, params)
@@ -194,8 +219,8 @@ class SqliteSignalStorage(SignalStorage):
 default_storage = JsonSignalStorage("lumoza_signals.json")
 
 
-def store_signal(activity_type: str, zone: str, frequency: str, actors: Optional[int] = None, 
-                 raw_message: str = "", user_phone: str = "") -> str:
+def store_signal(activity_type: str, zone: str, frequency: str, actors: Optional[int] = None,
+                 raw_message: str = "", user_phone: str = "", confidence: float = 0.8) -> str:
     """
     Convenience function to store a signal.
     
@@ -210,8 +235,12 @@ def store_signal(activity_type: str, zone: str, frequency: str, actors: Optional
     Returns:
         Signal ID if successful
     """
-    signal_id = f"{zone}_{activity_type}_{datetime.utcnow().isoformat()}"
-    
+    from zone_utils import normalize_zone
+
+    zone = normalize_zone(zone)
+    ts = datetime.utcnow().isoformat()
+    signal_id = f"{zone}_{activity_type}_{ts}"
+
     signal = Signal(
         signal_id=signal_id,
         activity_type=activity_type,
@@ -219,8 +248,8 @@ def store_signal(activity_type: str, zone: str, frequency: str, actors: Optional
         frequency=frequency,
         actors=actors,
         raw_message=raw_message,
-        confidence=0.8,
-        timestamp=datetime.utcnow().isoformat(),
+        confidence=confidence,
+        timestamp=ts,
         user_phone=user_phone,
         processed=False
     )

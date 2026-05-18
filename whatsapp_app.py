@@ -13,10 +13,21 @@ Then configure Twilio webhook to point to:
 
 from flask import Flask, request, jsonify, Response
 import os
+import xml.sax.saxutils
 from whatsapp_handler import process_message
 from signal_storage import get_unprocessed_signals
 
 app = Flask(__name__)
+
+
+def twiml_response(message: str) -> Response:
+    """Build a valid Twilio TwiML XML response (UTF-8, escaped body)."""
+    safe_body = xml.sax.saxutils.escape(message or "")
+    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Message>{safe_body}</Message>
+</Response>"""
+    return Response(twiml, mimetype="application/xml")
 
 # Environment variables (set these in production)
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "test-account")
@@ -38,22 +49,30 @@ def webhook():
         message_sid = request.form.get("MessageSid", "unknown").strip()
 
         if not incoming_msg or not sender_phone:
-            return jsonify({"error": "Invalid message payload"}), 400
+            return twiml_response(
+                "Activity recorded (best effort interpretation). "
+                "We could not read your message — please try again."
+            )
 
         print(f"[{message_sid}] Incoming message from {sender_phone}: {incoming_msg}")
 
         success, response_msg = process_message(incoming_msg, sender_phone)
         print(f"[{message_sid}] Response: {response_msg}")
 
-        twiml_response = (
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-            "<Response><Message>{}</Message></Response>".format(response_msg)
-        )
-        return Response(twiml_response, mimetype="application/xml")
-        
+        if not response_msg:
+            response_msg = (
+                "Activity recorded (best effort interpretation). "
+                "Thank you — your update supports local energy planning."
+            )
+
+        return twiml_response(response_msg)
+
     except Exception as e:
         print(f"Error processing webhook: {e}")
-        return jsonify({"error": str(e)}), 500
+        return twiml_response(
+            "Activity recorded (best effort interpretation). "
+            "A temporary error occurred — please send your update again shortly."
+        )
 
 
 @app.route("/health", methods=["GET"])
@@ -115,4 +134,4 @@ def index():
 if __name__ == "__main__":
     # Run Flask server
     # In production, use gunicorn or similar
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)

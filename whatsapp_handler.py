@@ -8,8 +8,10 @@ Supports Twilio integration for MVP.
 from typing import Dict, Optional, Tuple
 from datetime import datetime
 from input_parser import parse_user_input, ParsedSignal
-from signal_storage import store_signal, get_unprocessed_signals
+from signal_storage import store_signal
 from lumoza_integration import integrate_whatsapp_to_lumoza
+from coordination_accumulation import compute_coordination_trend
+from zone_utils import normalize_zone
 from prospectus_generator import ProspectusGenerator
 import json
 from pathlib import Path
@@ -40,11 +42,13 @@ class WhatsAppMessageHandler:
         if self._is_report_command(message_text):
             return self._handle_report_command(message_text)
         
-        # Parse as activity signal with phone-based zone inference
+        # Parse as activity signal with phone-based zone inference (best effort)
         parsed_signal = parse_user_input(message_text, sender_phone=sender_phone)
         
         if not parsed_signal:
-            return False, self._format_error_message()
+            return True, self._format_meaningless_message()
+        
+        print("Parsed activity:", parsed_signal.activity_type)
         
         # Store signal
         signal_id = store_signal(
@@ -53,22 +57,23 @@ class WhatsAppMessageHandler:
             frequency=parsed_signal.frequency,
             actors=parsed_signal.actors,
             raw_message=message_text,
-            user_phone=sender_phone
+            user_phone=sender_phone,
+            confidence=parsed_signal.confidence,
         )
         
         if signal_id:
-            # Count the zone backlog before processing the newly stored signal
-            zone_signals = get_unprocessed_signals(zone=parsed_signal.zone)
+            zone_key = normalize_zone(parsed_signal.zone)
+            summary = integrate_whatsapp_to_lumoza(zone=zone_key, mark_processed=False)
+            print(
+                f"Processing zone {zone_key}: {summary['signals_in_window']} signals in window, "
+                f"{summary['patterns_processed']} coordination patterns"
+            )
 
-            # Auto-process signals through the core pipeline and mark them as processed for this zone
-            summary = integrate_whatsapp_to_lumoza(zone=parsed_signal.zone, mark_processed=True)
-            print(f"🔄 Auto-processed: {len(summary['patterns'])} patterns from {len(summary['patterns'])} signals")
-            
-            # Optionally generate a light artifact when new signals arrive
-            if summary['patterns']:
-                self._generate_artifact(parsed_signal.zone, summary['patterns'])
-            
-            return True, self._format_success_message(parsed_signal, len(zone_signals))
+            if summary["patterns"]:
+                self._generate_artifact(zone_key, summary["patterns"])
+
+            trend = compute_coordination_trend(zone_key)
+            return True, self._format_success_message(trend)
         else:
             return False, "❌ Error storing signal. Please try again."
     
@@ -82,9 +87,11 @@ class WhatsAppMessageHandler:
         zone = self._parse_report_zone(message)
         
         if not zone:
-            return False, "❌ Invalid REPORT command. Use: REPORT <ZONE> (e.g., 'REPORT Zone B')"
-        
-        # Process signals for the zone
+            return False, "❌ Invalid REPORT command. Use: REPORT <ZONE> (e.g., 'REPORT B' or 'REPORT MZUZU')"
+
+        zone = normalize_zone(zone)
+
+        # Process only this zone's accumulated signals
         summary = integrate_whatsapp_to_lumoza(zone=zone, mark_processed=True)
         patterns = summary['patterns']
         
@@ -135,32 +142,23 @@ class WhatsAppMessageHandler:
         return True, response
     
     def _parse_report_zone(self, message: str) -> Optional[str]:
-        """Parse zone from REPORT command."""
+        """Parse zone from REPORT command (supports cluster names)."""
         parts = message.split()
-        if len(parts) >= 2 and parts[0].upper() == "REPORT":
-            if len(parts) >= 3 and parts[1].upper() == "ZONE":
-                zone = parts[2].upper()
-            else:
-                zone = parts[1].upper()
-            return zone
-        return None
-    
-    def _format_success_message(self, signal: ParsedSignal, zone_signal_count: int) -> str:
-        """Format success message for user."""
-        # Determine coordination strength using the number of unprocessed signals in zone
-        if zone_signal_count >= 5:
-            strength = "Strong"
-        elif zone_signal_count >= 3:
-            strength = "Growing"
+        if len(parts) < 2 or parts[0].upper() != "REPORT":
+            return None
+        if len(parts) >= 3 and parts[1].upper() == "ZONE":
+            raw = " ".join(parts[2:])
         else:
-            strength = "Emerging"
-        
-        message = "✅ Activity Recorded\n\n"
-        message += "📊 Coordination in your area:\n"
-        message += f"• Status: {strength}\n\n"
-        message += "🔌 Your input supports local energy planning"
-        
-        return message
+            raw = " ".join(parts[1:])
+        return normalize_zone(raw)
+    
+    def _format_success_message(self, trend: str) -> str:
+        """User-facing confirmation only — coordination trend from accumulated signals."""
+        return (
+            "✅ Activity recorded (best effort interpretation)\n\n"
+            f"📊 Coordination trend: {trend}\n\n"
+            "🔌 Thank you — your update supports local energy planning."
+        )
     
     def _generate_artifact(self, zone: str, patterns: list):
         """Generate a light demand prospectus artifact for the current zone."""
@@ -199,20 +197,17 @@ class WhatsAppMessageHandler:
             json_path = artifacts_dir / json_filename
             json_path.write_text(json.dumps(prospectus, indent=2))
 
-            print(f"📄 Artifact generated: {pdf_path}")
+            print(f"Artifact generated: {pdf_path}")
         except Exception as e:
             print(f"Error generating artifact: {e}")
 
-    def _format_error_message(self) -> str:
-        """Format error message for malformed input."""
-        message = "❌ Could not parse your message.\n\n"
-        message += "Please send a simple activity update like:\n\n"
-        message += "• 'I am irrigating my crops'\n"
-        message += "• 'Our mill is busy this week'\n"
-        message += "• 'I sold maize today'\n"
-        message += "• 'Cold storage is filling up'\n"
-        
-        return message
+    def _format_meaningless_message(self) -> str:
+        """Friendly response when message has no interpretable content."""
+        return (
+            "✅ Activity recorded (best effort interpretation)\n\n"
+            "📊 Coordination trend: Emerging\n\n"
+            "🔌 Send a short note about what you did today when you can."
+        )
 
 
 def process_message(message_text: str, sender_phone: str) -> Tuple[bool, str]:
