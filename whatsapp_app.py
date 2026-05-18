@@ -16,6 +16,7 @@ import os
 import xml.sax.saxutils
 from whatsapp_handler import process_message
 from signal_storage import get_unprocessed_signals
+from twilio.twiml.messaging_response import MessagingResponse
 
 app = Flask(__name__)
 
@@ -44,35 +45,40 @@ def webhook():
     """
     try:
         # Extract message data from Twilio
-        incoming_msg = request.form["Body"].strip()
-        sender_phone = request.form["From"].strip()
+        incoming_msg = request.form.get("Body", "").strip()
+        sender_phone = request.form.get("From", "").strip()
         message_sid = request.form.get("MessageSid", "unknown").strip()
 
-        if not incoming_msg or not sender_phone:
-            return twiml_response(
-                "Activity recorded (best effort interpretation). "
-                "We could not read your message — please try again."
-            )
+        # Ensure we always build a Twilio MessagingResponse
+        resp = MessagingResponse()
 
-        print(f"[{message_sid}] Incoming message from {sender_phone}: {incoming_msg}")
+        if not incoming_msg or not sender_phone:
+            print("Incoming message: <missing or empty>")
+            resp.message(
+                "Activity recorded (best effort interpretation). We could not read your message — please try again."
+            )
+            print("Response:", resp)
+            return str(resp)
+
+        print("Incoming message:", incoming_msg)
+        print(f"Message SID: {message_sid} From: {sender_phone}")
 
         success, response_msg = process_message(incoming_msg, sender_phone)
-        print(f"[{message_sid}] Response: {response_msg}")
 
-        if not response_msg:
-            response_msg = (
-                "Activity recorded (best effort interpretation). "
-                "Thank you — your update supports local energy planning."
-            )
+        # Default acknowledgement if handler returns nothing
+        outgoing_msg = response_msg or (
+            "Activity recorded (best effort interpretation). Thank you — your update supports local energy planning."
+        )
 
-        return twiml_response(response_msg)
+        resp.message(outgoing_msg)
+        print("Response:", outgoing_msg)
+        return str(resp)
 
     except Exception as e:
-        print(f"Error processing webhook: {e}")
-        return twiml_response(
-            "Activity recorded (best effort interpretation). "
-            "A temporary error occurred — please send your update again shortly."
-        )
+        print("ERROR:", str(e))
+        resp = MessagingResponse()
+        resp.message("System error occurred. Please try again.")
+        return str(resp)
 
 
 @app.route("/health", methods=["GET"])
