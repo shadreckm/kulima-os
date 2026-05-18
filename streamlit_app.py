@@ -150,8 +150,10 @@ def interpret_coordination_trend(trend: str) -> str:
 def main() -> None:
     st.set_page_config(page_title="Kulima OS — Demand Signal Interface", layout="wide")
 
-    st.title("Kulima OS – Demand Signal Interface")
-    st.subheader("Coordination-based infrastructure intelligence")
+    st.image("assets/kulima_africa_logo.png", width=140)
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.title("Kulima OS — Demand Signal Interface")
+    st.caption("Coordination-based infrastructure intelligence")
     st.write(
         "A focused interface for infrastructure planners, funders, and development partners to review verified demand signals."
     )
