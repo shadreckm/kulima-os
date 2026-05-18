@@ -112,9 +112,8 @@ def generate_zone_prospectus(zone: str) -> Tuple[Optional[Path], str]:
 
     if not patterns:
         return None, (
-            f"No stable coordination patterns for {zone_key} yet "
-            f"({summary.get('signals_in_window', 0)} signal(s) in the "
-            f"{CYCLE_WINDOW_DAYS}-day window)."
+            f"Coordination activity detected, but patterns are not yet stable for infrastructure planning in {zone_key}. "
+            f"({summary.get('signals_in_window', 0)} signal(s) in the {CYCLE_WINDOW_DAYS}-day window)."
         )
 
     gen = ProspectusGenerator()
@@ -154,42 +153,45 @@ def main() -> None:
         """
         <style>
         div.block-container {
-            padding: 1.75rem 2rem 3rem;
+            padding: 2rem 2rem 3rem;
             max-width: 1180px;
             margin: auto;
             background: #F8FAFC;
         }
-        .title-block {
+        div[data-testid="stImage"] {
             display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1.5rem 1.5rem 1rem;
-            background: rgba(255, 255, 255, 0.92);
-            border-radius: 24px;
-            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
-            margin-bottom: 1.25rem;
+            justify-content: center;
         }
-        .title-block img {
-            border-radius: 18px;
+        div[data-testid="stImage"] img {
+            border-radius: 16px;
             box-shadow: 0 18px 35px rgba(46, 125, 50, 0.12);
         }
-        .title-block h1 {
+        .hero-block {
+            text-align: center;
+            padding: 2rem 1.5rem 1.75rem;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 28px;
+            box-shadow: 0 26px 70px rgba(15, 23, 42, 0.08);
+            margin-bottom: 1.75rem;
+        }
+        .hero-block h1 {
             margin: 0;
             color: #263238;
-            font-size: 3rem;
+            font-size: 3.35rem;
             letter-spacing: -0.04em;
         }
-        .title-block h2 {
-            margin: 0.2rem 0 0;
-            color: #263238;
-            font-size: 1.4rem;
-            font-weight: 500;
-        }
-        .title-block p {
+        .hero-block h2 {
             margin: 0.75rem 0 0;
-            color: #4B5563;
+            color: #263238;
+            font-size: 1.45rem;
+            font-weight: 600;
+        }
+        .hero-block p {
+            margin: 1rem auto 0;
+            color: #616161;
             font-size: 1rem;
-            line-height: 1.6;
+            line-height: 1.75;
+            max-width: 740px;
         }
         .section-heading {
             color: #263238;
@@ -198,30 +200,33 @@ def main() -> None:
             font-weight: 700;
         }
         .section-copy {
-            color: #4B5563;
-            margin-top: 0.5rem;
-            margin-bottom: 1rem;
+            color: #616161;
+            margin-top: 0.75rem;
+            margin-bottom: 1.25rem;
             line-height: 1.75;
             max-width: 820px;
         }
         .section-divider {
             height: 1px;
             background: #E2E8F0;
-            margin: 1.5rem 0 2rem;
+            margin: 1.75rem 0 2rem;
             border: none;
         }
         .card-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 1rem;
-            margin-top: 1.25rem;
+            margin-top: 1.75rem;
         }
         .card {
             background: white;
-            border-radius: 20px;
-            padding: 1.4rem 1.5rem;
+            border-radius: 22px;
+            padding: 1.7rem 1.7rem;
             box-shadow: 0 24px 45px rgba(15, 23, 42, 0.08);
-            min-height: 150px;
+            min-height: 190px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
         .card-title {
             margin: 0;
@@ -232,24 +237,27 @@ def main() -> None:
             opacity: 0.75;
         }
         .card-value {
-            margin: 0.8rem 0 0;
+            margin: 0.9rem 0 0;
             color: #263238;
             font-size: 2rem;
             font-weight: 700;
             line-height: 1.05;
         }
+        .card-primary .card-value {
+            font-size: 2.4rem;
+        }
         .card-note {
             margin: 0.65rem 0 0;
-            color: #2E7D32;
+            color: #616161;
             font-size: 0.95rem;
             font-weight: 600;
         }
         .footer-text {
-            color: #64748B;
-            font-size: 0.94rem;
-            line-height: 1.7;
+            color: #9E9E9E;
+            font-size: 0.92rem;
+            line-height: 1.8;
             text-align: center;
-            margin-top: 2.5rem;
+            margin-top: 3rem;
         }
         button {
             background: #F57C00 !important;
@@ -258,10 +266,16 @@ def main() -> None:
             border: none !important;
             padding: 0.95rem 1.25rem !important;
             font-weight: 700 !important;
-            box-shadow: 0 18px 40px rgba(245, 124, 0, 0.22) !important;
+            box-shadow: 0 18px 40px rgba(245, 124, 0, 0.18) !important;
+            transition: background 0.18s ease, transform 0.18s ease !important;
         }
         button:hover {
             background: #dd6d03 !important;
+            transform: translateY(-1px) !important;
+        }
+        button:focus {
+            outline: none !important;
+            box-shadow: 0 0 0 4px rgba(245, 124, 0, 0.18) !important;
         }
         </style>
         """,
@@ -272,18 +286,16 @@ def main() -> None:
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(
         """
-        <div class='title-block'>
-            <div>
-                <h1>Kulima OS</h1>
-                <h2>Demand Signal Interface</h2>
-                <p>Coordination-based infrastructure intelligence</p>
-            </div>
+        <div class='hero-block'>
+            <h1>Kulima OS</h1>
+            <h2>Demand Signal Interface</h2>
+            <p>Coordination-based infrastructure intelligence</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("<p class='section-copy'>A high-integrity interface for infrastructure planners, development partners, and institutional decision-makers.</p>", unsafe_allow_html=True)
+    st.markdown("<p class='section-copy'>A calm, authoritative data intelligence interface for infrastructure planners, development agencies, and institutional stakeholders.</p>", unsafe_allow_html=True)
     st.markdown("<hr class='section-divider' />", unsafe_allow_html=True)
     st.markdown("<h2 class='section-heading'>Overview</h2>", unsafe_allow_html=True)
     st.markdown(
@@ -296,6 +308,7 @@ def main() -> None:
         horizontal=True,
         label_visibility="collapsed",
     )
+    st.markdown("<br>", unsafe_allow_html=True)
 
     summary = build_coordination_summary(zone)
 
@@ -303,7 +316,7 @@ def main() -> None:
     st.markdown("<h2 class='section-heading'>Coordination Status</h2>", unsafe_allow_html=True)
 
     if summary["total_signals"] == 0:
-        st.warning("No validated coordination patterns detected in this zone.")
+        st.warning("Coordination activity is not yet available for this zone.")
         st.markdown(
             "<p class='section-copy'>No coordination signals are recorded yet. The platform is ready to aggregate pilot data once it is submitted.</p>",
             unsafe_allow_html=True,
@@ -312,7 +325,7 @@ def main() -> None:
         st.markdown(
             f"""
             <div class='card-grid'>
-                <div class='card'>
+                <div class='card card-primary'>
                     <p class='card-title'>Coordination trend</p>
                     <p class='card-value'>{summary['coordination_trend']}</p>
                     <p class='card-note'>{interpret_coordination_trend(summary['coordination_trend'])}</p>
@@ -361,7 +374,7 @@ def main() -> None:
                 key=f"download_{summary['zone']}",
             )
     else:
-        st.info("No validated coordination patterns detected in this zone.")
+        st.info("Coordination activity detected, but patterns are not yet stable for infrastructure planning.")
 
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button(
@@ -369,11 +382,11 @@ def main() -> None:
         type="primary",
         use_container_width=True,
     ):
-        with st.spinner("Generating demand prospectus..."):
+        with st.spinner("Generating demand signal prospectus..."):
             new_pdf, message = generate_zone_prospectus(zone)
 
         if new_pdf and new_pdf.is_file():
-            st.success("Prospectus generated successfully.")
+            st.success("Prospectus generated and ready for download.")
             with open(new_pdf, "rb") as pdf_file:
                 st.download_button(
                     label="Download Demand Prospectus",
