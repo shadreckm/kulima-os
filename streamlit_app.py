@@ -521,118 +521,104 @@ def main() -> None:
     selected_zone = st.session_state.selected_zone
     summary = build_coordination_summary(selected_zone)
 
-kpi_cards = [
-    {
-        "label": "Coordination Trend",
-        "value": summary["coordination_trend"],
-        "note": "Current intelligence classification for this zone.",
-        "score": summary["coordination_score"],
-        "strength_label": summary["coordination_strength_label"],
-        "strength_color": coordination_strength_color(summary["coordination_score"]),
-    },
-    {
-        "label": "Validated Signals",
-        "value": summary["validated_signals"],
-        "note": "Signals that passed integrity and reserve filtering.",
-    },
-    {
-        "label": "Planning Reserve",
-        "value": summary["planning_reserve"],
-        "note": "Conservative capacity reserved for shared productive loads.",
-    },
-    {
-        "label": "Infrastructure Readiness",
-        "value": summary["lundai_status"],
-        "note": "Assessment from the LUNDAI infrastructure layer.",
-    },
-]
+    kpi_cards = [
+        {
+            "label": "Coordination Trend",
+            "value": summary["coordination_trend"],
+            "note": "Current intelligence classification for this zone.",
+            "score": summary["coordination_score"],
+            "strength_label": summary["coordination_strength_label"],
+            "strength_color": coordination_strength_color(summary["coordination_score"]),
+        },
+        {
+            "label": "Validated Signals",
+            "value": summary["validated_signals"],
+            "note": "Signals that passed integrity and reserve filtering.",
+        },
+        {
+            "label": "Planning Reserve",
+            "value": summary["planning_reserve"],
+            "note": "Conservative capacity reserved for shared productive loads.",
+        },
+        {
+            "label": "Infrastructure Readiness",
+            "value": summary["lundai_status"],
+            "note": "Assessment from the LUNDAI infrastructure layer.",
+        },
+    ]
 
-# ✅ FIXED KPI GRID (ONLY CHANGE: HTML + SAFE STRENGTH)
-st.markdown("<div class='kpi-grid'>", unsafe_allow_html=True)
-for card in kpi_cards:
-
-    strength_html = ""
-    if card.get("score") is not None:
-        strength_html = f"""
-        <div class='strength-meter'>
-            <div class='strength-fill' style='width: {card['score']}%; background: {card['strength_color']};'></div>
-        </div>
-        <p class='strength-label'>{card['strength_label']} — {card['score']}% coordination strength</p>
-        """
-
-    st.markdown(
-        f"""
-        <div class='card kpi-card'>
-            <p class='kpi-label'>{card['label']}</p>
-            <p class='kpi-value'>{card['value']}</p>
-            {strength_html}
-            <p class='kpi-note'>{card['note']}</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-st.markdown("</div>", unsafe_allow_html=True)
-
-# ✅ NO CHANGE BELOW — ONLY FIX HTML TAGS
-timeline = build_zone_signal_timeline(selected_zone)
-if timeline:
-    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.markdown("<h3 class='section-heading'>Signal Accumulation</h3>", unsafe_allow_html=True)
-    st.markdown(
-        "<p class='section-copy'>Recent daily signal volume for the selected pilot zone.</p>",
-        unsafe_allow_html=True,
-    )
-    st.line_chart(
-        {"Signals": [point["signals"] for point in timeline]},
-        use_container_width=True,
-    )
+    st.markdown("<div class='kpi-grid'>", unsafe_allow_html=True)
+    for card in kpi_cards:
+        st.markdown(
+            f"""
+            <div class='card kpi-card'>
+                <p class='kpi-label'>{card['label']}</p>
+                <p class='kpi-value'>{card['value']}</p>
+                {"<div class='strength-meter'><div class='strength-fill' style='width: {card['score']}%; background: {card['strength_color']};'></div></div><p class='strength-label'>{card['strength_label']} — {card['score']}% coordination strength</p>" if card.get('score') is not None else ''}
+                <p class='kpi-note'>{card['note']}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown("<div class='section-separator'></div>", unsafe_allow_html=True)
+    timeline = build_zone_signal_timeline(selected_zone)
+    if timeline:
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='section-heading'>Signal Accumulation</h3>", unsafe_allow_html=True)
+        st.markdown(
+            "<p class='section-copy'>Recent daily signal volume for the selected pilot zone.</p>",
+            unsafe_allow_html=True,
+        )
+        st.line_chart(
+            {"Signals": [point["signals"] for point in timeline]},
+            use_container_width=True,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown("<h2 class='section-heading'>Prospectus / Reporting</h2>", unsafe_allow_html=True)
-st.markdown(
-    "<p class='section-copy'>Create a verified demand signal prospectus for institutional review and infrastructure investment planning.</p>",
-    unsafe_allow_html=True,
-)
+    st.markdown("<div class='section-separator'></div>", unsafe_allow_html=True)
 
-st.markdown("<div class='action-card'>", unsafe_allow_html=True)
-st.markdown("<h3>Generate Verified Demand Signal Prospectus</h3>", unsafe_allow_html=True)
-st.markdown(
-    "<p>Deliver a prospectus that packages audited coordination patterns, infrastructure context, and social reserve guidance into an institutional artifact.</p>",
-    unsafe_allow_html=True,
-)
+    st.markdown("<h2 class='section-heading'>Prospectus / Reporting</h2>", unsafe_allow_html=True)
+    st.markdown(
+        "<p class='section-copy'>Create a verified demand signal prospectus for institutional review and infrastructure investment planning.</p>",
+        unsafe_allow_html=True,
+    )
 
-if st.button("Generate Verified Demand Signal Prospectus", key="generate_prospectus", help="Create the latest verified planning prospectus", use_container_width=False):
-    with st.spinner("Generating verified demand prospectus..."):
-        new_pdf, message = generate_zone_prospectus(selected_zone)
-    if new_pdf and new_pdf.is_file():
-        st.success("Verified demand prospectus generated.")
-        with open(new_pdf, "rb") as pdf_file:
-            st.download_button(
-                label="Download Demand Prospectus",
-                data=pdf_file.read(),
-                file_name="demand_prospectus.pdf",
-                mime="application/pdf",
-                use_container_width=False,
-                key=f"download_new_{summary['zone']}",
-            )
-    else:
-        st.warning(message)
-st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div class='action-card'>", unsafe_allow_html=True)
+    st.markdown("<h3>Generate Verified Demand Signal Prospectus</h3>", unsafe_allow_html=True)
+    st.markdown(
+        "<p>Deliver a prospectus that packages audited coordination patterns, infrastructure context, and social reserve guidance into an institutional artifact.</p>",
+        unsafe_allow_html=True,
+    )
+    if st.button("Generate Verified Demand Signal Prospectus", key="generate_prospectus", help="Create the latest verified planning prospectus", use_container_width=False):
+        with st.spinner("Generating verified demand prospectus..."):
+            new_pdf, message = generate_zone_prospectus(selected_zone)
+        if new_pdf and new_pdf.is_file():
+            st.success("Verified demand prospectus generated.")
+            with open(new_pdf, "rb") as pdf_file:
+                st.download_button(
+                    label="Download Demand Prospectus",
+                    data=pdf_file.read(),
+                    file_name="demand_prospectus.pdf",
+                    mime="application/pdf",
+                    use_container_width=False,
+                    key=f"download_new_{summary['zone']}",
+                )
+        else:
+            st.warning(message)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown("<div class='section-separator'></div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-separator'></div>", unsafe_allow_html=True)
 
-st.markdown("<h2 class='section-heading'>Join System</h2>", unsafe_allow_html=True)
-st.markdown(
-    "<p class='section-copy'>Activate local participation through the operational WhatsApp channel and contribute real coordination signals for infrastructure planning.</p>",
-    unsafe_allow_html=True,
-)
+    st.markdown("<h2 class='section-heading'>Join System</h2>", unsafe_allow_html=True)
+    st.markdown(
+        "<p class='section-copy'>Activate local participation through the operational WhatsApp channel and surface evidence-ready signals for planning.</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown("<div class='onboard-card'>", unsafe_allow_html=True)
 
-st.markdown("<div class='onboard-card'>", unsafe_allow_html=True)
 st.markdown("<h3>Join the System</h3>", unsafe_allow_html=True)
 
-# ✅ ONLY IMPROVED ONBOARDING (CLARITY FIX)
 st.markdown(
 """
 <ul>
@@ -648,18 +634,18 @@ st.markdown(
     "Selling tomatoes today"</li>
 
     <li><strong>Step 4:</strong> Continue sending updates consistently.<br>
-    Stable repetition strengthens coordination signals.</li>
+    Strong repetition builds reliable coordination signals.</li>
 </ul>
 """,
 unsafe_allow_html=True,
 )
 
 st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='dashboard-footer'>Kulima Africa — Coordination Intelligence Infrastructure • Public Digital System • <a href='https://github.com/shadreckm/kulima-os' target='_blank'>GitHub</a> • <a href='#'>Dashboard</a></div>",
+        unsafe_allow_html=True,
+    )
 
-st.markdown(
-    "<div class='dashboard-footer'>Kulima Africa — Coordination Intelligence Infrastructure • Public Digital System • <a href='https://github.com/shadreckm/kulima-os' target='_blank'>GitHub</a> • <a href='#'>Dashboard</a></div>",
-    unsafe_allow_html=True,
-)
 
 if __name__ == "__main__":
     main()
