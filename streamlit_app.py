@@ -13,7 +13,16 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import streamlit as st
+...
 
+def coordination_strength_color(score: int) -> str:
+    ...
+def coordination_strength_color(score: int) -> str:
+    if score >= 70:
+        return "#2E7D32"   # green
+    elif score >= 40:
+        return "#F57C00"   # orange
+    return "#D32F2F"       # red
 from coordination_accumulation import (
     CYCLE_WINDOW_DAYS,
     compute_coordination_patterns,
