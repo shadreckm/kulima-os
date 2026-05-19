@@ -521,131 +521,109 @@ def main() -> None:
     selected_zone = st.session_state.selected_zone
     summary = build_coordination_summary(selected_zone)
 
-    kpi_cards = [
-        {
-            "label": "Coordination Trend",
-            "value": summary["coordination_trend"],
-            "note": "Current intelligence classification for this zone.",
-            "score": summary["coordination_score"],
-            "strength_label": summary["coordination_strength_label"],
-            "strength_color": coordination_strength_color(summary["coordination_score"]),
-        },
-        {
-            "label": "Validated Signals",
-            "value": summary["validated_signals"],
-            "note": "Signals that passed integrity and reserve filtering.",
-        },
-        {
-            "label": "Planning Reserve",
-            "value": summary["planning_reserve"],
-            "note": "Conservative capacity reserved for shared productive loads.",
-        },
-        {
-            "label": "Infrastructure Readiness",
-            "value": summary["lundai_status"],
-            "note": "Assessment from the LUNDAI infrastructure layer.",
-        },
-    ]
+kpi_cards = [
+    {
+        "label": "Coordination Trend",
+        "value": summary["coordination_trend"],
+        "note": "Current intelligence classification for this zone.",
+        "score": summary["coordination_score"],
+        "strength_label": summary["coordination_strength_label"],
+        "strength_color": coordination_strength_color(summary["coordination_score"]),
+    },
+    {
+        "label": "Validated Signals",
+        "value": summary["validated_signals"],
+        "note": "Signals that passed integrity and reserve filtering.",
+    },
+    {
+        "label": "Planning Reserve",
+        "value": summary["planning_reserve"],
+        "note": "Conservative capacity reserved for shared productive loads.",
+    },
+    {
+        "label": "Infrastructure Readiness",
+        "value": summary["lundai_status"],
+        "note": "Assessment from the LUNDAI infrastructure layer.",
+    },
+]
 
-    st.markdown("<div class='kpi-grid'>", unsafe_allow_html=True)
-    for card in kpi_cards:
-        st.markdown(
-            f"""
-            <div class='card kpi-card'>
-                <p class='kpi-label'>{card['label']}</p>
-                <p class='kpi-value'>{card['value']}</p>
-                {"<div class='strength-meter'><div class='strength-fill' style='width: {card['score']}%; background: {card['strength_color']};'></div></div><p class='strength-label'>{card['strength_label']} — {card['score']}% coordination strength</p>" if card.get('score') is not None else ''}
-                <p class='kpi-note'>{card['note']}</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
+# ✅ FIX KPI DISPLAY (REMOVE BROKEN HTML)
+col1, col2, col3, col4 = st.columns(4)
 
-    timeline = build_zone_signal_timeline(selected_zone)
-    if timeline:
-        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-        st.markdown("<h3 class='section-heading'>Signal Accumulation</h3>", unsafe_allow_html=True)
-        st.markdown(
-            "<p class='section-copy'>Recent daily signal volume for the selected pilot zone.</p>",
-            unsafe_allow_html=True,
-        )
-        st.line_chart(
-            {"Signals": [point["signals"] for point in timeline]},
-            use_container_width=True,
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
+col1.metric("Coordination Trend", summary["coordination_trend"])
+col2.metric("Validated Signals", summary["validated_signals"])
+col3.metric("Planning Reserve", summary["planning_reserve"])
+col4.metric("Infrastructure Readiness", summary["lundai_status"])
 
-    st.markdown("<div class='section-separator'></div>", unsafe_allow_html=True)
+# ✅ SAFE STRENGTH BAR
+score = summary.get("coordination_score", 0)
+st.progress(score)
+st.caption(f"Coordination Strength: {score}%")
 
-    st.markdown("<h2 class='section-heading'>Prospectus / Reporting</h2>", unsafe_allow_html=True)
-    st.markdown(
-        "<p class='section-copy'>Create a verified demand signal prospectus for institutional review and infrastructure investment planning.</p>",
-        unsafe_allow_html=True,
+# ✅ TIMELINE (UNCHANGED LOGIC)
+timeline = build_zone_signal_timeline(selected_zone)
+if timeline:
+    st.markdown("### Signal Accumulation")
+    st.markdown("Recent daily signal volume for the selected pilot zone.")
+    st.line_chart(
+        {"Signals": [point["signals"] for point in timeline]},
+        use_container_width=True,
     )
 
-    st.markdown("<div class='action-card'>", unsafe_allow_html=True)
-    st.markdown("<h3>Generate Verified Demand Signal Prospectus</h3>", unsafe_allow_html=True)
-    st.markdown(
-        "<p>Deliver a prospectus that packages audited coordination patterns, infrastructure context, and social reserve guidance into an institutional artifact.</p>",
-        unsafe_allow_html=True,
-    )
-    if st.button("Generate Verified Demand Signal Prospectus", key="generate_prospectus", help="Create the latest verified planning prospectus", use_container_width=False):
-        with st.spinner("Generating verified demand prospectus..."):
-            new_pdf, message = generate_zone_prospectus(selected_zone)
-        if new_pdf and new_pdf.is_file():
-            st.success("Verified demand prospectus generated.")
-            with open(new_pdf, "rb") as pdf_file:
-                st.download_button(
-                    label="Download Demand Prospectus",
-                    data=pdf_file.read(),
-                    file_name="demand_prospectus.pdf",
-                    mime="application/pdf",
-                    use_container_width=False,
-                    key=f"download_new_{summary['zone']}",
-                )
-        else:
-            st.warning(message)
-    st.markdown("</div>", unsafe_allow_html=True)
+st.markdown("---")
 
-    st.markdown("<div class='section-separator'></div>", unsafe_allow_html=True)
-
-    st.markdown("<h2 class='section-heading'>Join System</h2>", unsafe_allow_html=True)
-    st.markdown(
-        "<p class='section-copy'>Activate local participation through the operational WhatsApp channel and surface evidence-ready signals for planning.</p>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("<div class='onboard-card'>", unsafe_allow_html=True)
-
-st.markdown("<h3>Join the System</h3>", unsafe_allow_html=True)
-
+# ✅ PROSPECTUS SECTION (CLEAN)
+st.markdown("## Prospectus / Reporting")
 st.markdown(
-"""
-<ul>
-    <li><strong>Step 1:</strong> Save the Kulima OS WhatsApp number:<br>
-    <strong>+1 415 523 8886</strong></li>
-
-    <li><strong>Step 2:</strong> Open WhatsApp and send:<br>
-    <strong>join week-saved</strong></li>
-
-    <li><strong>Step 3:</strong> Send real activity updates such as:<br>
-    "I am irrigating crops"<br>
-    "We are milling maize"<br>
-    "Selling tomatoes today"</li>
-
-    <li><strong>Step 4:</strong> Continue sending updates consistently.<br>
-    Strong repetition builds reliable coordination signals.</li>
-</ul>
-""",
-unsafe_allow_html=True,
+    "Create a verified demand signal prospectus for institutional review and infrastructure investment planning."
 )
 
-st.markdown("</div>", unsafe_allow_html=True)
-st.markdown(
-        "<div class='dashboard-footer'>Kulima Africa — Coordination Intelligence Infrastructure • Public Digital System • <a href='https://github.com/shadreckm/kulima-os' target='_blank'>GitHub</a> • <a href='#'>Dashboard</a></div>",
-        unsafe_allow_html=True,
-    )
+if st.button("Generate Verified Demand Signal Prospectus"):
+    with st.spinner("Generating verified demand prospectus..."):
+        new_pdf, message = generate_zone_prospectus(selected_zone)
 
+    if new_pdf and new_pdf.is_file():
+        st.success("Verified demand prospectus generated.")
+        with open(new_pdf, "rb") as pdf_file:
+            st.download_button(
+                label="Download Demand Prospectus",
+                data=pdf_file.read(),
+                file_name="demand_prospectus.pdf",
+                mime="application/pdf",
+            )
+    else:
+        st.warning(message)
+
+st.markdown("---")
+
+# ✅ FIXED ONBOARDING (NO HTML → NO BREAKS)
+st.markdown("## Join System")
+st.markdown(
+    "**Activate coordination signals in your community. Follow the steps below.**"
+)
+
+st.write("**Step 1:** Save the WhatsApp number")
+st.code("+1 415 523 8886")
+
+st.write("**Step 2:** Send this message")
+st.code("join week-saved")
+
+st.write("**Step 3:** Share real activities")
+st.write("""
+- I am irrigating crops  
+- We are milling maize  
+- Selling tomatoes today  
+""")
+
+st.write("**Step 4:** Keep sending consistently")
+st.write("Stable repetition strengthens coordination signals.")
+
+st.markdown("---")
+
+# ✅ FOOTER (CLEAN TEXT)
+st.caption(
+    "Kulima Africa — Coordination Intelligence Infrastructure • Public Digital System • https://github.com/shadreckm/kulima-os"
+)
 
 if __name__ == "__main__":
     main()
