@@ -356,6 +356,7 @@ if __name__ == "__main__":
     from pilot_signals import generate_pilot_signals
     from lumoza_engine import LumozaEngine
     from zentari_engine import ZentariEngine
+    from policy import compute_planning_reserve
     
     print("Testing Energy Demand Estimator...")
     
@@ -364,8 +365,9 @@ if __name__ == "__main__":
     lumoza = LumozaEngine()
     patterns = lumoza.process_signals(signals)
     
+    planning_reserve = compute_planning_reserve(len(patterns))
     zentari = ZentariEngine()
-    confidence_results = zentari.evaluate_coordination_confidence(patterns)
+    confidence_results = zentari.evaluate_coordination_confidence(patterns, planning_reserve=planning_reserve)
     
     # Estimate demand
     estimator = EnergyDemandEstimator()

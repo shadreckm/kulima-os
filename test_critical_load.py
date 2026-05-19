@@ -6,6 +6,7 @@ from pilot_signals import generate_pilot_signals
 from lumoza_engine import LumozaEngine
 from zentari_engine import ZentariEngine
 from prospectus_generator import ProspectusGenerator
+from policy import compute_planning_reserve
 
 print("Testing Critical Load Protection Implementation...")
 print("=" * 70)
@@ -39,11 +40,15 @@ if essential_patterns:
 
 # Process through ZENTARI
 zentari = ZentariEngine()
-confidence_results = zentari.evaluate_coordination_confidence(patterns)
+planning_reserve = compute_planning_reserve(len(patterns))
+confidence_results = zentari.evaluate_coordination_confidence(patterns, planning_reserve=planning_reserve)
 
 # Generate prospectus
 generator = ProspectusGenerator()
-prospectus = generator.generate_prospectus(confidence_results)
+prospectus = generator.generate_prospectus(
+    confidence_results,
+    planning_reserve=planning_reserve,
+)
 
 # Check Critical Load Protection section
 if 'critical_load_protection' in prospectus:

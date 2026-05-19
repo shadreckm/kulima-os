@@ -121,7 +121,11 @@ def cmd_report(zone: str = None):
         'period': '7-cycle window (1 week)'
     }
     
-    prospectus = gen.generate_prospectus(confidence_results, metadata=metadata)
+    prospectus = gen.generate_prospectus(
+        confidence_results,
+        metadata=metadata,
+        planning_reserve=summary['planning_reserve'],
+    )
     
     # Generate PDF
     pdf_path = f"lumoza_prospectus_{zone.lower() if zone else 'all'}_{datetime.utcnow().isoformat().replace(':', '-')}.pdf"

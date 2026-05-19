@@ -24,6 +24,7 @@ from pilot_signals import generate_pilot_signals, print_signal_summary
 from lumoza_engine import LumozaEngine, print_coordination_patterns
 from zentari_engine import ZentariEngine, print_confidence_results
 from prospectus_generator import ProspectusGenerator
+from policy import compute_planning_reserve
 
 
 def print_header(title: str) -> None:
@@ -117,8 +118,11 @@ def main():
     print("- Generating bankability guidance")
     
     zentari = ZentariEngine()
-    confidence_results = zentari.evaluate_coordination_confidence(coordination_patterns)
-    
+    planning_reserve = compute_planning_reserve(len(coordination_patterns))
+    confidence_results = zentari.evaluate_coordination_confidence(
+        coordination_patterns,
+        planning_reserve=planning_reserve,
+    )
     print_confidence_results(confidence_results)
     
     print("\n🎯 Trust Insights:")
@@ -141,13 +145,17 @@ def main():
     print("- Including ethics compliance documentation")
     print("- Saving as JSON and Markdown")
     
+    from policy import compute_planning_reserve
+
     generator = ProspectusGenerator()
+    planning_reserve = compute_planning_reserve(len(confidence_results))
     prospectus = generator.generate_prospectus(
         confidence_results,
         metadata={
             "region": "Pilot Region - Rural Energy Planning",
             "period": "7-cycle window (Week 1)"
-        }
+        },
+        planning_reserve=planning_reserve,
     )
     
     # Save prospectus

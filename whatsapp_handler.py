@@ -13,6 +13,7 @@ from lumoza_integration import integrate_whatsapp_to_lumoza
 from coordination_accumulation import compute_coordination_trend
 from zone_utils import normalize_zone
 from prospectus_generator import ProspectusGenerator
+from policy import compute_planning_reserve
 import json
 from pathlib import Path
 
@@ -120,7 +121,11 @@ class WhatsAppMessageHandler:
         # Generate prospectus
         gen = ProspectusGenerator()
         metadata = {'region': zone, 'period': '7-cycle window (1 week)'}
-        prospectus = gen.generate_prospectus(confidence_results, metadata=metadata)
+        prospectus = gen.generate_prospectus(
+            confidence_results,
+            metadata=metadata,
+            planning_reserve=summary['planning_reserve'],
+        )
         
         # Create artifacts directory structure
         timestamp = datetime.utcnow().isoformat().replace(':', '-')
@@ -183,7 +188,12 @@ class WhatsAppMessageHandler:
 
             gen = ProspectusGenerator()
             metadata = {'region': zone, 'period': '7-cycle window (1 week)'}
-            prospectus = gen.generate_prospectus(confidence_results, metadata=metadata)
+            planning_reserve = compute_planning_reserve(len(confidence_results))
+            prospectus = gen.generate_prospectus(
+                confidence_results,
+                metadata=metadata,
+                planning_reserve=planning_reserve,
+            )
 
             timestamp = datetime.utcnow().isoformat().replace(':', '-')
             artifacts_dir = Path(f"artifacts/{zone.lower()}/{timestamp}")

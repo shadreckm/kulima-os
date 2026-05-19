@@ -42,21 +42,27 @@ def filter_signals_by_zone(signals: List[Signal], zone: str) -> List[Signal]:
 
 def build_coordination_summary(zone: str) -> dict:
     """
-    Real coordination state from stored signals and LUMOZA 7-cycle logic.
-    Reuses coordination_accumulation (no duplicate logic).
+    Real coordination state from the validated pipeline.
+    Uses the LUMOZA → LUNDAI → ZENTARI integration path so dashboard metrics
+    reflect validated, institution-ready outputs only.
     """
     zone_key = normalize_zone(zone)
-    all_zone_signals = filter_signals_by_zone(load_all_signals(), zone_key)
-    window_signals = get_zone_window_signals(zone_key)
-    patterns = compute_coordination_patterns(zone_key)
+    summary = integrate_whatsapp_to_lumoza(zone=zone_key)
+    patterns = summary.get("patterns", [])
+    lundai_overall = summary.get("lundai_analysis", {}).get("overall_assessment", {})
 
     return {
         "zone": zone_key,
-        "total_signals": len(all_zone_signals),
-        "signal_count": len(window_signals),
+        "total_signals": summary.get("raw_signal_count", 0),
+        "validated_signals": summary.get("validated_signal_count", 0),
+        "signal_count": summary.get("validated_signal_count", 0),
         "pattern_count": len(patterns),
-        "coordination_trend": compute_coordination_trend(zone_key),
-        "window_days": CYCLE_WINDOW_DAYS,
+        "coordination_trend": summary.get("coordination_trend", "Emerging"),
+        "window_days": summary.get("window_days", CYCLE_WINDOW_DAYS),
+        "high_confidence_patterns": sum(1 for p in patterns if p.get("confidence_class") == "high"),
+        "lundai_status": lundai_overall.get("overall_infrastructure_status", "Unknown"),
+        "planning_reserve": summary.get("planning_reserve", {}).get("usable_signals", 0),
+        "pattern_explanations": [p.get('explanation', {}).get('human_readable', '') for p in patterns],
     }
 
 
@@ -79,23 +85,30 @@ def latest_pdf_path(zone: str) -> Optional[Path]:
 
 
 def patterns_to_confidence_results(patterns: list) -> list:
-    """Map LUMOZA integration patterns to prospectus generator input."""
+    """Normalize patterns for prospectus generation.
+
+    If the pipeline has already produced ZENTARI outputs, keep them intact.
+    """
     results = []
     for pattern in patterns:
+        if pattern.get("confidence_class") and pattern.get("coordination_confidence") is not None:
+            results.append(pattern)
+            continue
+
         results.append({
             "activity_type": pattern["activity_type"],
             "zone": pattern["zone"],
             "time_window": pattern["demand_rhythm"]["time_window"],
-            "confidence_class": pattern["confidence_class"],
+            "confidence_class": pattern.get("confidence_class", "moderate"),
             "stability_score": pattern.get("coordination_confidence", 0.7),
             "demand_rhythm": {
                 "frequency": pattern["demand_rhythm"]["frequency"],
                 "stability_class": pattern["demand_rhythm"]["stability_class"],
             },
-            "coordination_confidence": pattern["coordination_confidence"],
-            "validation_strength": pattern["validation_strength"],
-            "validation_details": pattern["validation_details"],
-            "bankability_note": pattern["bankability_note"],
+            "coordination_confidence": pattern.get("coordination_confidence", 0.7),
+            "validation_strength": pattern.get("validation_strength", "human_only"),
+            "validation_details": pattern.get("validation_details", ""),
+            "bankability_note": pattern.get("bankability_note", ""),
         })
     return results
 
@@ -109,18 +122,21 @@ def generate_zone_prospectus(zone: str) -> Tuple[Optional[Path], str]:
     zone_key = normalize_zone(zone)
     summary = integrate_whatsapp_to_lumoza(zone=zone_key)
     patterns = summary.get("patterns", [])
+    lundai_analysis = summary.get("lundai_analysis", {})
 
     if not patterns:
         return None, (
-            f"Coordination activity detected, but patterns are not yet stable for infrastructure planning in {zone_key}. "
-            f"({summary.get('signals_in_window', 0)} signal(s) in the {CYCLE_WINDOW_DAYS}-day window)."
+            f"Coordination activity detected, but validated patterns are not yet stable for infrastructure planning in {zone_key}. "
+            f"({summary.get('validated_signal_count', 0)} validated signal(s) in the {CYCLE_WINDOW_DAYS}-day window)."
         )
 
     gen = ProspectusGenerator()
     metadata = {"region": zone_key, "period": f"{CYCLE_WINDOW_DAYS}-cycle window (1 week)"}
     prospectus = gen.generate_prospectus(
         patterns_to_confidence_results(patterns),
+        lundai_analysis=lundai_analysis,
         metadata=metadata,
+        planning_reserve=summary.get("planning_reserve"),
     )
 
     timestamp = datetime.utcnow().isoformat().replace(":", "-")
@@ -153,231 +169,210 @@ def main() -> None:
         """
         <style>
         div.block-container {
-            padding: 2rem 2rem 3rem;
+            padding: 2.5rem 2.5rem 3rem;
             max-width: 1180px;
             margin: auto;
             background: #F8FAFC;
         }
-        div[data-testid="stImage"] {
-            display: flex;
-            justify-content: center;
-        }
-        div[data-testid="stImage"] img {
-            border-radius: 16px;
-            box-shadow: 0 18px 35px rgba(46, 125, 50, 0.12);
-        }
         .hero-block {
-            text-align: center;
-            padding: 2rem 1.5rem 1.75rem;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 28px;
-            box-shadow: 0 26px 70px rgba(15, 23, 42, 0.08);
-            margin-bottom: 1.75rem;
+            text-align: left;
+            padding: 2rem 2rem 2.25rem;
+            background: #FFFFFF;
+            border-radius: 24px;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+            margin-bottom: 2rem;
         }
         .hero-block h1 {
             margin: 0;
-            color: #263238;
-            font-size: 3.35rem;
+            color: #102A43;
+            font-size: 2.75rem;
             letter-spacing: -0.04em;
         }
         .hero-block h2 {
-            margin: 0.75rem 0 0;
-            color: #263238;
-            font-size: 1.45rem;
+            margin: 0.8rem 0 0;
+            color: #102A43;
+            font-size: 1.35rem;
             font-weight: 600;
         }
         .hero-block p {
-            margin: 1rem auto 0;
-            color: #616161;
+            margin: 1.15rem 0 0;
+            color: #334E68;
             font-size: 1rem;
-            line-height: 1.75;
-            max-width: 740px;
+            line-height: 1.8;
+            max-width: 780px;
         }
         .section-heading {
-            color: #263238;
+            color: #102A43;
             margin: 0;
-            font-size: 1.45rem;
+            font-size: 1.6rem;
             font-weight: 700;
         }
         .section-copy {
-            color: #616161;
-            margin-top: 0.75rem;
-            margin-bottom: 1.25rem;
+            color: #334E68;
+            margin: 0.75rem 0 1.5rem;
             line-height: 1.75;
-            max-width: 820px;
-        }
-        .section-divider {
-            height: 1px;
-            background: #E2E8F0;
-            margin: 1.75rem 0 2rem;
-            border: none;
+            max-width: 780px;
         }
         .card-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
             gap: 1rem;
-            margin-top: 1.75rem;
+            margin-top: 1rem;
         }
         .card {
-            background: white;
-            border-radius: 22px;
-            padding: 1.7rem 1.7rem;
-            box-shadow: 0 24px 45px rgba(15, 23, 42, 0.08);
-            min-height: 190px;
+            background: #FFFFFF;
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 18px 35px rgba(15, 23, 42, 0.06);
+            min-height: 180px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
         }
         .card-title {
             margin: 0;
-            color: #263238;
+            color: #102A43;
             font-size: 0.85rem;
             letter-spacing: 0.12em;
             text-transform: uppercase;
             opacity: 0.75;
         }
         .card-value {
-            margin: 0.9rem 0 0;
-            color: #263238;
+            margin: 1rem 0 0;
+            color: #102A43;
             font-size: 2rem;
             font-weight: 700;
             line-height: 1.05;
         }
-        .card-primary .card-value {
-            font-size: 2.4rem;
-        }
         .card-note {
-            margin: 0.65rem 0 0;
-            color: #616161;
+            margin: 0.75rem 0 0;
+            color: #334E68;
             font-size: 0.95rem;
             font-weight: 600;
+            line-height: 1.6;
         }
         .footer-text {
-            color: #9E9E9E;
-            font-size: 0.92rem;
+            color: #627D98;
+            font-size: 0.95rem;
             line-height: 1.8;
             text-align: center;
             margin-top: 3rem;
         }
         button {
-            background: #F57C00 !important;
+            background: #0F766E !important;
             color: #ffffff !important;
             border-radius: 999px !important;
             border: none !important;
             padding: 0.95rem 1.25rem !important;
             font-weight: 700 !important;
-            box-shadow: 0 18px 40px rgba(245, 124, 0, 0.18) !important;
-            transition: background 0.18s ease, transform 0.18s ease !important;
         }
         button:hover {
-            background: #dd6d03 !important;
-            transform: translateY(-1px) !important;
+            background: #115E59 !important;
         }
         button:focus {
             outline: none !important;
-            box-shadow: 0 0 0 4px rgba(245, 124, 0, 0.18) !important;
+            box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.2) !important;
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    st.image("assets/kulima_africa_logo.png", width=130)
-    st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(
         """
         <div class='hero-block'>
-            <h1>Kulima OS</h1>
-            <h2>Demand Signal Interface</h2>
-            <p>Seeing real demand before infrastructure is built.</p>
-            <p>A coordination-first digital public infrastructure for real-world demand sensing.</p>
+            <h1>Kulima OS — Demand Signal Interface</h1>
+            <h2>Coordination-based infrastructure intelligence</h2>
+            <p>This interface presents conservative, coordination-driven demand insights for planners, energy developers, and funders.</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<h2 class='section-heading'>Live System</h2>", unsafe_allow_html=True)
-    st.markdown(
-        "<p class='section-copy'>Core infrastructure signals are flowing through the platform in real time.</p>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        """
-        <div class='info-card-grid'>
-            <div class='info-card'>✅ System operational</div>
-            <div class='info-card'>✅ Signals being collected in real time</div>
-            <div class='info-card'>✅ Backend live</div>
-            <div class='info-card'>✅ WhatsApp input active</div>
-        </div>
-        <p class='section-copy'><strong>Live Pilot:</strong> Mzuzu · Ekwendeni · Karonga</p>
-        """,
-        unsafe_allow_html=True,
-    )
+    with st.expander("How this works"):
+        st.write(
+            "This system translates daily community activity into coordination-based demand signals to support infrastructure planning."
+        )
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.divider()
     st.markdown("<h2 class='section-heading'>Overview</h2>", unsafe_allow_html=True)
     st.markdown(
-        "<p class='section-copy'>Select a pilot zone to review live coordination state, demand intelligence, and prospectus delivery.</p>",
+        "<p class='section-copy'>Select a pilot zone to review the latest coordination state, demand signal readiness, and prospectus access.</p>",
         unsafe_allow_html=True,
     )
+
     zone = st.radio(
         "Select pilot zone",
         options=PILOT_ZONES,
         horizontal=True,
         label_visibility="collapsed",
     )
-    st.markdown("<br>", unsafe_allow_html=True)
 
     summary = build_coordination_summary(zone)
-
-    st.markdown("<hr class='section-divider' />", unsafe_allow_html=True)
-    st.markdown("<h2 class='section-heading'>Dashboard</h2>", unsafe_allow_html=True)
+    st.markdown("<div class='card-grid'>", unsafe_allow_html=True)
     st.markdown(
-        "<p class='section-copy'>Live coordination indicators for the selected pilot zone.</p>",
+        f"""
+        <div class='card'>
+            <p class='card-title'>Selected Zone</p>
+            <p class='card-value'>{summary['zone']}</p>
+            <p class='card-note'>{'Pilot area under review'}</p>
+        </div>
+        <div class='card'>
+            <p class='card-title'>Validated Signals</p>
+            <p class='card-value'>{summary['validated_signals']}</p>
+            <p class='card-note'>Signals that passed integrity filtering before planning.</p>
+        </div>
+        <div class='card'>
+            <p class='card-title'>Stable Patterns</p>
+            <p class='card-value'>{summary['pattern_count']}</p>
+            <p class='card-note'>Verified coordination patterns available for planning review.</p>
+        </div>
+        <div class='card'>
+            <p class='card-title'>Infrastructure Status</p>
+            <p class='card-value'>{summary['lundai_status']}</p>
+            <p class='card-note'>Zone-level assessment from the LUNDAI context layer.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.divider()
+    st.markdown("<h2 class='section-heading'>Coordination Status</h2>", unsafe_allow_html=True)
+    st.markdown(
+        "<p class='section-copy'>The current signal trend indicates whether the zone is moving toward planning-grade demand intelligence.</p>",
         unsafe_allow_html=True,
     )
 
     st.markdown(
         f"""
-        <div class='dashboard-grid'>
+        <div class='card-grid'>
             <div class='card card-primary'>
                 <p class='card-title'>Coordination Trend</p>
                 <p class='card-value'>{summary['coordination_trend']}</p>
                 <p class='card-note'>{interpret_coordination_trend(summary['coordination_trend'])}</p>
             </div>
             <div class='card'>
-                <p class='card-title'>Signals Count</p>
-                <p class='card-value'>{summary['signal_count']}</p>
-                <p class='card-note'>Signals in the current {summary['window_days']}-day coordination window.</p>
-            </div>
-            <div class='card'>
-                <p class='card-title'>Detected Patterns</p>
-                <p class='card-value'>{summary['pattern_count']}</p>
-                <p class='card-note'>Stable patterns currently available for planning review.</p>
-            </div>
-            <div class='card'>
-                <p class='card-title'>Zone Activity State</p>
-                <p class='card-value'>{summary['zone']}</p>
-                <p class='card-note'>{('Active signals detected' if summary['total_signals'] > 0 else 'Awaiting pilot coordination inputs')}</p>
+                <p class='card-title'>Planning Reserve</p>
+                <p class='card-value'>{summary['planning_reserve']}</p>
+                <p class='card-note'>Usable signal capacity after a 25% conservative reserve.</p>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("<hr class='section-divider' />", unsafe_allow_html=True)
-    st.markdown("<h2 class='section-heading'>Prospectus</h2>", unsafe_allow_html=True)
+    st.divider()
+    st.markdown("<h2 class='section-heading'>Prospectus Access</h2>", unsafe_allow_html=True)
     st.markdown(
-        "<p class='section-copy'>Generate demand intelligence for infrastructure planning.</p>",
+        "<p class='section-copy'>Generate or download the latest demand prospectus for this pilot zone.</p>",
         unsafe_allow_html=True,
     )
 
     pdf_path = latest_pdf_path(zone)
-
     if pdf_path and pdf_path.is_file():
         st.markdown(
-            f"<p class='section-copy'>Latest prospectus generated from folder: <strong>{pdf_path.parent.name}</strong></p>",
+            f"<p class='section-copy'>Latest prospectus: <strong>{pdf_path.parent.name}</strong></p>",
             unsafe_allow_html=True,
         )
         with open(pdf_path, "rb") as pdf_file:
@@ -390,19 +385,15 @@ def main() -> None:
                 key=f"download_{summary['zone']}",
             )
     else:
-        st.info("Coordination activity detected, but patterns are not yet stable for infrastructure planning.")
+        st.info("Coordination activity is present, but planning-grade patterns are still forming.")
 
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.button(
-        "Generate Demand Prospectus",
-        type="primary",
-        use_container_width=True,
-    ):
-        with st.spinner("Generating demand signal prospectus..."):
+    if st.button("Generate Prospectus", type="primary", use_container_width=True):
+        with st.spinner("Generating demand prospectus..."):
             new_pdf, message = generate_zone_prospectus(zone)
 
         if new_pdf and new_pdf.is_file():
-            st.success("Prospectus generated and ready for download.")
+            st.success("Prospectus generated successfully.")
             with open(new_pdf, "rb") as pdf_file:
                 st.download_button(
                     label="Download Demand Prospectus",
@@ -412,33 +403,25 @@ def main() -> None:
                     use_container_width=True,
                     key=f"download_new_{summary['zone']}",
                 )
-            st.experimental_rerun()
         else:
             st.warning(message)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<h2 class='section-heading'>Join the System</h2>", unsafe_allow_html=True)
-    st.markdown(
-        "<p class='section-copy'>Help the pilot grow by sharing real-time activity updates through WhatsApp.</p>",
-        unsafe_allow_html=True,
-    )
+    st.divider()
+    st.markdown("<h2 class='section-heading'>Notes</h2>", unsafe_allow_html=True)
     st.markdown(
         """
-        <div class='join-card'>
-            <p class='join-step'><strong>1.</strong> Save number: +1 415 523 8886</p>
-            <p class='join-step'><strong>2.</strong> Send: <em>join week-saved</em></p>
-            <p class='join-step'><strong>3.</strong> Start sending updates like:</p>
-            <p class='join-step'>• I am irrigating crops</p>
-            <p class='join-step'>• We are milling maize</p>
-            <p class='join-step'>• Selling tomatoes</p>
-        </div>
-        <p class='section-copy'>Just send what you are doing — no app required.</p>
+        <p class='section-copy'>The platform is designed for institutional review and conservative planning.</p>
+        <ul style='color: #334E68; margin-top: 0.75rem; line-height: 1.8;'>
+            <li>Signals are derived from 7-cycle coordination windows.</li>
+            <li>Outputs represent conservative lower-bound demand estimates.</li>
+            <li>No personal or individual data is collected.</li>
+        </ul>
         """,
         unsafe_allow_html=True,
     )
 
     st.markdown(
-        "<div class='footer-text'>Kulima Africa<br>Kulima OS v0.2<br>Coordination-based Digital Public Infrastructure<br>Live Dashboard: https://kulima-os.streamlit.app/</div>",
+        "<div class='footer-text'>Kulima Africa | Kulima OS Pilot v0.2<br>Coordination-based Digital Public Infrastructure</div>",
         unsafe_allow_html=True,
     )
 

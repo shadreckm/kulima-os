@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 from energy_demand_estimator import EnergyDemandEstimator
+from policy import RESERVE_RATIO, require_planning_reserve
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -55,7 +56,8 @@ class ProspectusGenerator:
         self,
         confidence_results: List[Dict],
         lundai_analysis: Dict = None,
-        metadata: Dict = None
+        metadata: Dict = None,
+        planning_reserve: Dict = None,
     ) -> Dict:
         """
         Generate a Demand-Signal Prospectus.
@@ -68,6 +70,7 @@ class ProspectusGenerator:
             confidence_results: Coordination patterns with confidence scores from ZENTARI
             lundai_analysis: Settlement and infrastructure gap analysis from LUNDAI (optional)
             metadata: Optional metadata about the pilot (region, time period, etc.)
+            planning_reserve: Planning reserve object describing usable_signals and reserve_buffer
             
         Returns:
             Demand-Signal Prospectus as a dictionary
@@ -75,6 +78,11 @@ class ProspectusGenerator:
         
         if metadata is None:
             metadata = {}
+        if planning_reserve is None:
+            raise ValueError(
+                "ProspectusGenerator requires an explicit planning_reserve object derived from usable signals."
+            )
+        require_planning_reserve(planning_reserve)
         
         # Build prospectus structure
         prospectus = {
@@ -104,6 +112,7 @@ class ProspectusGenerator:
                 ],
                 "estimate_nature": "Estimates are conservative lower-bound signals intended for planning, not exact operational forecasts."
             },
+            "planning_reserve": planning_reserve,
             
             "executive_summary": self._generate_executive_summary(confidence_results, lundai_analysis),
             
@@ -126,7 +135,7 @@ class ProspectusGenerator:
             "infrastructure_planning_guidance": self._generate_planning_guidance(confidence_results, lundai_analysis),
             
             "social_reserve_policy": {
-                "description": "20% capacity reserved for communal productive assets",
+                "description": f"{int(RESERVE_RATIO * 100)}% capacity reserved for communal productive assets",
                 "rationale": "Ensures infrastructure serves collective economic activity, not just individual consumption",
                 "implementation": "Infrastructure design must include capacity for shared assets (mills, pumps, cold storage)"
             },
@@ -748,16 +757,42 @@ class ProspectusGenerator:
             ]
         }
     
+    def _validate_pattern_explanation(self, explanation: Dict) -> None:
+        """Ensure that each prospectus pattern contains a complete explainability payload."""
+        if not isinstance(explanation, dict):
+            raise ValueError("Pattern explanation must be a dictionary.")
+
+        required_keys = [
+            'why_accepted',
+            'why_rejected',
+            'reserve_explanation',
+            'action_allowed_explanation',
+            'human_readable'
+        ]
+        missing = [key for key in required_keys if not explanation.get(key)]
+        if missing:
+            raise ValueError(
+                f"Prospectus pattern explanation missing required keys: {', '.join(missing)}"
+            )
+
     def _format_patterns_for_institutions(self, confidence_results: List[Dict]) -> List[Dict]:
         """Format coordination patterns for institutional decision-makers."""
         
         formatted_patterns = []
         
         for result in confidence_results:
+            explanation = result.get('explanation', {})
+            self._validate_pattern_explanation(explanation)
+
             pattern = {
                 "pattern_id": f"{result['zone']}_{result['activity_type']}_{result['time_window']}",
                 "activity_type": result['activity_type'],
                 "zone": result['zone'],
+                "signal_count": result.get('signal_count', None),
+                "validated_signals": result.get('validated_signals', None),
+                "rejected_signals": result.get('rejected_signals', None),
+                "integrity_score": result.get('integrity_score', None),
+                "alignment_level": result.get('alignment_level', None),
                 "confidence_class": result['confidence_class'],  # Add top-level confidence_class
                 "stability_score": result.get('stability_score', 0.7),  # Add stability_score
                 "demand_rhythm": {
@@ -774,6 +809,8 @@ class ProspectusGenerator:
                     "strength": result['validation_strength'],
                     "details": result['validation_details']
                 },
+                "explanation": explanation,
+                "trust": result.get('trust', {}),
                 "infrastructure_implication": self._get_infrastructure_implication(result)
             }
             
@@ -1619,8 +1656,11 @@ if __name__ == "__main__":
     lumoza = LumozaEngine()
     patterns = lumoza.process_signals(signals)
     
+    from policy import compute_planning_reserve
+
     zentari = ZentariEngine()
-    confidence_results = zentari.evaluate_coordination_confidence(patterns)
+    planning_reserve = compute_planning_reserve(len(patterns))
+    confidence_results = zentari.evaluate_coordination_confidence(patterns, planning_reserve=planning_reserve)
     
     # Generate prospectus
     generator = ProspectusGenerator()
@@ -1629,7 +1669,8 @@ if __name__ == "__main__":
         metadata={
             "region": "Pilot Region - Rural Energy Planning",
             "period": "7-cycle window (Week 1)"
-        }
+        },
+        planning_reserve=planning_reserve,
     )
     
     # Save in both formats

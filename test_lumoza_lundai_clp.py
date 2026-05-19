@@ -9,6 +9,7 @@ from lumoza_engine import LumozaEngine
 from lundai_engine import LundaiEngine
 from zentari_engine import ZentariEngine
 from prospectus_generator import ProspectusGenerator
+from policy import compute_planning_reserve
 
 print("=" * 80)
 print("KULIMA OS COMPLETE SYSTEM TEST")
@@ -44,7 +45,8 @@ print(f"  - Average infrastructure adequacy: {lundai_analysis['overall_assessmen
 # Step 4: ZENTARI - Coordination Confidence Evaluation
 print("\n[STEP 4] ZENTARI - Coordination Confidence Evaluation...")
 zentari = ZentariEngine()
-confidence_results = zentari.evaluate_coordination_confidence(patterns)
+planning_reserve = compute_planning_reserve(len(patterns))
+confidence_results = zentari.evaluate_coordination_confidence(patterns, planning_reserve=planning_reserve)
 high_confidence = sum(1 for r in confidence_results if r['confidence_class'] == 'high')
 print(f"  Evaluated {len(confidence_results)} patterns")
 print(f"  - High confidence: {high_confidence}")
@@ -55,7 +57,8 @@ generator = ProspectusGenerator()
 prospectus = generator.generate_prospectus(
     confidence_results,
     lundai_analysis=lundai_analysis,
-    metadata={"region": "Pilot Region", "period": "7-cycle window"}
+    metadata={"region": "Pilot Region", "period": "7-cycle window"},
+    planning_reserve=planning_reserve,
 )
 
 # Step 6: Analyze Critical Load Protection
