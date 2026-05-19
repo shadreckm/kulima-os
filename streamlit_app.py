@@ -616,29 +616,31 @@ def main() -> None:
         unsafe_allow_html=True,
     )
     st.markdown("<div class='onboard-card'>", unsafe_allow_html=True)
-    st.markdown("<h3>Join the System</h3>", unsafe_allow_html=True)
-    st.markdown(
-    """
-    <ul>
-        <li><strong>Step 1:</strong> Save the Kulima OS WhatsApp number:<br>
-        <strong>+1 415 523 8886</strong></li>
 
-        <li><strong>Step 2:</strong> Open WhatsApp and send:<br>
-        <strong>join week-saved</strong></li>
+st.markdown("<h3>Join the System</h3>", unsafe_allow_html=True)
 
-        <li><strong>Step 3:</strong> Start sending real activity updates, such as:<br>
-        “I am irrigating crops”<br>
-        “We are milling maize”<br>
-        “Selling tomatoes today”</li>
+st.markdown(
+"""
+<ul>
+    <li><strong>Step 1:</strong> Save the Kulima OS WhatsApp number:<br>
+    <strong>+1 415 523 8886</strong></li>
 
-        <li><strong>Step 4:</strong> Continue sending updates over time to build coordinated signals<br>
-        (the more consistent the activity, the stronger the infrastructure signal).</li>
-    </ul>
-    """,
-    unsafe_allow_html=True,
+    <li><strong>Step 2:</strong> Open WhatsApp and send:<br>
+    <strong>join week-saved</strong></li>
+
+    <li><strong>Step 3:</strong> Start sending real activity updates:<br>
+    “I am irrigating crops”<br>
+    “We are milling maize”<br>
+    “Selling tomatoes today”</li>
+
+    <li><strong>Step 4:</strong> Continue sending updates consistently.<br>
+    The more consistent the activity, the stronger the coordination signal.</li>
+</ul>
+""",
+unsafe_allow_html=True,
 )
-    st.markdown("</div>", unsafe_allow_html=True)
 
+st.markdown("</div>", unsafe_allow_html=True)
     st.markdown(
         "<div class='dashboard-footer'>Kulima Africa — Coordination Intelligence Infrastructure • Public Digital System • <a href='https://github.com/shadreckm/kulima-os' target='_blank'>GitHub</a> • <a href='#'>Dashboard</a></div>",
         unsafe_allow_html=True,
