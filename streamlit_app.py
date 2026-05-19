@@ -641,7 +641,7 @@ unsafe_allow_html=True,
 )
 
 st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown(
+st.markdown(
         "<div class='dashboard-footer'>Kulima Africa — Coordination Intelligence Infrastructure • Public Digital System • <a href='https://github.com/shadreckm/kulima-os' target='_blank'>GitHub</a> • <a href='#'>Dashboard</a></div>",
         unsafe_allow_html=True,
     )
