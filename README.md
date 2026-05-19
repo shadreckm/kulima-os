@@ -38,7 +38,16 @@ pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
 
-4. Optional: run the demo or CLI scripts as needed.
+4. To enable pilot evidence logging and dashboard insights, set the pilot mode environment variable:
+
+```bash
+set KULIMA_PILOT_MODE=1
+streamlit run streamlit_app.py
+```
+
+The structured pilot evidence log is written to `pilot_log.json` in the repository root.
+
+5. Optional: run the demo or CLI scripts as needed.
 
 ## Deployment
 

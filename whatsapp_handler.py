@@ -14,6 +14,7 @@ from coordination_accumulation import compute_coordination_trend
 from zone_utils import normalize_zone
 from prospectus_generator import ProspectusGenerator
 from policy import compute_planning_reserve
+from pilot_mode import is_pilot_mode, log_pilot_event
 import json
 from pathlib import Path
 
@@ -64,6 +65,19 @@ class WhatsAppMessageHandler:
         
         if signal_id:
             zone_key = normalize_zone(parsed_signal.zone)
+            if is_pilot_mode():
+                log_pilot_event(
+                    {
+                        "event_type": "incoming_signal",
+                        "zone": zone_key,
+                        "activity_type": parsed_signal.activity_type,
+                        "signal_source": "whatsapp",
+                        "confidence": parsed_signal.confidence,
+                        "validated": None,
+                        "signal_id": signal_id,
+                    }
+                )
+
             summary = integrate_whatsapp_to_lumoza(zone=zone_key, mark_processed=False)
             print(
                 f"Processing zone {zone_key}: {summary['signals_in_window']} signals in window, "

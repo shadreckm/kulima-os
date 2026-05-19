@@ -30,6 +30,7 @@ from lundai_engine import (
     detect_infrastructure_mismatch,
     LundaiEngine,
 )
+from pilot_mode import is_pilot_mode, log_pilot_event
 from zentari_engine import ZentariEngine
 from zone_utils import normalize_zone
 
@@ -38,12 +39,16 @@ class LumozaIntegration:
     """Integrates time-accumulated WhatsApp signals through the full KULIMA OS pipeline."""
 
     def convert_to_lumoza_patterns(
-        self, zone: Optional[str] = None, mark_processed: bool = False
+        self,
+        zone: Optional[str] = None,
+        mark_processed: bool = False,
+        pilot_mode: bool = False,
     ) -> Dict:
         """Process raw zone signals through LUMOZA, then LUNDAI and ZENTARI."""
         if not zone:
             return self._empty_summary()
 
+        pilot_mode = pilot_mode or is_pilot_mode()
         zone_key = normalize_zone(zone)
         window_signals = get_zone_window_signals(zone_key)
         raw_signal_count = len(window_signals)
@@ -99,6 +104,28 @@ class LumozaIntegration:
             planning_reserve=planning_reserve,
         )
 
+        if pilot_mode:
+            for pattern in confidence_patterns:
+                log_pilot_event(
+                    {
+                        "event_type": "coordination_pattern",
+                        "zone": zone_key,
+                        "activity_type": pattern.get("activity_type"),
+                        "time_window": pattern.get("demand_rhythm", {}).get("time_window"),
+                        "validated": bool(pattern.get("confidence_class") in {"high", "moderate"}),
+                        "confidence_class": pattern.get("confidence_class"),
+                        "coordination_confidence": pattern.get("coordination_confidence"),
+                        "alignment_level": pattern.get("alignment_level"),
+                        "integrity_score": pattern.get("integrity_score"),
+                        "decision_note": pattern.get("bankability_note", ""),
+                        "explanation": pattern.get("explanation"),
+                        "planning_reserve": planning_reserve,
+                        "signal_count": pattern.get("signal_count"),
+                        "validated_signals": pattern.get("validated_signals"),
+                        "rejected_signals": pattern.get("rejected_signals"),
+                    }
+                )
+
         return {
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "zone": zone_key,
@@ -113,6 +140,7 @@ class LumozaIntegration:
             "lundai_analysis": lundai_analysis,
             "settlement_alignment": settlement_alignment,
             "infrastructure_mismatch": infrastructure_mismatch,
+            "pilot_mode": pilot_mode,
             "status": "ready_for_prospectus" if confidence_patterns else "insufficient_data",
         }
 
