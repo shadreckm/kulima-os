@@ -1,9 +1,9 @@
+"""
 Kulima OS – Institutional Demand Signal Interface (Streamlit)
 
 Live view: community signals → coordination → prospectus.
 Run: streamlit run streamlit_app.py
 """
-
 from __future__ import annotations
 
 import json
