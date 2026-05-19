@@ -109,8 +109,7 @@ def latest_pdf_path(zone: str) -> Optional[Path]:
         key=lambda p: p.name,
         reverse=True,
     )
-            "coordination_score": score,
-            "coordination_strength_label": strength_label,
+           
     for folder in subdirs:
         pdfs = list(folder.glob("*.pdf"))
         if pdfs:
