@@ -618,15 +618,25 @@ def main() -> None:
     st.markdown("<div class='onboard-card'>", unsafe_allow_html=True)
     st.markdown("<h3>Join the System</h3>", unsafe_allow_html=True)
     st.markdown(
-        """
-        <ul>
-            <li>Save the Kulima WhatsApp number in your device.</li>
-            <li>Send the designated join code to register your community signal source.</li>
-            <li>Submit activity updates to build coordination intelligence over time.</li>
-        </ul>
-        """,
-        unsafe_allow_html=True,
-    )
+    """
+    <ul>
+        <li><strong>Step 1:</strong> Save the Kulima OS WhatsApp number:<br>
+        <strong>+1 415 523 8886</strong></li>
+
+        <li><strong>Step 2:</strong> Open WhatsApp and send:<br>
+        <strong>join week-saved</strong></li>
+
+        <li><strong>Step 3:</strong> Start sending real activity updates, such as:<br>
+        “I am irrigating crops”<br>
+        “We are milling maize”<br>
+        “Selling tomatoes today”</li>
+
+        <li><strong>Step 4:</strong> Continue sending updates over time to build coordinated signals<br>
+        (the more consistent the activity, the stronger the infrastructure signal).</li>
+    </ul>
+    """,
+    unsafe_allow_html=True,
+)
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(
