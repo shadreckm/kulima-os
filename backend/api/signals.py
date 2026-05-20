@@ -1,7 +1,7 @@
 """
 Signal endpoints
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from typing import Optional
 import uuid
@@ -13,7 +13,7 @@ router = APIRouter()
 
 
 @router.post("/signal")
-async def create_signal(signal_data: dict, db: Session = next(get_db())):
+async def create_signal(signal_data: dict, db: Session = Depends(get_db)):
     """
     Receive activity input from WhatsApp or manual entry.
     

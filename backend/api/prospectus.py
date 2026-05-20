@@ -1,7 +1,7 @@
 """
 Prospectus endpoints
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import FileResponse
 from datetime import datetime
 import uuid
@@ -22,7 +22,7 @@ PROSPECTUS_DIR.mkdir(exist_ok=True)
 
 
 @router.post("/generate-prospectus")
-async def generate_prospectus(request: dict, db: Session = next(get_db())):
+async def generate_prospectus(request: dict, db: Session = Depends(get_db)):
     """
     Trigger PDF generation for a zone.
     
@@ -171,7 +171,7 @@ async def generate_prospectus(request: dict, db: Session = next(get_db())):
 
 
 @router.get("/prospectus/{prospectus_id}")
-async def get_prospectus(prospectus_id: str, db: Session = next(get_db())):
+async def get_prospectus(prospectus_id: str, db: Session = Depends(get_db)):
     """
     Get prospectus details by ID.
     """

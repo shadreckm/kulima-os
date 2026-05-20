@@ -1,7 +1,7 @@
 """
 Summary endpoints
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
@@ -15,7 +15,7 @@ router = APIRouter()
 
 
 @router.get("/summary/{zone}")
-async def get_summary(zone: str, db: Session = next(get_db())):
+async def get_summary(zone: str, db: Session = Depends(get_db)):
     """
     Return coordination summary for a zone.
     
