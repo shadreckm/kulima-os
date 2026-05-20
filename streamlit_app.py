@@ -6,6 +6,7 @@ Run: streamlit run streamlit_app.py
 """
 from __future__ import annotations
 
+import json
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -107,6 +108,98 @@ def build_coordination_summary(zone: str) -> dict:
     }
 
 
+def generate_sample_patterns(zone: str) -> list:
+    """Generate realistic sample coordination patterns for demonstration purposes."""
+    zone_key = normalize_zone(zone)
+    
+    # Semi-dynamic sample data with realistic Malawian context
+    base_patterns = [
+        {
+            "activity_type": "irrigation",
+            "zone": zone_key,
+            "time_window": "morning",
+            "frequency": "6 of 7 cycles",
+            "coordination_confidence": 0.78,
+            "confidence_class": "high",
+            "stability_score": 0.82,
+            "service_priority": "productive",
+            "actors": 15,
+            "bankability_note": "High bankability - stable pattern with strong coordination confidence",
+            "validation_strength": "strong",
+            "validation_details": "Pattern validated through 6 of 7 cycles with consistent timing and sufficient actor diversity",
+            "demand_rhythm": {
+                "time_window": "morning",
+                "frequency": "6 of 7 cycles",
+                "peak_hours": "06:00-10:00",
+                "stability_class": "stable"
+            },
+            "explanation": {
+                "human_readable": f"Consistent morning irrigation activity detected in {zone_key}. Farmers coordinate water access during early hours, indicating stable agricultural demand patterns.",
+                "why_accepted": "Pattern appears in 6 of 7 cycles with consistent timing and sufficient actor diversity",
+                "why_rejected": "N/A - Pattern accepted",
+                "reserve_explanation": "Pattern classified as productive use; 20% capacity reserve applies to essential services only",
+                "action_allowed_explanation": "Pattern accepted for infrastructure planning; productive-use capacity allocation permitted"
+            }
+        },
+        {
+            "activity_type": "milling",
+            "zone": zone_key,
+            "time_window": "afternoon",
+            "frequency": "5 of 7 cycles",
+            "coordination_confidence": 0.72,
+            "confidence_class": "high",
+            "stability_score": 0.75,
+            "service_priority": "productive",
+            "actors": 12,
+            "bankability_note": "High bankability - stable pattern with strong coordination confidence",
+            "validation_strength": "strong",
+            "validation_details": "Pattern validated through 5 of 7 cycles with stable afternoon timing and adequate actor participation",
+            "demand_rhythm": {
+                "time_window": "afternoon",
+                "frequency": "5 of 7 cycles",
+                "peak_hours": "12:00-16:00",
+                "stability_class": "stable"
+            },
+            "explanation": {
+                "human_readable": f"Maize milling activity clusters in afternoon hours in {zone_key}. Community members coordinate grain processing, showing consistent productive-use energy demand.",
+                "why_accepted": "Pattern appears in 5 of 7 cycles with stable afternoon timing and adequate actor participation",
+                "why_rejected": "N/A - Pattern accepted",
+                "reserve_explanation": "Pattern classified as productive use; 20% capacity reserve applies to essential services only",
+                "action_allowed_explanation": "Pattern accepted for infrastructure planning; productive-use capacity allocation permitted"
+            }
+        },
+        {
+            "activity_type": "trading",
+            "zone": zone_key,
+            "time_window": "evening",
+            "frequency": "4 of 7 cycles",
+            "coordination_confidence": 0.65,
+            "confidence_class": "moderate",
+            "stability_score": 0.68,
+            "service_priority": "productive",
+            "actors": 20,
+            "bankability_note": "Moderate bankability - emerging pattern with moderate coordination confidence",
+            "validation_strength": "moderate",
+            "validation_details": "Pattern validated through 4 of 7 cycles with moderate stability and good actor diversity",
+            "demand_rhythm": {
+                "time_window": "evening",
+                "frequency": "4 of 7 cycles",
+                "peak_hours": "16:00-20:00",
+                "stability_class": "emerging"
+            },
+            "explanation": {
+                "human_readable": f"Market trading activity emerges in evening hours in {zone_key}. Commercial activity coordination suggests growing economic demand patterns.",
+                "why_accepted": "Pattern appears in 4 of 7 cycles with moderate stability and good actor diversity",
+                "why_rejected": "N/A - Pattern accepted",
+                "reserve_explanation": "Pattern classified as productive use; 20% capacity reserve applies to essential services only",
+                "action_allowed_explanation": "Pattern accepted for infrastructure planning; productive-use capacity allocation permitted"
+            }
+        }
+    ]
+    
+    return base_patterns
+
+
 def patterns_to_confidence_results(patterns: list) -> list:
     """Normalize patterns for prospectus generation."""
     results = []
@@ -139,16 +232,40 @@ def generate_zone_prospectus(zone: str) -> Tuple[Optional[Path], str]:
     summary = integrate_whatsapp_to_lumoza(zone=zone_key)
     patterns = summary.get("patterns", [])
     lundai_analysis = summary.get("lundai_analysis", {})
+    validated_signal_count = summary.get("validated_signal_count", 0)
+    is_sample = False
 
-    if not patterns:
-        return None, (
-            f"Coordination activity detected, but validated patterns are not yet stable for infrastructure planning in {zone_key}. "
-            f"({summary.get('validated_signal_count', 0)} validated signal(s) in the {CYCLE_WINDOW_DAYS}-day window)."
-        )
+    # Detect empty state and use sample patterns if needed
+    if not patterns or validated_signal_count == 0:
+        patterns = generate_sample_patterns(zone)
+        is_sample = True
+        # Generate sample lundai analysis
+        lundai_analysis = {
+            "overall_assessment": {
+                "total_zones_analyzed": 1,
+                "critical_infrastructure_gaps": 1,
+                "urgent_priority_zones": 1,
+                "average_infrastructure_adequacy_score": 45,
+                "overall_infrastructure_status": "underserved"
+            },
+            "zone_analyses": {
+                zone_key: {
+                    "settlement_type": "rural_agricultural",
+                    "infrastructure_status": "underserved",
+                    "essential_services_count": 2,
+                    "productive_activity_count": 3,
+                    "grid_edge_exposure": True
+                }
+            }
+        }
 
     try:
         gen = ProspectusGenerator()
-        metadata = {"region": zone_key, "period": f"{CYCLE_WINDOW_DAYS}-cycle window (1 week)"}
+        metadata = {
+            "region": zone_key,
+            "period": f"{CYCLE_WINDOW_DAYS}-cycle window (1 week)",
+            "is_sample": is_sample
+        }
         planning_reserve = summary.get("planning_reserve")
         
         if planning_reserve is None:
@@ -172,6 +289,8 @@ def generate_zone_prospectus(zone: str) -> Tuple[Optional[Path], str]:
         json_path = artifacts_dir / f"demand_prospectus_{zone_key.lower()}_{timestamp}.json"
         json_path.write_text(json.dumps(prospectus, indent=2), encoding="utf-8")
 
+        if is_sample:
+            return pdf_path, f"Sample prospectus generated ({len(patterns)} demonstration pattern(s))."
         return pdf_path, f"Prospectus generated ({len(patterns)} pattern(s))."
     except Exception as e:
         return None, f"Error generating prospectus: {str(e)}"
@@ -359,6 +478,8 @@ def main() -> None:
                 new_pdf, message = generate_zone_prospectus(selected_zone)
             if new_pdf and new_pdf.is_file():
                 st.success("Verified demand signal prospectus generated successfully.")
+                if "Sample prospectus" in message:
+                    st.warning("Sample Prospectus – Demonstration Only")
                 with open(new_pdf, "rb") as pdf_file:
                     st.download_button(
                         label="Download Demand Signal Prospectus",
