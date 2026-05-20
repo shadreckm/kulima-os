@@ -63,7 +63,11 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                 "source": signal.source
             })
         
-        print(f"Converted {len(signal_data)} signals to engine format")
+        # Add cycle_index to each signal
+        for i, signal in enumerate(signal_data):
+            signal["cycle_index"] = i
+        
+        print(f"Converted {len(signal_data)} signals to engine format with cycle_index")
         
         # 3. Run LUMOZA engine to generate coordination patterns
         print("Running LUMOZA engine...")

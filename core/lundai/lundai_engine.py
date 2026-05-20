@@ -143,7 +143,7 @@ def evaluate_signal_integrity(signals: List[Dict], integrity_threshold: float = 
             ts = _parse_iso_timestamp(signal.get('timestamp', ''))
             if ts is None and signal.get('cycle_index') is not None:
                 try:
-                    cycle_index = int(signal['cycle_index'])
+                    cycle_index = int(signal.get('cycle_index', 0))
                     ts = datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(days=cycle_index - 1)
                 except (TypeError, ValueError):
                     ts = None

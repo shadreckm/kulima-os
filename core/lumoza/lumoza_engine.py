@@ -99,6 +99,7 @@ class LumozaEngine:
                 "zone": zone,
                 "time_window": time_window,
                 "service_priority": service_priority,
+                "cycle_index": pattern_analysis.get('cycle_count', 0),  # Add cycle_index to pattern
                 "demand_rhythm": {
                     "frequency": f"{pattern_analysis['cycle_count']} of {self.TOTAL_CYCLES} cycles",
                     "cycles_present": sorted(pattern_analysis['cycles_present']),
@@ -108,6 +109,8 @@ class LumozaEngine:
                 "validation_strength": validation_result['strength'],
                 "validation_details": validation_result['details']
             }
+            
+            print(f"Cycle index check: {coordination_pattern}")
             
             coordination_patterns.append(coordination_pattern)
         
@@ -144,7 +147,8 @@ class LumozaEngine:
         cycles_present = set()
         
         for signal in pattern_signals:
-            cycles_present.add(signal['cycle_index'])
+            cycle_index = signal.get('cycle_index', 0)
+            cycles_present.add(cycle_index)
         
         return {
             'cycle_count': len(cycles_present),

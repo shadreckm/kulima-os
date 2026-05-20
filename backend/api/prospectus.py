@@ -80,6 +80,10 @@ async def generate_prospectus(request: dict, db: Session = Depends(get_db)):
                     "source": signal.source
                 })
             
+            # Add cycle_index to each signal
+            for i, signal in enumerate(signal_data):
+                signal["cycle_index"] = i
+            
             from core.lumoza.lumoza_engine import LumozaEngine
             from core.lundai.lundai_engine import LundaiEngine
             from core.zentari.zentari_engine import ZentariEngine
