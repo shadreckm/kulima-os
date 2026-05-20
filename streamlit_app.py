@@ -13,16 +13,14 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import streamlit as st
-...
 
-def coordination_strength_color(score: int) -> str:
-    ...
 def coordination_strength_color(score: int) -> str:
     if score >= 70:
         return "#2E7D32"   # green
     elif score >= 40:
         return "#F57C00"   # orange
     return "#D32F2F"       # red
+
 from coordination_accumulation import (
     CYCLE_WINDOW_DAYS,
     compute_coordination_patterns,
@@ -126,19 +124,8 @@ def latest_pdf_path(zone: str) -> Optional[Path]:
     return None
 
 
-
-    def coordination_strength_color(score: int) -> str:
-        if score >= 70:
-            return "#2E7D32"
-        if score >= 40:
-            return "#F57C00"
-        return "#D32F2F"
-
 def patterns_to_confidence_results(patterns: list) -> list:
-    """Normalize patterns for prospectus generation.
-
-    If the pipeline has already produced ZENTARI outputs, keep them intact.
-    """
+    """Normalize patterns for prospectus generation."""
     results = []
     for pattern in patterns:
         if pattern.get("confidence_class") and pattern.get("coordination_confidence") is not None:
@@ -164,11 +151,7 @@ def patterns_to_confidence_results(patterns: list) -> list:
 
 
 def generate_zone_prospectus(zone: str) -> Tuple[Optional[Path], str]:
-    """
-    1. integrate_whatsapp_to_lumoza(zone)
-    2. ProspectusGenerator.generate_prospectus + generate_pdf
-    3. Save under artifacts/<zone>/<timestamp>/
-    """
+    """Generate the PDF/JSON prospectus for a zone."""
     zone_key = normalize_zone(zone)
     summary = integrate_whatsapp_to_lumoza(zone=zone_key)
     patterns = summary.get("patterns", [])
@@ -281,17 +264,6 @@ def main() -> None:
             box-shadow: 0 28px 70px rgba(38, 50, 56, 0.08);
             margin-bottom: 2rem;
         }
-        .hero-panel img {
-            width: 88px;
-            border-radius: 24px;
-            background: #FFFFFF;
-            padding: 0.75rem;
-            box-shadow: 0 16px 40px rgba(46, 125, 50, 0.08);
-        }
-        .hero-copy {
-            display: grid;
-            gap: 0.4rem;
-        }
         .hero-copy h1 {
             margin: 0;
             color: #263238;
@@ -384,31 +356,6 @@ def main() -> None:
             font-size: 0.95rem;
             font-weight: 700;
         }
-        .pill-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            margin-top: 1rem;
-        }
-        .pill {
-            border-radius: 999px;
-            background: #FFFFFF;
-            color: #263238;
-            border: 1px solid rgba(38, 50, 56, 0.12);
-            padding: 0.8rem 1.1rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .pill.selected {
-            background: #2E7D32;
-            color: #FFFFFF;
-            border-color: transparent;
-            box-shadow: 0 18px 30px rgba(46, 125, 50, 0.16);
-        }
-        .action-card {
-            text-align: center;
-        }
         .action-card h3 {
             margin: 0;
             font-size: 1.45rem;
@@ -419,18 +366,6 @@ def main() -> None:
             color: #455A64;
             max-width: 720px;
             line-height: 1.75;
-        }
-        .action-button {
-            background: #F57C00 !important;
-            color: #FFFFFF !important;
-            border-radius: 999px !important;
-            padding: 1rem 1.6rem !important;
-            font-size: 1rem !important;
-            font-weight: 800 !important;
-            border: none !important;
-        }
-        .action-button:hover {
-            background: #EF6C00 !important;
         }
         .onboard-card h3 {
             margin: 0;
@@ -554,7 +489,7 @@ def main() -> None:
             <div class='card kpi-card'>
                 <p class='kpi-label'>{card['label']}</p>
                 <p class='kpi-value'>{card['value']}</p>
-                {"<div class='strength-meter'><div class='strength-fill' style='width: {card['score']}%; background: {card['strength_color']};'></div></div><p class='strength-label'>{card['strength_label']} — {card['score']}% coordination strength</p>" if card.get('score') is not None else ''}
+                {"<div class='strength-meter'><div class='strength-fill' style='width: " + str(card['score']) + "%; background: " + card['strength_color'] + ";'></div></div><p class='strength-label'>" + card['strength_label'] + " — " + str(card['score']) + "% coordination strength</p>" if card.get('score') is not None else ''}
                 <p class='kpi-note'>{card['note']}</p>
             </div>
             """,
@@ -615,33 +550,30 @@ def main() -> None:
         "<p class='section-copy'>Activate local participation through the operational WhatsApp channel and surface evidence-ready signals for planning.</p>",
         unsafe_allow_html=True,
     )
-    st.markdown("<div class='onboard-card'>", unsafe_allow_html=True)
+    
+    # Refined Onboarding Section
+    st.markdown(
+        """
+        <div class='onboard-card'>
+            <h3>Join the System</h3>
+            <ul>
+                <li><strong>Step 1:</strong> Save the Kulima OS WhatsApp number:<br>
+                <strong>+1 415 523 8886</strong></li>
+                <li><strong>Step 2:</strong> Open WhatsApp and send:<br>
+                <strong>join week-saved</strong></li>
+                <li><strong>Step 3:</strong> Send real activity updates such as:<br>
+                "I am irrigating crops"<br>
+                "We are milling maize"<br>
+                "Selling tomatoes today"</li>
+                <li><strong>Step 4:</strong> Continue sending updates consistently.<br>
+                Strong repetition builds reliable coordination signals.</li>
+            </ul>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-st.markdown("<h3>Join the System</h3>", unsafe_allow_html=True)
-
-st.markdown(
-"""
-<ul>
-    <li><strong>Step 1:</strong> Save the Kulima OS WhatsApp number:<br>
-    <strong>+1 415 523 8886</strong></li>
-
-    <li><strong>Step 2:</strong> Open WhatsApp and send:<br>
-    <strong>join week-saved</strong></li>
-
-    <li><strong>Step 3:</strong> Send real activity updates such as:<br>
-    "I am irrigating crops"<br>
-    "We are milling maize"<br>
-    "Selling tomatoes today"</li>
-
-    <li><strong>Step 4:</strong> Continue sending updates consistently.<br>
-    Strong repetition builds reliable coordination signals.</li>
-</ul>
-""",
-unsafe_allow_html=True,
-)
-
-st.markdown("</div>", unsafe_allow_html=True)
-st.markdown(
+    st.markdown(
         "<div class='dashboard-footer'>Kulima Africa — Coordination Intelligence Infrastructure • Public Digital System • <a href='https://github.com/shadreckm/kulima-os' target='_blank'>GitHub</a> • <a href='#'>Dashboard</a></div>",
         unsafe_allow_html=True,
     )
