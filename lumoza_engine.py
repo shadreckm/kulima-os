@@ -270,5 +270,3 @@ if __name__ == "__main__":
     patterns = lumoza.process_signals(signals)
     
     print_coordination_patterns(patterns)
-
-# Made with Bob

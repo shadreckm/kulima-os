@@ -247,4 +247,3 @@ if __name__ == "__main__":
     for signal in signals[:5]:
         print(f"  {signal}")
 
-# Made with Bob

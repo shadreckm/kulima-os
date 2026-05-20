@@ -36,4 +36,3 @@ __all__ = [
     "EphemeralBuffer"
 ]
 
-# Made with Bob

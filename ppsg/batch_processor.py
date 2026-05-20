@@ -183,4 +183,3 @@ class EphemeralBuffer:
             "last_batch_handoff": self.last_batch_handoff.isoformat() + "Z"
         }
 
-# Made with Bob

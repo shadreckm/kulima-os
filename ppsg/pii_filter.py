@@ -103,7 +103,6 @@ def validate_zone_precision(zone_id: str) -> Optional[str]:
     # Check if it contains suspicious precision indicators
     if any(indicator in zone_id.lower() for indicator in ['lat', 'lon', 'gps', 'coord']):
         return "zone_id must be coarse zone identifier, not location coordinates"
-    
+
     return None
 
-# Made with Bob

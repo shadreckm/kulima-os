@@ -66,4 +66,3 @@ print("\n" + "=" * 70)
 print("[SUCCESS] Critical Load Protection is working correctly!")
 print("=" * 70)
 
-# Made with Bob

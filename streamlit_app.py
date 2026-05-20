@@ -6,7 +6,6 @@ Run: streamlit run streamlit_app.py
 """
 from __future__ import annotations
 
-import json
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -23,9 +22,7 @@ def coordination_strength_color(score: int) -> str:
 
 from coordination_accumulation import (
     CYCLE_WINDOW_DAYS,
-    compute_coordination_patterns,
     compute_coordination_trend,
-    get_zone_window_signals,
 )
 from lumoza_integration import integrate_whatsapp_to_lumoza
 from pilot_mode import generate_pilot_report
@@ -101,27 +98,13 @@ def build_coordination_summary(zone: str) -> dict:
         "high_confidence_patterns": sum(1 for p in patterns if p.get("confidence_class") == "high"),
         "lundai_status": lundai_overall.get("overall_infrastructure_status", "Unknown"),
         "planning_reserve": summary.get("planning_reserve", {}).get("usable_signals", 0),
-        "pattern_explanations": [p.get('explanation', {}).get('human_readable', '') for p in patterns],
+        "pattern_explanations": [
+            p.get('explanation', {}).get('human_readable', '')
+            if isinstance(p.get('explanation'), dict)
+            else p.get('explanation', '')
+            for p in patterns
+        ],
     }
-
-
-def latest_pdf_path(zone: str) -> Optional[Path]:
-    """Scan artifacts/<zone>/ for the newest timestamp folder and its PDF."""
-    zone_dir = ARTIFACTS_ROOT / normalize_zone(zone).lower()
-    if not zone_dir.is_dir():
-        return None
-
-    subdirs = sorted(
-        (d for d in zone_dir.iterdir() if d.is_dir()),
-        key=lambda p: p.name,
-        reverse=True,
-    )
-           
-    for folder in subdirs:
-        pdfs = list(folder.glob("*.pdf"))
-        if pdfs:
-            return max(pdfs, key=lambda p: p.stat().st_mtime)
-    return None
 
 
 def patterns_to_confidence_results(patterns: list) -> list:
@@ -163,26 +146,35 @@ def generate_zone_prospectus(zone: str) -> Tuple[Optional[Path], str]:
             f"({summary.get('validated_signal_count', 0)} validated signal(s) in the {CYCLE_WINDOW_DAYS}-day window)."
         )
 
-    gen = ProspectusGenerator()
-    metadata = {"region": zone_key, "period": f"{CYCLE_WINDOW_DAYS}-cycle window (1 week)"}
-    prospectus = gen.generate_prospectus(
-        patterns_to_confidence_results(patterns),
-        lundai_analysis=lundai_analysis,
-        metadata=metadata,
-        planning_reserve=summary.get("planning_reserve"),
-    )
+    try:
+        gen = ProspectusGenerator()
+        metadata = {"region": zone_key, "period": f"{CYCLE_WINDOW_DAYS}-cycle window (1 week)"}
+        planning_reserve = summary.get("planning_reserve")
+        
+        if planning_reserve is None:
+            from policy import compute_planning_reserve
+            planning_reserve = compute_planning_reserve(len(patterns))
+        
+        prospectus = gen.generate_prospectus(
+            patterns_to_confidence_results(patterns),
+            lundai_analysis=lundai_analysis,
+            metadata=metadata,
+            planning_reserve=planning_reserve,
+        )
 
-    timestamp = datetime.utcnow().isoformat().replace(":", "-")
-    artifacts_dir = ARTIFACTS_ROOT / zone_key.lower() / timestamp
-    artifacts_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.utcnow().isoformat().replace(":", "-")
+        artifacts_dir = ARTIFACTS_ROOT / zone_key.lower() / timestamp
+        artifacts_dir.mkdir(parents=True, exist_ok=True)
 
-    pdf_path = artifacts_dir / f"demand_prospectus_{zone_key.lower()}_{timestamp}.pdf"
-    gen.generate_pdf(prospectus, str(pdf_path))
+        pdf_path = artifacts_dir / f"demand_prospectus_{zone_key.lower()}_{timestamp}.pdf"
+        gen.generate_pdf(prospectus, str(pdf_path))
 
-    json_path = artifacts_dir / f"demand_prospectus_{zone_key.lower()}_{timestamp}.json"
-    json_path.write_text(json.dumps(prospectus, indent=2), encoding="utf-8")
+        json_path = artifacts_dir / f"demand_prospectus_{zone_key.lower()}_{timestamp}.json"
+        json_path.write_text(json.dumps(prospectus, indent=2), encoding="utf-8")
 
-    return pdf_path, f"Prospectus generated ({len(patterns)} pattern(s))."
+        return pdf_path, f"Prospectus generated ({len(patterns)} pattern(s))."
+    except Exception as e:
+        return None, f"Error generating prospectus: {str(e)}"
 
 
 def build_pilot_insights() -> dict:
@@ -221,183 +213,8 @@ def main() -> None:
         menu_items={
             'Get help': None,
             'Report a bug': None,
-            'About': 'Kulima OS is a coordination intelligence platform for infrastructure planning.',
+            'About': 'Kulima OS is a coordination-first economic substrate designed as Digital Public Infrastructure (DPI) for infrastructure planning.',
         },
-    )
-
-    st.markdown(
-        """
-        <style>
-        body, html, .stApp, .main {
-            background: #F5F7FA !important;
-            color: #263238 !important;
-        }
-        #MainMenu, header, footer, .css-1lsmgbg, .viewerBadge_link, [data-testid="stToolbar"], [data-testid="collapsedControl"], [aria-label="Main menu"] {
-            visibility: hidden !important;
-            height: 0 !important;
-            width: 0 !important;
-            overflow: hidden !important;
-        }
-        .css-1v0mbdj, .css-1lsmgbg, .css-1d391kg, .css-14xtw13 {
-            display: none !important;
-        }
-        div.block-container {
-            padding: 1rem 1.5rem 1.5rem !important;
-            max-width: 1200px;
-            margin: 0 auto;
-            background: transparent;
-        }
-        .stApp {
-            background: linear-gradient(180deg, #F5F7FA 0%, #FFFFFF 100%) !important;
-        }
-        main {
-            padding-top: 0 !important;
-        }
-        .hero-panel {
-            display: grid;
-            grid-template-columns: 120px minmax(320px, 1fr);
-            gap: 2rem;
-            align-items: center;
-            padding: 2rem 2rem 2.5rem;
-            background: linear-gradient(160deg, #E8F5E9 0%, #F5F7FA 100%);
-            border-radius: 28px;
-            box-shadow: 0 28px 70px rgba(38, 50, 56, 0.08);
-            margin-bottom: 2rem;
-        }
-        .hero-copy h1 {
-            margin: 0;
-            color: #263238;
-            font-size: 3.2rem;
-            letter-spacing: -0.04em;
-        }
-        .hero-copy h2 {
-            margin: 0;
-            color: #2E7D32;
-            font-size: 1.45rem;
-            font-weight: 700;
-        }
-        .hero-copy p {
-            margin: 0.8rem 0 0;
-            color: #455A64;
-            font-size: 1rem;
-            line-height: 1.8;
-            max-width: 720px;
-        }
-        .section-heading {
-            color: #263238;
-            margin: 0;
-            font-size: 1.55rem;
-            font-weight: 700;
-        }
-        .section-copy {
-            color: #455A64;
-            margin: 0.75rem 0 0;
-            line-height: 1.75;
-            max-width: 820px;
-        }
-        .section-separator {
-            height: 1px;
-            background: rgba(38, 50, 56, 0.12);
-            margin: 2rem 0;
-        }
-        .kpi-grid, .overview-grid, .pilot-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-        .section-card, .action-card, .onboard-card {
-            background: #FFFFFF;
-            border-radius: 24px;
-            padding: 1.75rem;
-            box-shadow: 0 18px 40px rgba(38, 50, 56, 0.06);
-        }
-        .kpi-card {
-            border-left: 4px solid #2E7D32;
-            padding-left: 1.25rem;
-        }
-        .kpi-label {
-            margin: 0;
-            color: #455A64;
-            font-size: 0.85rem;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-        }
-        .kpi-value {
-            margin: 0.85rem 0 0;
-            color: #263238;
-            font-size: 2.4rem;
-            font-weight: 800;
-            line-height: 1;
-        }
-        .kpi-note {
-            margin: 0.9rem 0 0;
-            color: #607D8B;
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-        .strength-meter {
-            position: relative;
-            width: 100%;
-            height: 12px;
-            border-radius: 999px;
-            background: rgba(38, 50, 56, 0.08);
-            margin: 1rem 0 0.55rem;
-            overflow: hidden;
-        }
-        .strength-fill {
-            height: 100%;
-            border-radius: 999px;
-            transition: width 0.35s ease;
-        }
-        .strength-label {
-            margin: 0;
-            color: #455A64;
-            font-size: 0.95rem;
-            font-weight: 700;
-        }
-        .action-card h3 {
-            margin: 0;
-            font-size: 1.45rem;
-            color: #263238;
-        }
-        .action-card p {
-            margin: 1rem auto 1.5rem;
-            color: #455A64;
-            max-width: 720px;
-            line-height: 1.75;
-        }
-        .onboard-card h3 {
-            margin: 0;
-            font-size: 1.35rem;
-            color: #263238;
-        }
-        .onboard-card ul {
-            margin: 1rem 0 0;
-            padding-left: 1.2rem;
-            color: #455A64;
-            line-height: 1.8;
-        }
-        .onboard-card li {
-            margin-bottom: 0.8rem;
-        }
-        .dashboard-footer {
-            margin-top: 3rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid rgba(38, 50, 56, 0.12);
-            color: #546E7A;
-            text-align: center;
-            font-size: 0.95rem;
-            line-height: 1.8;
-        }
-        .dashboard-footer a {
-            color: #2E7D32;
-            text-decoration: none;
-            font-weight: 700;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
     )
 
     logo_path = Path(__file__).resolve().parent / "assets" / "kulima_africa_logo.png"
@@ -406,43 +223,53 @@ def main() -> None:
         if logo_path.is_file():
             st.image(str(logo_path), width=96)
     with cols[1]:
-        st.markdown(
-            """
-            <div class='hero-copy'>
-                <h1>Kulima OS</h1>
-                <h2>Coordination Intelligence System</h2>
-                <p>Seeing real demand before infrastructure is built.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        st.title("Kulima OS")
+        st.subheader("Digital Public Infrastructure (DPI) for Infrastructure Planning")
+        st.caption("Verifying collective demand rhythms and coordination patterns to derisk infrastructure deployment without extraction or surveillance.")
+
+    st.divider()
+
+    with st.container():
+        st.header("1. System Architecture & Digital Public Infrastructure (DPI)")
+        st.write(
+            "Kulima OS is a coordination-first economic substrate designed to convert decentralized livelihood activity "
+            "into verified, bankable coordination signals for infrastructure planning. By mapping temporal demand rhythms "
+            "without extracting or profiling individual behaviors, the platform provides institutional decision-makers "
+            "with high-fidelity evidence of productive-use energy demand before capital is deployed."
         )
+        
+        overview_cols = st.columns(3)
+        with overview_cols[0]:
+            with st.container():
+                st.subheader("LUMOZA Engine")
+                st.markdown("**Temporal Coordination**")
+                st.caption(
+                    "Aggregates identity-free livelihood signals (irrigation, milling, cold storage) into "
+                    "7-cycle batched windows to verify collective rhythms and patterns while preserving the temporal moat."
+                )
+        with overview_cols[1]:
+            with st.container():
+                st.subheader("LUNDAI Engine")
+                st.markdown("**Infrastructure Geometry**")
+                st.caption(
+                    "Analyzes settlement density patterns, asset distributions, and distance-to-service metrics "
+                    "to identify geometric mismatches where coordinated demand exists but infrastructure is absent."
+                )
+        with overview_cols[2]:
+            with st.container():
+                st.subheader("ZENTARI Engine")
+                st.markdown("**Coordination Confidence**")
+                st.caption(
+                    "Derives trust from the persistence, repetition, and resilience of coordination patterns over "
+                    "multiple observation periods, substituting credit scoring with collective pattern bankability."
+                )
 
-    st.markdown("<div class='section-separator'></div>", unsafe_allow_html=True)
+    st.divider()
 
-    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.markdown("<h2 class='section-heading'>System Overview</h2>", unsafe_allow_html=True)
-    st.markdown(
-        "<p class='section-copy'>Kulima OS converts verified, identity-free coordination signals into institution-grade infrastructure intelligence for critical planning decisions.</p>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        """
-        <div class='overview-grid'>
-            <div class='card'><p class='card-title'>Temporal Coordination</p><p class='card-note'>Process signals in 7-cycle windows to protect the temporal moat and preserve collective context.</p></div>
-            <div class='card'><p class='card-title'>Infrastructure Context</p><p class='card-note'>Apply settlement and gap analysis so planning reflects real infrastructure readiness.</p></div>
-            <div class='card'><p class='card-title'>Traceable Evidence</p><p class='card-note'>Capture structured pilot evidence and decision intelligence for governance review.</p></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("<div class='section-separator'></div>", unsafe_allow_html=True)
-
-    st.markdown("<h2 class='section-heading'>Live Coordination Dashboard</h2>", unsafe_allow_html=True)
-    st.markdown(
-        "<p class='section-copy'>Review validated demand signal performance and infrastructure readiness for the selected pilot zone.</p>",
-        unsafe_allow_html=True,
+    st.header("2. Livelihood Coordination & Temporal Demand Analysis")
+    st.write(
+        "Quantitative assessment of temporal coordination stability, planning reserve allocations, "
+        "and infrastructure status for the selected observation area."
     )
 
     if "selected_zone" not in st.session_state:
@@ -456,127 +283,115 @@ def main() -> None:
     selected_zone = st.session_state.selected_zone
     summary = build_coordination_summary(selected_zone)
 
+    # Professional wording upgrade for KPIs
+    coordination_score_val = summary.get("coordination_score", 15)
+    validated_signals_count = summary.get("validated_signals", 0)
+    
+    if validated_signals_count == 0:
+        validated_signals_val = "0"
+        validated_signals_note = "No validated coordination signals detected within the current observation window."
+    else:
+        validated_signals_val = str(validated_signals_count)
+        validated_signals_note = f"{validated_signals_count} validated coordination signal(s) successfully verified within the current 7-cycle window."
+
     kpi_cards = [
         {
-            "label": "Coordination Trend",
-            "value": summary["coordination_trend"],
-            "note": "Current intelligence classification for this zone.",
-            "score": summary["coordination_score"],
-            "strength_label": summary["coordination_strength_label"],
-            "strength_color": coordination_strength_color(summary["coordination_score"]),
+            "label": "Coordination Trend Assessment",
+            "value": summary.get("coordination_trend", "Emerging"),
+            "note": f"Current coordination pattern classification for the {selected_zone.upper()} observation zone.",
+            "score": coordination_score_val,
+            "strength_label": summary.get("coordination_strength_label", "Weak"),
+            "strength_color": coordination_strength_color(coordination_score_val),
         },
         {
-            "label": "Validated Signals",
-            "value": summary["validated_signals"],
-            "note": "Signals that passed integrity and reserve filtering.",
+            "label": "Validated Coordination Signals",
+            "value": validated_signals_val,
+            "note": validated_signals_note,
         },
         {
-            "label": "Planning Reserve",
-            "value": summary["planning_reserve"],
-            "note": "Conservative capacity reserved for shared productive loads.",
+            "label": "Social Reserve Allocation",
+            "value": f"{summary.get('planning_reserve', 0)} Units" if summary.get('planning_reserve') else "0 Units",
+            "note": "Non-negotiable energy capacity reserved for critical communal services (clinics, schools, water systems) before productive allocation.",
         },
         {
-            "label": "Infrastructure Readiness",
-            "value": summary["lundai_status"],
-            "note": "Assessment from the LUNDAI infrastructure layer.",
+            "label": "Infrastructure Adequacy Class",
+            "value": summary.get("lundai_status", "Unknown"),
+            "note": "LUNDAI-derived settlement context and grid adequacy classification.",
         },
     ]
 
-    st.markdown("<div class='kpi-grid'>", unsafe_allow_html=True)
-    for card in kpi_cards:
-        st.markdown(
-            f"""
-            <div class='card kpi-card'>
-                <p class='kpi-label'>{card['label']}</p>
-                <p class='kpi-value'>{card['value']}</p>
-                {"<div class='strength-meter'><div class='strength-fill' style='width: " + str(card['score']) + "%; background: " + card['strength_color'] + ";'></div></div><p class='strength-label'>" + card['strength_label'] + " — " + str(card['score']) + "% coordination strength</p>" if card.get('score') is not None else ''}
-                <p class='kpi-note'>{card['note']}</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
+    kpi_cols = st.columns(len(kpi_cards))
+    for idx, card in enumerate(kpi_cards):
+        with kpi_cols[idx]:
+            with st.container():
+                st.metric(label=card["label"], value=str(card["value"]))
+                if card.get("score") is not None:
+                    st.progress(card["score"] / 100.0)
+                    st.caption(f"{card['strength_label']} — {card['score']}% coordination strength")
+                st.caption(card["note"])
 
     timeline = build_zone_signal_timeline(selected_zone)
     if timeline:
-        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-        st.markdown("<h3 class='section-heading'>Signal Accumulation</h3>", unsafe_allow_html=True)
-        st.markdown(
-            "<p class='section-copy'>Recent daily signal volume for the selected pilot zone.</p>",
-            unsafe_allow_html=True,
-        )
-        st.line_chart(
-            {"Signals": [point["signals"] for point in timeline]},
-            use_container_width=True,
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container():
+            st.subheader("2.1 Signal Accumulation Timeline")
+            st.caption("Recent chronological aggregation of raw coordination signals across the active observation window.")
+            st.line_chart(
+                {"Signals": [point["signals"] for point in timeline]},
+                use_container_width=True,
+            )
 
-    st.markdown("<div class='section-separator'></div>", unsafe_allow_html=True)
+    st.divider()
 
-    st.markdown("<h2 class='section-heading'>Prospectus / Reporting</h2>", unsafe_allow_html=True)
-    st.markdown(
-        "<p class='section-copy'>Create a verified demand signal prospectus for institutional review and infrastructure investment planning.</p>",
-        unsafe_allow_html=True,
+    st.header("3. Institutional Reporting & Investment Prospectus Generator")
+    st.write(
+        "Formulate a bankable Demand-Signal Prospectus incorporating temporal coordination rhythms, "
+        "LUNDAI infrastructure gap assessments, and social reserve parameters."
     )
 
-    st.markdown("<div class='action-card'>", unsafe_allow_html=True)
-    st.markdown("<h3>Generate Verified Demand Signal Prospectus</h3>", unsafe_allow_html=True)
-    st.markdown(
-        "<p>Deliver a prospectus that packages audited coordination patterns, infrastructure context, and social reserve guidance into an institutional artifact.</p>",
-        unsafe_allow_html=True,
-    )
-    if st.button("Generate Verified Demand Signal Prospectus", key="generate_prospectus", help="Create the latest verified planning prospectus", use_container_width=False):
-        with st.spinner("Generating verified demand prospectus..."):
-            new_pdf, message = generate_zone_prospectus(selected_zone)
-        if new_pdf and new_pdf.is_file():
-            st.success("Verified demand prospectus generated.")
-            with open(new_pdf, "rb") as pdf_file:
-                st.download_button(
-                    label="Download Demand Prospectus",
-                    data=pdf_file.read(),
-                    file_name="demand_prospectus.pdf",
-                    mime="application/pdf",
-                    use_container_width=False,
-                    key=f"download_new_{summary['zone']}",
-                )
-        else:
-            st.warning(message)
-    st.markdown("</div>", unsafe_allow_html=True)
+    with st.container():
+        st.subheader("Generate Verified Demand Signal Prospectus")
+        st.write(
+            "Deliver an audited Demand-Signal Prospectus packaging coordination patterns, spatial context, "
+            "and social reserve requirements into an institutional artifact ready for development finance evaluation."
+        )
+        if st.button("Generate Verified Demand Signal Prospectus", key="generate_prospectus", help="Create the latest verified planning prospectus", use_container_width=False):
+            with st.spinner("Generating verified demand signal prospectus..."):
+                new_pdf, message = generate_zone_prospectus(selected_zone)
+            if new_pdf and new_pdf.is_file():
+                st.success("Verified demand signal prospectus generated successfully.")
+                with open(new_pdf, "rb") as pdf_file:
+                    st.download_button(
+                        label="Download Demand Signal Prospectus",
+                        data=pdf_file.read(),
+                        file_name="demand_prospectus.pdf",
+                        mime="application/pdf",
+                        use_container_width=False,
+                        key=f"download_new_{summary.get('zone', selected_zone)}",
+                    )
+            else:
+                st.warning(message)
 
-    st.markdown("<div class='section-separator'></div>", unsafe_allow_html=True)
+    st.divider()
 
-    st.markdown("<h2 class='section-heading'>Join System</h2>", unsafe_allow_html=True)
-    st.markdown(
-        "<p class='section-copy'>Activate local participation through the operational WhatsApp channel and surface evidence-ready signals for planning.</p>",
-        unsafe_allow_html=True,
+    st.header("4. Decentralized Signal Acquisition & Onboarding Protocol")
+    st.write(
+        "Operational procedures to activate decentralized, privacy-preserving livelihood signal telemetry "
+        "through standard messaging channels."
     )
     
-    # Refined Onboarding Section
-    st.markdown(
-        """
-        <div class='onboard-card'>
-            <h3>Join the System</h3>
-            <ul>
-                <li><strong>Step 1:</strong> Save the Kulima OS WhatsApp number:<br>
-                <strong>+1 415 523 8886</strong></li>
-                <li><strong>Step 2:</strong> Open WhatsApp and send:<br>
-                <strong>join week-saved</strong></li>
-                <li><strong>Step 3:</strong> Send real activity updates such as:<br>
-                "I am irrigating crops"<br>
-                "We are milling maize"<br>
-                "Selling tomatoes today"</li>
-                <li><strong>Step 4:</strong> Continue sending updates consistently.<br>
-                Strong repetition builds reliable coordination signals.</li>
-            </ul>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    with st.container():
+        st.subheader("Join the System")
+        st.info(
+            "**Step 1 (Channel Activation):** Save the Kulima OS WhatsApp gatekeeper number: **+1 415 523 8886**\n\n"
+            "**Step 2 (Session Handshake):** Open WhatsApp and transmit the verification token: **join week-saved**\n\n"
+            "**Step 3 (Livelihood Telemetry):** Transmit real activity updates using clear, identity-free descriptions, e.g.:\n"
+            "- *\"I am irrigating crops\"*\n"
+            "- *\"We are milling maize\"*\n"
+            "- *\"Selling tomatoes today\"*\n\n"
+            "**Step 4 (Coordination Persistence):** Continue transmitting updates consistently. Consistent repetition across weekly cycles confirms coordination confidence."
+        )
 
-    st.markdown(
-        "<div class='dashboard-footer'>Kulima Africa — Coordination Intelligence Infrastructure • Public Digital System • <a href='https://github.com/shadreckm/kulima-os' target='_blank'>GitHub</a> • <a href='#'>Dashboard</a></div>",
-        unsafe_allow_html=True,
-    )
+    st.caption("Kulima Africa — Coordination Intelligence Infrastructure • Public Digital System • [GitHub Repository](https://github.com/shadreckm/kulima-os)")
 
 
 if __name__ == "__main__":

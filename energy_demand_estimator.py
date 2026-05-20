@@ -382,4 +382,3 @@ if __name__ == "__main__":
     
     print("\n✓ Energy demand estimation complete")
 
-# Made with Bob

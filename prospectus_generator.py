@@ -1677,7 +1677,6 @@ if __name__ == "__main__":
     generator.save_prospectus_json(prospectus)
     generator.save_prospectus_markdown(prospectus)
     generator.generate_pdf(prospectus, "demand_signal_prospectus.pdf")
-    
+
     print("\n[SUCCESS] Demand-Signal Prospectus generated successfully (JSON, Markdown, PDF)")
 
-# Made with Bob

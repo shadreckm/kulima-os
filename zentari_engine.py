@@ -462,5 +462,3 @@ if __name__ == "__main__":
     confidence_results = zentari.evaluate_coordination_confidence(patterns, planning_reserve=planning_reserve)
     
     print_confidence_results(confidence_results)
-
-# Made with Bob

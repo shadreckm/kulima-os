@@ -182,4 +182,3 @@ def calculate_cross_source_confidence(
     else:
         return 0.9  # All three sources aligned
 
-# Made with Bob
