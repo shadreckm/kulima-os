@@ -272,8 +272,13 @@ def generate_zone_prospectus(zone: str) -> Tuple[Optional[Path], str]:
             from policy import compute_planning_reserve
             planning_reserve = compute_planning_reserve(len(patterns))
         
+        # Run Zentari engine to compute confidence results inline
+        from zentari_engine import ZentariEngine
+        zentari = ZentariEngine()
+        confidence_results = zentari.evaluate_coordination_confidence(patterns, planning_reserve=planning_reserve)
+        
         prospectus = gen.generate_prospectus(
-            patterns_to_confidence_results(patterns),
+            confidence_results,
             lundai_analysis=lundai_analysis,
             metadata=metadata,
             planning_reserve=planning_reserve,

@@ -10,10 +10,10 @@ from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Signal, Prospectus
 from core.prospectus.prospectus_generator import ProspectusGenerator
-from core.lumoza.lumoza_integration import integrate_whatsapp_to_lumoza
-from streamlit_app import generate_sample_patterns
+from core.lumoza.lumoza_engine import LumozaEngine
+from core.lundai.lundai_engine import LundaiEngine
+from core.zentari.zentari_engine import ZentariEngine
 from policy import compute_planning_reserve
-from patterns_to_confidence_results import patterns_to_confidence_results
 
 router = APIRouter()
 
@@ -96,27 +96,16 @@ async def generate_prospectus(request: dict, db: Session = Depends(get_db)):
             confidence_results = zentari.evaluate_coordination_confidence(patterns, planning_reserve=planning_reserve)
         else:
             # Use sample patterns if no signals
+            from streamlit_app import generate_sample_patterns
             patterns = generate_sample_patterns(zone_key)
-            lundai_analysis = {
-                "overall_assessment": {
-                    "total_zones_analyzed": 1,
-                    "critical_infrastructure_gaps": 1,
-                    "urgent_priority_zones": 1,
-                    "average_infrastructure_adequacy_score": 45,
-                    "overall_infrastructure_status": "underserved"
-                },
-                "zone_analyses": {
-                    zone_key: {
-                        "settlement_type": "rural_agricultural",
-                        "infrastructure_status": "underserved",
-                        "essential_services_count": 2,
-                        "productive_activity_count": 3,
-                        "grid_edge_exposure": True
-                    }
-                }
-            }
-            confidence_results = patterns_to_confidence_results(patterns)
+            
+            # Run engines on sample patterns
+            lundai = LundaiEngine()
             planning_reserve = compute_planning_reserve(len(patterns))
+            lundai_analysis = lundai.analyze_settlement_context(patterns, planning_reserve=planning_reserve)
+            
+            zentari = ZentariEngine()
+            confidence_results = zentari.evaluate_coordination_confidence(patterns, planning_reserve=planning_reserve)
         
         # Generate prospectus using ProspectusGenerator
         gen = ProspectusGenerator()

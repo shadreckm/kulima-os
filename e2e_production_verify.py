@@ -234,7 +234,7 @@ for i, exp in enumerate(explanations):
 section("LAYER 5 — Prospectus Generation")
 
 from prospectus_generator import ProspectusGenerator
-from streamlit_app import generate_zone_prospectus, patterns_to_confidence_results
+from streamlit_app import generate_zone_prospectus
 
 # Generate a prospectus for MZUZU
 pdf_path, message = generate_zone_prospectus("MZUZU")
