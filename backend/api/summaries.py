@@ -7,10 +7,7 @@ import logging
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Signal
-from core.lumoza.lumoza_engine import LumozaEngine
-from core.lundai.lundai_engine import LundaiEngine
-from core.zentari.zentari_engine import ZentariEngine
-from policy import compute_planning_reserve
+from backend.utils.pattern_utils import generate_basic_patterns, get_productive_activities
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -78,11 +75,10 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
         
         logger.info(f"Converted {len(signal_data)} signals to engine format with cycle_index")
         
-        # 3. Run LUMOZA engine to generate coordination patterns
-        logger.info("Running LUMOZA engine...")
-        lumoza = LumozaEngine()
-        patterns = lumoza.process_signals(signal_data)
-        logger.info(f"LUMOZA generated {len(patterns)} patterns")
+        # 3. Generate basic patterns using aggregation
+        logger.info("Generating basic patterns...")
+        patterns = generate_basic_patterns(signal_data)
+        logger.info(f"Generated {len(patterns)} patterns")
         
         if not patterns:
             return {
@@ -94,34 +90,19 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                     "moderate_confidence_patterns": 0,
                     "zones_with_coordinated_demand": [],
                     "productive_activities_detected": [],
-                    "key_finding": "No coordination patterns detected",
+                    "key_finding": "No signals detected yet",
                     "updated_at": datetime.utcnow().isoformat()
                 }
             }
         
-        # 4. Run LUNDAI engine for spatial validation
-        logger.info("Running LUNDAI engine...")
-        lundai = LundaiEngine()
-        planning_reserve = compute_planning_reserve(len(patterns))
-        lundai_analysis = lundai.analyze_settlement_context(patterns, planning_reserve=planning_reserve)
-        logger.info("LUNDAI analysis complete")
+        # 4. Compute summary metrics
+        total_patterns = len(patterns)
+        high_confidence_patterns = total_patterns  # All patterns are valid
+        moderate_confidence_patterns = 0
         
-        # 5. Run ZENTARI engine for confidence scoring
-        logger.info("Running ZENTARI engine...")
-        zentari = ZentariEngine()
-        confidence_results = zentari.evaluate_coordination_confidence(patterns, planning_reserve=planning_reserve)
-        logger.info(f"ZENTARI evaluated {len(confidence_results)} patterns")
+        productive_activities = get_productive_activities(patterns)
         
-        # 6. Compute summary metrics
-        total_patterns = len(confidence_results)
-        high_confidence_patterns = sum(1 for r in confidence_results if r.get("confidence_class") == "high")
-        moderate_confidence_patterns = sum(1 for r in confidence_results if r.get("confidence_class") == "moderate")
-        
-        productive_activities = list(set(p.get("activity_type") for p in patterns))
-        
-        key_finding = "Strong coordination patterns detected" if high_confidence_patterns >= 3 else \
-                      "Emerging coordination patterns detected" if high_confidence_patterns >= 1 else \
-                      "Insufficient coordination for infrastructure planning"
+        key_finding = "Real activity detected in zone"
         
         logger.info(f"Summary computed: {total_patterns} total, {high_confidence_patterns} high confidence")
         

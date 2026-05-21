@@ -1,4 +1,4 @@
-const API_URL = 'https://kulima-os-backend.onrender.com/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://kulima-os-backend.onrender.com/api/v1';
 
 export interface ApiResponse<T> {
   status: 'success' | 'error';
