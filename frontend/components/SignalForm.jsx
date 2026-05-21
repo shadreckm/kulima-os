@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { api, SignalData } from '@/lib/api';
+import { api } from '@/lib/api';
 
 export default function SignalForm() {
-  const [formData, setFormData] = useState<SignalData>({
+  const [formData, setFormData] = useState({
     zone: '',
     activity_type: '',
     time_window: '',
@@ -19,14 +19,14 @@ export default function SignalForm() {
   const timeWindows = ['morning', 'afternoon', 'evening'];
   const zones = ['MZUZU', 'LILONGWE', 'BLANTYRE', 'ZOMBA'];
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setMessage('');
 
     try {
-      const response = await api.submitSignal(formData);
+      const response = await api.createSignal(formData);
       if (response.status === 'success') {
         setMessage('Activity recorded successfully!');
         setFormData({

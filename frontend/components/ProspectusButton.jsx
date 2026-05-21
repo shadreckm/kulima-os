@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 export default function ProspectusButton() {
   const [selectedZone, setSelectedZone] = useState('');
   const [loading, setLoading] = useState(false);
-  const [prospectus, setProspectus] = useState<any>(null);
+  const [prospectus, setProspectus] = useState(null);
   const [error, setError] = useState('');
 
   const zones = ['MZUZU', 'LILONGWE', 'BLANTYRE', 'ZOMBA'];
@@ -19,7 +19,7 @@ export default function ProspectusButton() {
     setProspectus(null);
     
     try {
-      const response = await api.generateProspectus(selectedZone);
+      const response = await api.generateReport(selectedZone);
       if (response.status === 'success') {
         setProspectus(response.data);
       } else {

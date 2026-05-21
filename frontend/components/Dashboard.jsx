@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { api, SummaryData } from '@/lib/api';
+import { api } from '@/lib/api';
 
 export default function Dashboard() {
   const [selectedZone, setSelectedZone] = useState('');
-  const [summary, setSummary] = useState<SummaryData | null>(null);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
