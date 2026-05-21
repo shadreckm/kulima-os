@@ -43,9 +43,6 @@ def init_db(reset: bool = False):
     from backend.database.models import Base
     
     if reset:
-        print("Dropping all tables...")
         Base.metadata.drop_all(bind=engine)
     
-    print("Creating database tables...")
     Base.metadata.create_all(bind=engine, checkfirst=True)
-    print("Database initialization complete.")

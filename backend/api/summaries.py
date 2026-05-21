@@ -3,6 +3,7 @@ Summary endpoints
 """
 from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
+import logging
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Signal
@@ -10,6 +11,10 @@ from core.lumoza.lumoza_engine import LumozaEngine
 from core.lundai.lundai_engine import LundaiEngine
 from core.zentari.zentari_engine import ZentariEngine
 from policy import compute_planning_reserve
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -34,22 +39,25 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
     }
     """
     try:
-        print(f"Running coordination pipeline for zone: {zone}")
+        logger.info(f"Running coordination pipeline for zone: {zone}")
         
         # 1. Fetch signals from database
         signals = db.query(Signal).filter(Signal.zone == zone.upper()).all()
-        print(f"Found {len(signals)} signals in database for zone {zone}")
+        logger.info(f"Found {len(signals)} signals in database for zone {zone}")
         
         if not signals:
             return {
-                "zone": zone,
-                "total_patterns": 0,
-                "high_confidence_patterns": 0,
-                "moderate_confidence_patterns": 0,
-                "zones_with_coordinated_demand": [],
-                "productive_activities_detected": [],
-                "key_finding": "No signals detected yet",
-                "updated_at": datetime.utcnow().isoformat()
+                "status": "success",
+                "data": {
+                    "zone": zone,
+                    "total_patterns": 0,
+                    "high_confidence_patterns": 0,
+                    "moderate_confidence_patterns": 0,
+                    "zones_with_coordinated_demand": [],
+                    "productive_activities_detected": [],
+                    "key_finding": "No signals detected yet",
+                    "updated_at": datetime.utcnow().isoformat()
+                }
             }
         
         # 2. Convert database signals to engine format
@@ -60,45 +68,49 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                 "activity_type": signal.activity_type,
                 "time_window": signal.time_window,
                 "timestamp": signal.timestamp.isoformat(),
-                "source": signal.source
+                "source": signal.source,
+                "user_id": signal.user_id
             })
         
         # Add cycle_index to each signal
         for i, signal in enumerate(signal_data):
             signal["cycle_index"] = i
         
-        print(f"Converted {len(signal_data)} signals to engine format with cycle_index")
+        logger.info(f"Converted {len(signal_data)} signals to engine format with cycle_index")
         
         # 3. Run LUMOZA engine to generate coordination patterns
-        print("Running LUMOZA engine...")
+        logger.info("Running LUMOZA engine...")
         lumoza = LumozaEngine()
         patterns = lumoza.process_signals(signal_data)
-        print(f"LUMOZA generated {len(patterns)} patterns")
+        logger.info(f"LUMOZA generated {len(patterns)} patterns")
         
         if not patterns:
             return {
-                "zone": zone,
-                "total_patterns": 0,
-                "high_confidence_patterns": 0,
-                "moderate_confidence_patterns": 0,
-                "zones_with_coordinated_demand": [],
-                "productive_activities_detected": [],
-                "key_finding": "No coordination patterns detected",
-                "updated_at": datetime.utcnow().isoformat()
+                "status": "success",
+                "data": {
+                    "zone": zone,
+                    "total_patterns": 0,
+                    "high_confidence_patterns": 0,
+                    "moderate_confidence_patterns": 0,
+                    "zones_with_coordinated_demand": [],
+                    "productive_activities_detected": [],
+                    "key_finding": "No coordination patterns detected",
+                    "updated_at": datetime.utcnow().isoformat()
+                }
             }
         
         # 4. Run LUNDAI engine for spatial validation
-        print("Running LUNDAI engine...")
+        logger.info("Running LUNDAI engine...")
         lundai = LundaiEngine()
         planning_reserve = compute_planning_reserve(len(patterns))
         lundai_analysis = lundai.analyze_settlement_context(patterns, planning_reserve=planning_reserve)
-        print(f"LUNDAI analysis complete")
+        logger.info("LUNDAI analysis complete")
         
         # 5. Run ZENTARI engine for confidence scoring
-        print("Running ZENTARI engine...")
+        logger.info("Running ZENTARI engine...")
         zentari = ZentariEngine()
         confidence_results = zentari.evaluate_coordination_confidence(patterns, planning_reserve=planning_reserve)
-        print(f"ZENTARI evaluated {len(confidence_results)} patterns")
+        logger.info(f"ZENTARI evaluated {len(confidence_results)} patterns")
         
         # 6. Compute summary metrics
         total_patterns = len(confidence_results)
@@ -111,25 +123,33 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                       "Emerging coordination patterns detected" if high_confidence_patterns >= 1 else \
                       "Insufficient coordination for infrastructure planning"
         
-        print(f"Summary computed: {total_patterns} total, {high_confidence_patterns} high confidence")
+        logger.info(f"Summary computed: {total_patterns} total, {high_confidence_patterns} high confidence")
         
         return {
-            "zone": zone,
-            "total_patterns": total_patterns,
-            "high_confidence_patterns": high_confidence_patterns,
-            "moderate_confidence_patterns": moderate_confidence_patterns,
-            "zones_with_coordinated_demand": [zone] if total_patterns > 0 else [],
-            "productive_activities_detected": productive_activities,
-            "key_finding": key_finding,
-            "updated_at": datetime.utcnow().isoformat()
+            "status": "success",
+            "data": {
+                "zone": zone,
+                "total_patterns": total_patterns,
+                "high_confidence_patterns": high_confidence_patterns,
+                "moderate_confidence_patterns": moderate_confidence_patterns,
+                "zones_with_coordinated_demand": [zone] if total_patterns > 0 else [],
+                "productive_activities_detected": productive_activities,
+                "key_finding": key_finding,
+                "updated_at": datetime.utcnow().isoformat()
+            }
         }
     except Exception as e:
-        print(f"Error in summary pipeline: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error in summary pipeline: {str(e)}")
+        return {
+            "status": "error",
+            "data": {
+                "error": str(e)
+            }
+        }
 
 
 @router.get("/zones")
-async def get_zones():
+async def get_zones(db: Session = Depends(get_db)):
     """
     List all available zones.
     
@@ -140,10 +160,24 @@ async def get_zones():
     }
     """
     try:
-        # TODO: Query database for all zones
+        # Query database for distinct zones
+        zones = db.query(Signal.zone).distinct().all()
+        zone_list = [zone[0] for zone in zones if zone[0]]
+        
+        logger.info(f"Fetched {len(zone_list)} zones")
+        
         return {
-            "zones": ["MZUZU", "LILONGWE", "BLANTYRE", "ZOMBA"],
-            "total": 4
+            "status": "success",
+            "data": {
+                "zones": zone_list,
+                "total": len(zone_list)
+            }
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error fetching zones: {str(e)}")
+        return {
+            "status": "error",
+            "data": {
+                "error": str(e)
+            }
+        }

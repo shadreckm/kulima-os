@@ -14,11 +14,8 @@ from backend.api import signals, summaries, prospectus, health
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
-    print(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
-    print(f"Database: {settings.DATABASE_URL}")
     yield
     # Shutdown
-    print(f"Shutting down {settings.APP_NAME}")
 
 
 # Create FastAPI application

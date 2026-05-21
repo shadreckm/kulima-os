@@ -28,3 +28,7 @@ demand_signal_prospectus*.pdf
 # OS files
 .DS_Store
 Thumbs.db
+kulima_os.db 
+__pycache__/ 
+*.pyc 
+.env 

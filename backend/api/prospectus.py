@@ -4,7 +4,10 @@ Prospectus endpoints
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import FileResponse
 from datetime import datetime
+from typing import Optional
 import uuid
+import logging
+import os
 from pathlib import Path
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
@@ -14,15 +17,27 @@ from core.lumoza.lumoza_engine import LumozaEngine
 from core.lundai.lundai_engine import LundaiEngine
 from core.zentari.zentari_engine import ZentariEngine
 from policy import compute_planning_reserve
+from pydantic import BaseModel, Field
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Ensure prospectus directory exists
 PROSPECTUS_DIR = Path("prospectuses")
-PROSPECTUS_DIR.mkdir(exist_ok=True)
+os.makedirs(PROSPECTUS_DIR, exist_ok=True)
+
+
+class ProspectusRequest(BaseModel):
+    """Pydantic model for prospectus generation validation"""
+    zone: str = Field(..., min_length=1, description="Zone identifier")
+    user_id: Optional[str] = Field(None, description="User identifier")
 
 
 @router.post("/generate-prospectus")
-async def generate_prospectus(request: dict, db: Session = Depends(get_db)):
+async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(get_db)):
     """
     Trigger PDF generation for a zone.
     
@@ -35,20 +50,19 @@ async def generate_prospectus(request: dict, db: Session = Depends(get_db)):
     Response:
     {
       "status": "success",
-      "prospectus_id": "pros_abc123",
-      "pdf_url": "/api/v1/download/prospectus_mzuzu_2026-05-20.pdf",
-      "json_url": "/api/v1/download/prospectus_mzuzu_2026-05-20.json",
-      "generated_at": "2026-05-20T10:00:00Z"
+      "data": {
+        "prospectus_id": "pros_abc123",
+        "pdf_url": "/api/v1/download/prospectus_mzuzu_2026-05-20.pdf",
+        "json_url": "/api/v1/download/prospectus_mzuzu_2026-05-20.json",
+        "generated_at": "2026-05-20T10:00:00Z"
+      }
     }
     """
     try:
-        zone = request.get("zone")
-        user_id = request.get("user_id")
+        zone = request.zone.upper()
+        user_id = request.user_id or "anonymous"
         
-        if not zone:
-            raise HTTPException(status_code=400, detail="Zone is required")
-        
-        print(f"Generating prospectus for zone: {zone}")
+        logger.info(f"Generating prospectus for zone: {zone}")
         
         # Generate prospectus ID
         prospectus_id = f"pros_{uuid.uuid4().hex[:12]}"
@@ -66,57 +80,59 @@ async def generate_prospectus(request: dict, db: Session = Depends(get_db)):
         
         # Fetch signals from database
         signals = db.query(Signal).filter(Signal.zone == zone_key).all()
-        print(f"Found {len(signals)} signals for zone {zone}")
+        logger.info(f"Found {len(signals)} signals for zone {zone}")
         
         # Generate patterns using core engines
-        if signals:
-            signal_data = []
-            for signal in signals:
-                signal_data.append({
-                    "zone": signal.zone,
-                    "activity_type": signal.activity_type,
-                    "time_window": signal.time_window,
-                    "timestamp": signal.timestamp.isoformat(),
-                    "source": signal.source
-                })
-            
-            # Add cycle_index to each signal
-            for i, signal in enumerate(signal_data):
-                signal["cycle_index"] = i
-            
-            from core.lumoza.lumoza_engine import LumozaEngine
-            from core.lundai.lundai_engine import LundaiEngine
-            from core.zentari.zentari_engine import ZentariEngine
-            
-            lumoza = LumozaEngine()
-            patterns = lumoza.process_signals(signal_data)
-            print(f"LUMOZA generated {len(patterns)} patterns")
-            
-            lundai = LundaiEngine()
-            planning_reserve = compute_planning_reserve(len(patterns))
-            lundai_analysis = lundai.analyze_settlement_context(patterns, planning_reserve=planning_reserve)
-            
-            zentari = ZentariEngine()
-            confidence_results = zentari.evaluate_coordination_confidence(patterns, planning_reserve=planning_reserve)
-        else:
-            # Use sample patterns if no signals
-            from streamlit_app import generate_sample_patterns
-            patterns = generate_sample_patterns(zone_key)
-            
-            # Run engines on sample patterns
-            lundai = LundaiEngine()
-            planning_reserve = compute_planning_reserve(len(patterns))
-            lundai_analysis = lundai.analyze_settlement_context(patterns, planning_reserve=planning_reserve)
-            
-            zentari = ZentariEngine()
-            confidence_results = zentari.evaluate_coordination_confidence(patterns, planning_reserve=planning_reserve)
+        if not signals:
+            logger.warning(f"No signals found for zone {zone}")
+            return {
+                "status": "error",
+                "data": {
+                    "error": f"No signals found for zone {zone}. Cannot generate prospectus without data."
+                }
+            }
+        
+        signal_data = []
+        for signal in signals:
+            signal_data.append({
+                "zone": signal.zone,
+                "activity_type": signal.activity_type,
+                "time_window": signal.time_window,
+                "timestamp": signal.timestamp.isoformat(),
+                "source": signal.source,
+                "user_id": signal.user_id
+            })
+        
+        # Add cycle_index to each signal
+        for i, signal in enumerate(signal_data):
+            signal["cycle_index"] = i
+        
+        lumoza = LumozaEngine()
+        patterns = lumoza.process_signals(signal_data)
+        logger.info(f"LUMOZA generated {len(patterns)} patterns")
+        
+        if not patterns:
+            logger.warning(f"No coordination patterns detected for zone {zone}")
+            return {
+                "status": "error",
+                "data": {
+                    "error": f"No coordination patterns detected for zone {zone}. Cannot generate prospectus."
+                }
+            }
+        
+        lundai = LundaiEngine()
+        planning_reserve = compute_planning_reserve(len(patterns))
+        lundai_analysis = lundai.analyze_settlement_context(patterns, planning_reserve=planning_reserve)
+        
+        zentari = ZentariEngine()
+        confidence_results = zentari.evaluate_coordination_confidence(patterns, planning_reserve=planning_reserve)
         
         # Generate prospectus using ProspectusGenerator
         gen = ProspectusGenerator()
         metadata = {
             "region": zone_key,
             "period": "7-cycle window (1 week)",
-            "is_sample": len(signals) == 0
+            "is_sample": False
         }
         
         prospectus = gen.generate_prospectus(
@@ -128,19 +144,19 @@ async def generate_prospectus(request: dict, db: Session = Depends(get_db)):
         
         # Save PDF
         gen.generate_pdf(prospectus, str(pdf_path))
-        print(f"PDF saved to: {pdf_path}")
+        logger.info(f"PDF saved to: {pdf_path}")
         
         # Save JSON
         import json
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(prospectus, f, indent=2)
-        print(f"JSON saved to: {json_path}")
+        logger.info(f"JSON saved to: {json_path}")
         
         # Store prospectus in database
         db_prospectus = Prospectus(
             id=prospectus_id,
             zone=zone_key,
-            user_id=user_id or "unknown",
+            user_id=user_id,
             pdf_url=f"/api/v1/download/{pdf_filename}",
             json_url=f"/api/v1/download/{json_filename}",
             meta_data=json.dumps(metadata),
@@ -148,19 +164,26 @@ async def generate_prospectus(request: dict, db: Session = Depends(get_db)):
         db.add(db_prospectus)
         db.commit()
         
-        print(f"Prospectus stored in database: {prospectus_id}")
+        logger.info(f"Prospectus stored in database: {prospectus_id}")
         
         return {
             "status": "success",
-            "prospectus_id": prospectus_id,
-            "pdf_url": f"/api/v1/download/{pdf_filename}",
-            "json_url": f"/api/v1/download/{json_filename}",
-            "generated_at": datetime.utcnow().isoformat()
+            "data": {
+                "prospectus_id": prospectus_id,
+                "pdf_url": f"/api/v1/download/{pdf_filename}",
+                "json_url": f"/api/v1/download/{json_filename}",
+                "generated_at": datetime.utcnow().isoformat()
+            }
         }
     except Exception as e:
         db.rollback()
-        print(f"Error generating prospectus: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error generating prospectus: {str(e)}")
+        return {
+            "status": "error",
+            "data": {
+                "error": str(e)
+            }
+        }
 
 
 @router.get("/prospectus/{prospectus_id}")
@@ -171,21 +194,33 @@ async def get_prospectus(prospectus_id: str, db: Session = Depends(get_db)):
     try:
         prospectus = db.query(Prospectus).filter(Prospectus.id == prospectus_id).first()
         if not prospectus:
-            raise HTTPException(status_code=404, detail="Prospectus not found")
+            logger.warning(f"Prospectus not found: {prospectus_id}")
+            return {
+                "status": "error",
+                "data": {
+                    "error": "Prospectus not found"
+                }
+            }
         
         return {
-            "prospectus_id": prospectus_id,
-            "status": "found",
-            "zone": prospectus.zone,
-            "user_id": prospectus.user_id,
-            "pdf_url": prospectus.pdf_url,
-            "json_url": prospectus.json_url,
-            "created_at": prospectus.created_at.isoformat()
+            "status": "success",
+            "data": {
+                "prospectus_id": prospectus_id,
+                "zone": prospectus.zone,
+                "user_id": prospectus.user_id,
+                "pdf_url": prospectus.pdf_url,
+                "json_url": prospectus.json_url,
+                "created_at": prospectus.created_at.isoformat()
+            }
         }
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error fetching prospectus: {str(e)}")
+        return {
+            "status": "error",
+            "data": {
+                "error": str(e)
+            }
+        }
 
 
 @router.get("/download/{filename}")
@@ -199,9 +234,15 @@ async def download_file(filename: str):
         file_path = PROSPECTUS_DIR / filename
         
         if not file_path.exists():
-            raise HTTPException(status_code=404, detail="File not found")
+            logger.warning(f"File not found: {filename}")
+            return {
+                "status": "error",
+                "data": {
+                    "error": "File not found"
+                }
+            }
         
-        print(f"Serving file: {file_path}")
+        logger.info(f"Serving file: {file_path}")
         
         # Determine media type based on file extension
         if filename.endswith('.pdf'):
@@ -216,8 +257,11 @@ async def download_file(filename: str):
             media_type=media_type,
             filename=filename
         )
-    except HTTPException:
-        raise
     except Exception as e:
-        print(f"Error serving file: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error serving file: {str(e)}")
+        return {
+            "status": "error",
+            "data": {
+                "error": str(e)
+            }
+        }
