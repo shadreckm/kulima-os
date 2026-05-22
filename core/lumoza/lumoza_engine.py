@@ -18,6 +18,7 @@ LUMOZA transforms heterogeneous activity signals into:
 
 from typing import List, Dict, Tuple
 from collections import defaultdict
+import statistics
 
 
 class LumozaEngine:
@@ -35,11 +36,12 @@ class LumozaEngine:
     
     def __init__(self):
         """Initialize LUMOZA engine."""
-        pass
+        self.pattern_history = {}  # Store pattern history across windows
+        self.window_count = 0  # Track number of windows processed
     
     def process_signals(self, signals: List[Dict]) -> List[Dict]:
         """
-        Process coordination signals through 7-cycle logic.
+        Process coordination signals through 7-cycle logic with multi-cycle tracking.
         
         TEMPORAL MOAT ENFORCEMENT:
         - Accepts only pre-batched signals (no real-time processing)
@@ -55,12 +57,24 @@ class LumozaEngine:
             signals: List of identity-free coordination signals
             
         Returns:
-            List of coordination patterns with demand rhythms and stability scores
+            List of coordination patterns with demand rhythms, stability scores, and persistence
         """
+        
+        # Increment window count for multi-cycle tracking
+        self.window_count += 1
         
         # Group signals by coordination pattern (activity, zone, time_window)
         # ZERO-PII: No individual identifiers in grouping keys
         pattern_groups = self._group_by_pattern(signals)
+        
+        # Track patterns across windows for persistence calculation
+        current_window_patterns = set(pattern_groups.keys())
+        
+        # Update pattern history with current window patterns
+        for pattern_key in current_window_patterns:
+            if pattern_key not in self.pattern_history:
+                self.pattern_history[pattern_key] = []
+            self.pattern_history[pattern_key].append(self.window_count)
         
         # Process each pattern through 7-cycle logic
         coordination_patterns = []
@@ -70,6 +84,9 @@ class LumozaEngine:
             
             # Analyze pattern across 7 cycles
             pattern_analysis = self._analyze_pattern(pattern_signals)
+            
+            # Calculate multi-cycle persistence
+            persistence_data = self._calculate_persistence(pattern_key)
             
             # Apply coordination thresholds
             if pattern_analysis['cycle_count'] < self.NOISE_THRESHOLD:
@@ -85,6 +102,9 @@ class LumozaEngine:
             # Calculate stability score (0-1)
             stability_score = pattern_analysis['cycle_count'] / self.TOTAL_CYCLES
             
+            # Calculate pattern frequency (within current window)
+            pattern_frequency = len(pattern_signals)
+            
             # Cross-validate with telemetry
             validation_result = self._cross_validate(pattern_signals)
             
@@ -92,14 +112,17 @@ class LumozaEngine:
             # CRITICAL LOAD PROTECTION: Essential services are identified and flagged
             service_priority = self._determine_service_priority(pattern_signals)
             
-            # Build coordination pattern output
+            # Build coordination pattern output with enhanced metrics
             # ZERO-PII: Output contains only aggregates, no individual data
             coordination_pattern = {
                 "activity_type": activity_type,
                 "zone": zone,
                 "time_window": time_window,
                 "service_priority": service_priority,
-                "cycle_index": pattern_analysis.get('cycle_count', 0),  # Add cycle_index to pattern
+                "cycle_index": pattern_analysis.get('cycle_count', 0),
+                "pattern_frequency": pattern_frequency,
+                "pattern_persistence": persistence_data['persistence'],
+                "pattern_stability": persistence_data['stability'],
                 "demand_rhythm": {
                     "frequency": f"{pattern_analysis['cycle_count']} of {self.TOTAL_CYCLES} cycles",
                     "cycles_present": sorted(pattern_analysis['cycles_present']),
@@ -109,8 +132,6 @@ class LumozaEngine:
                 "validation_strength": validation_result['strength'],
                 "validation_details": validation_result['details']
             }
-            
-            print(f"Cycle index check: {coordination_pattern}")
             
             coordination_patterns.append(coordination_pattern)
         
@@ -231,6 +252,61 @@ class LumozaEngine:
         if pattern_signals:
             return pattern_signals[0].get('service_priority', 'productive')
         return 'productive'
+    
+    def _calculate_persistence(self, pattern_key: Tuple) -> Dict:
+        """
+        Calculate persistence and stability metrics for a pattern across multiple windows.
+        
+        PERSISTENCE DEFINITION:
+        - P = number of windows in which the same pattern appears
+        - Higher persistence = pattern appears consistently across time windows
+        
+        STABILITY DEFINITION:
+        - Variance in occurrence across windows
+        - Lower variance = more stable pattern
+        
+        Args:
+            pattern_key: Tuple of (activity_type, zone, time_window)
+            
+        Returns:
+            Dictionary with persistence and stability metrics
+        """
+        if pattern_key not in self.pattern_history:
+            return {
+                'persistence': 0.0,
+                'stability': 0.0,
+                'window_count': 0
+            }
+        
+        window_occurrences = self.pattern_history[pattern_key]
+        window_count = len(window_occurrences)
+        
+        # Calculate persistence as ratio of windows where pattern appears
+        # Normalize to 0-1 range
+        persistence = window_count / max(self.window_count, 1)
+        
+        # Calculate stability as inverse of variance in occurrence
+        # If pattern appears in all windows, variance = 0, stability = 1
+        if window_count >= 2:
+            # Calculate gaps between window occurrences
+            gaps = []
+            for i in range(1, len(window_occurrences)):
+                gaps.append(window_occurrences[i] - window_occurrences[i-1])
+            
+            if gaps:
+                gap_variance = statistics.variance(gaps) if len(gaps) > 1 else 0
+                # Normalize variance to 0-1 range (lower variance = higher stability)
+                stability = 1.0 / (1.0 + gap_variance)
+            else:
+                stability = 1.0
+        else:
+            stability = 0.5  # Neutral stability for single occurrence
+        
+        return {
+            'persistence': round(persistence, 2),
+            'stability': round(stability, 2),
+            'window_count': window_count
+        }
 
 
 def print_coordination_patterns(patterns: List[Dict]) -> None:

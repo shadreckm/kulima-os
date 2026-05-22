@@ -603,12 +603,12 @@ class LundaiEngine:
     
     def __init__(self):
         """Initialize LUNDAI engine."""
-        pass
+        self.flow_history = {}  # Store flow patterns across windows
     
     def analyze_settlement_context(self, coordination_patterns: List[Dict], planning_reserve: Dict = None) -> Dict:
         """
         Analyze settlement context and infrastructure gaps for zones with
-        coordinated demand patterns.
+        coordinated demand patterns, including activity flow detection.
         
         ZERO-PII ENFORCEMENT:
         - Analyzes zone-level metadata only
@@ -617,12 +617,13 @@ class LundaiEngine:
         COORDINATION > IDENTITY:
         - Combines coordination patterns (from LUMOZA) with settlement context
         - Identifies infrastructure mismatches at zone level
+        - Detects activity flows for economic coordination graph
         
         Args:
             coordination_patterns: List of coordination patterns from LUMOZA
             
         Returns:
-            Settlement and infrastructure gap analysis
+            Settlement and infrastructure gap analysis with flow graph
         """
         
         # Extract zones with coordination patterns
@@ -639,9 +640,13 @@ class LundaiEngine:
         # Generate overall assessment
         overall_assessment = self._generate_overall_assessment(zone_analyses)
         
+        # Detect activity flows and build flow graph
+        flow_graph = self._detect_activity_flows(coordination_patterns)
+        
         return {
             "zone_analyses": zone_analyses,
-            "overall_assessment": overall_assessment
+            "overall_assessment": overall_assessment,
+            "flow_graph": flow_graph
         }
     
     def _analyze_zone(self, zone: str, metadata: Dict, patterns: List[Dict], planning_reserve: Dict = None) -> Dict:
@@ -824,6 +829,107 @@ class LundaiEngine:
         
         return "; ".join(justifications) if justifications else "Infrastructure adequate for current demand"
     
+    def _detect_activity_flows(self, coordination_patterns: List[Dict]) -> Dict:
+        """
+        Detect activity flows using hybrid model combining temporal sequencing and correlation.
+        
+        HYBRID FLOW MODEL:
+        - Temporal sequencing (PRIMARY): Detect sequences within same zone based on time order
+        - Correlation-based linking (SECONDARY): Strengthen connections if sequences repeat
+        
+        Args:
+            coordination_patterns: List of coordination patterns from LUMOZA
+            
+        Returns:
+            Flow graph structure with nodes and edges for economic coordination graph
+        """
+        
+        # Build nodes from coordination patterns
+        nodes = []
+        node_id_map = {}  # Map (activity, zone) to node ID
+        
+        for pattern in coordination_patterns:
+            activity = pattern.get('activity_type')
+            zone = pattern.get('zone')
+            key = (activity, zone)
+            
+            if key not in node_id_map:
+                node_id = f"node_{len(nodes)}"
+                node_id_map[key] = node_id
+                nodes.append({
+                    "id": node_id,
+                    "activity_type": activity,
+                    "zone": zone,
+                    "frequency": pattern.get('pattern_frequency', 0),
+                    "persistence": pattern.get('pattern_persistence', 0),
+                    "confidence_score": pattern.get('stability_score', 0)
+                })
+        
+        # Detect temporal sequences within zones
+        edges = []
+        sequence_counts = defaultdict(int)
+        time_lags = defaultdict(list)
+        
+        # Group patterns by zone for temporal sequencing
+        zone_patterns = defaultdict(list)
+        for pattern in coordination_patterns:
+            zone_patterns[pattern['zone']].append(pattern)
+        
+        # Detect sequences within each zone
+        for zone, patterns in zone_patterns.items():
+            # Sort patterns by time window (morning < afternoon < evening)
+            time_order = {'morning': 0, 'afternoon': 1, 'evening': 2}
+            patterns_sorted = sorted(patterns, key=lambda p: time_order.get(p.get('time_window', 'morning'), 0))
+            
+            # Build sequences from consecutive activities
+            for i in range(len(patterns_sorted) - 1):
+                from_activity = patterns_sorted[i].get('activity_type')
+                to_activity = patterns_sorted[i + 1].get('activity_type')
+                
+                if from_activity != to_activity:
+                    sequence_key = (from_activity, to_activity, zone)
+                    sequence_counts[sequence_key] += 1
+                    
+                    # Calculate time lag (simplified as difference in time windows)
+                    from_window = time_order.get(patterns_sorted[i].get('time_window', 'morning'), 0)
+                    to_window = time_order.get(patterns_sorted[i + 1].get('time_window', 'morning'), 0)
+                    time_lags[sequence_key].append(to_window - from_window)
+        
+        # Build edges from detected sequences
+        for (from_activity, to_activity, zone), count in sequence_counts.items():
+            from_key = (from_activity, zone)
+            to_key = (to_activity, zone)
+            
+            if from_key in node_id_map and to_key in node_id_map:
+                # Calculate transition probability
+                total_transitions = sum(c for (fa, _, z), c in sequence_counts.items() if fa == from_activity and z == zone)
+                transition_probability = count / max(total_transitions, 1)
+                
+                # Calculate average time lag
+                avg_time_lag = statistics.mean(time_lags[(from_activity, to_activity, zone)]) if time_lags[(from_activity, to_activity, zone)] else 0
+                
+                # Calculate strength score based on repeat count and consistency
+                strength_score = min(count / 3.0, 1.0)  # Normalize to 0-1
+                
+                edges.append({
+                    "from_activity": from_activity,
+                    "to_activity": to_activity,
+                    "from_node": node_id_map[from_key],
+                    "to_node": node_id_map[to_key],
+                    "zone": zone,
+                    "transition_probability": round(transition_probability, 2),
+                    "average_time_lag": round(avg_time_lag, 2),
+                    "strength_score": round(strength_score, 2),
+                    "sequence_repeat_count": count
+                })
+        
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "total_nodes": len(nodes),
+            "total_edges": len(edges)
+        }
+    
     def _classify_priority(self, gap_severity: str, essential_patterns: List[Dict]) -> str:
         """
         Classify infrastructure priority based on gap severity and essential services.
@@ -880,6 +986,24 @@ class LundaiEngine:
             return "Moderate infrastructure gaps, capacity expansion needed"
         else:
             return "Infrastructure generally adequate, targeted improvements recommended"
+    
+    def detect_inter_zone_flows(self, patterns_by_zone: Dict[str, List[Dict]]) -> List[Dict]:
+        """
+        Detect inter-zone flows between zones using correlation-based analysis.
+        
+        This method extends LUNDAI's flow detection to identify cross-zone
+        coordination patterns, enabling regional infrastructure planning.
+        
+        Args:
+            patterns_by_zone: Dictionary mapping zones to their coordination patterns
+            
+        Returns:
+            List of inter-zone flow correlations
+        """
+        from core.flow.cross_zone_flow_detector import CrossZoneFlowDetector
+        
+        flow_detector = CrossZoneFlowDetector()
+        return flow_detector.detect_inter_zone_correlations(patterns_by_zone)
 
 
 if __name__ == "__main__":

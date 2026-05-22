@@ -13,7 +13,10 @@ from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Signal, Prospectus
 from core.prospectus.prospectus_generator import ProspectusGenerator
-from backend.utils.pattern_utils import generate_basic_patterns, get_productive_activities
+from core.lumoza.lumoza_engine import LumozaEngine
+from core.lundai.lundai_engine import LundaiEngine, evaluate_signal_integrity
+from core.zentari.zentari_engine import ZentariEngine
+from policy import compute_planning_reserve
 from pydantic import BaseModel, Field
 
 # Configure logging
@@ -96,57 +99,65 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
                 "activity_type": signal.activity_type,
                 "time_window": signal.time_window,
                 "timestamp": signal.timestamp.isoformat(),
-                "source": signal.source,
-                "user_id": signal.user_id
+                "signal_source": signal.source,
+                "user_phone": signal.user_id,
+                "service_priority": "productive"
             })
         
         # Add cycle_index to each signal
         for i, signal in enumerate(signal_data):
             signal["cycle_index"] = i
         
-        # Generate basic patterns using aggregation
-        logger.info("Generating basic patterns...")
-        patterns = generate_basic_patterns(signal_data)
-        logger.info(f"Generated {len(patterns)} patterns")
+        # Run full coordination pipeline: LUMOZA → LUNDAI → ZENTARI
+        logger.info("Running LUMOZA engine for pattern detection...")
+        lumoza = LumozaEngine()
+        coordination_patterns = lumoza.process_signals(signal_data)
+        logger.info(f"LUMOZA generated {len(coordination_patterns)} coordination patterns")
         
-        if not patterns:
-            logger.warning(f"No activity data available for zone {zone}")
-            raise HTTPException(status_code=404, detail="No activity data available")
+        if not coordination_patterns:
+            logger.warning(f"No coordination patterns detected for zone {zone}")
+            raise HTTPException(status_code=404, detail="No coordination patterns detected")
         
-        # Generate prospectus using basic patterns
-        logger.info("Generating prospectus from basic patterns...")
+        # Run LUNDAI engine for integrity evaluation
+        logger.info("Running LUNDAI engine for integrity evaluation...")
+        integrity_results = evaluate_signal_integrity(signal_data, integrity_threshold=0.4)
+        logger.info(f"LUNDAI evaluated {len(integrity_results)} activity-zone groups")
+        
+        # Merge integrity scores into coordination patterns
+        pattern_map = {(p['activity_type'], p['zone'], p['time_window']): p for p in coordination_patterns}
+        for integrity_result in integrity_results:
+            key = (integrity_result['activity'], integrity_result['zone'], 'morning')  # Simplified key matching
+            if key in pattern_map:
+                pattern_map[key]['integrity_score'] = integrity_result['integrity_score']
+                pattern_map[key]['alignment_level'] = integrity_result['classification']
+                pattern_map[key]['signal_count'] = integrity_result['signal_count']
+                pattern_map[key]['unique_days'] = integrity_result['unique_days']
+                pattern_map[key]['unique_senders'] = integrity_result['unique_senders']
+        
+        # Run LUNDAI engine for settlement context analysis
+        logger.info("Running LUNDAI engine for settlement context...")
+        lundai = LundaiEngine()
+        planning_reserve = compute_planning_reserve(len(coordination_patterns))
+        lundai_analysis = lundai.analyze_settlement_context(coordination_patterns, planning_reserve)
+        logger.info(f"LUNDAI completed settlement context analysis")
+        
+        # Extract flow graph from LUNDAI analysis
+        flow_graph = lundai_analysis.get('flow_graph', {})
+        logger.info(f"Flow graph contains {flow_graph.get('total_nodes', 0)} nodes and {flow_graph.get('total_edges', 0)} edges")
+        
+        # Run ZENTARI engine for coordination confidence evaluation
+        logger.info("Running ZENTARI engine for coordination confidence...")
+        zentari = ZentariEngine()
+        confidence_results = zentari.evaluate_coordination_confidence(coordination_patterns, planning_reserve, flow_graph=flow_graph)
+        logger.info(f"ZENTARI evaluated {len(confidence_results)} patterns for coordination confidence")
+        
+        # Generate prospectus using full pipeline output
+        logger.info("Generating prospectus from full pipeline output...")
         gen = ProspectusGenerator()
         metadata = {
             "region": zone_key,
             "period": "7-cycle window (1 week)",
             "is_sample": False
-        }
-        
-        # Create simple confidence results for prospectus generation
-        confidence_results = []
-        for pattern in patterns:
-            confidence_results.append({
-                "activity_type": pattern["activity_type"],
-                "time_window": pattern["time_window"],
-                "zone": pattern["zone"],
-                "confidence_class": "high",
-                "confidence_score": 0.9,
-                "demand_class": "moderate",
-                "infrastructure_implication": "Consider infrastructure investment",
-                "trust": {
-                    "trust_score": 0.9,
-                    "trust_level": "high"
-                }
-            })
-        
-        # Use basic planning reserve
-        planning_reserve = {"total_reserve": len(patterns) * 100}
-        
-        # Create basic lundai analysis
-        lundai_analysis = {
-            "settlement_density": "moderate",
-            "infrastructure_coverage": "partial",
-            "demand_concentration": patterns
         }
         
         prospectus = gen.generate_prospectus(

@@ -2,6 +2,35 @@
 
 This file provides guidance to agents when working with code in this repository.
 
+## System Identity
+
+**KULIMA OS** is a coordination-first infrastructure planning system that transforms real-world activity into decision-grade intelligence without relying on identity or assumptions.
+
+### Architectural Philosophy
+
+Planning based on observed coordination patterns across time, space, and sectors — not assumptions or individual data.
+
+### System Invariants (CRITICAL)
+
+- **Zero-PII**: Operates only on aggregated patterns (never raw signals or individual data)
+- **Coordination > Identity**: Analyzes collective patterns, not individual behaviors
+- **Semantic Guard**: Designed for infrastructure planning, not surveillance or profiling
+- **Epistemic Reliability**: Truth from repetition, not reporting or assumptions
+
+### Forbidden Operations
+
+- Track individuals
+- Infer identity
+- Perform behavioral prediction
+- Enable surveillance
+
+### Core Principles
+
+- Identity-free coordination intelligence
+- Coordination-driven decision making
+- Temporally grounded analysis
+- Decision-oriented outputs
+
 ## Project Identity
 
 **KULIMA OS** is a coordination-first economic substrate designed as Digital Public Infrastructure (DPI). It is NOT an app, NOT a data platform, and NOT a surveillance system.

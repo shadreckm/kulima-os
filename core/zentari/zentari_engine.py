@@ -63,14 +63,21 @@ class ZentariEngine:
         self,
         coordination_patterns: List[Dict],
         planning_reserve: Dict = None,
+        flow_graph: Dict = None,
     ) -> List[Dict]:
         """
-        Evaluate coordination confidence for each pattern.
+        Evaluate coordination confidence for each pattern using weighted composite model.
         
         COORDINATION > IDENTITY:
         - Accepts only LUMOZA outputs (aggregated patterns, never raw signals)
         - Evaluates pattern trustworthiness, not individual creditworthiness
         - Produces confidence scores for infrastructure planning
+        
+        WEIGHTED CONFIDENCE MODEL:
+        - C = (0.5 × Persistence) + (0.3 × Stability) + (0.2 × Flow Strength)
+        - Persistence: how often pattern appears across multiple windows (from LUMOZA)
+        - Stability: variance in pattern occurrence (lower variance = higher stability)
+        - Flow Strength: strength of sequence connections (from LUNDAI)
         
         SEMANTIC GUARD:
         - No credit scoring (evaluates patterns, not people)
@@ -80,6 +87,7 @@ class ZentariEngine:
         Args:
             coordination_patterns: List of patterns from LUMOZA
             planning_reserve: Planning reserve object describing usable_signals and reserve_buffer
+            flow_graph: Flow graph structure from LUNDAI with nodes and edges
             
         Returns:
             List of patterns with coordination_confidence scores
@@ -148,14 +156,35 @@ class ZentariEngine:
                 return 'Emerging Trust'
             return 'Untrusted'
 
+        # Extract flow strength from flow graph
+        flow_strength_map = {}
+        if flow_graph and flow_graph.get('edges'):
+            for edge in flow_graph['edges']:
+                from_activity = edge.get('from_activity')
+                zone = edge.get('zone')
+                strength = edge.get('strength_score', 0)
+                key = (from_activity, zone)
+                if key not in flow_strength_map or flow_strength_map[key] < strength:
+                    flow_strength_map[key] = strength
+
         for pattern in coordination_patterns:
             stability_score = pattern.get('stability_score', 0.0)
             validation_strength = pattern.get('validation_strength', 'human_only')
+            
+            # Extract persistence from LUMOZA output
+            persistence = pattern.get('pattern_persistence', 0.0)
+            pattern_stability = pattern.get('pattern_stability', 0.0)
+            
+            # Extract flow strength from LUNDAI flow graph
+            activity = pattern.get('activity_type')
+            zone = pattern.get('zone')
+            flow_strength = flow_strength_map.get((activity, zone), 0.0)
 
-            # Base coordination confidence
-            confidence_score = self._calculate_confidence(
-                stability_score=stability_score,
-                validation_strength=validation_strength
+            # Calculate weighted composite confidence
+            confidence_score = self._calculate_weighted_confidence(
+                persistence=persistence,
+                stability=pattern_stability,
+                flow_strength=flow_strength
             )
 
             confidence_class = self._classify_confidence(confidence_score)
@@ -235,9 +264,13 @@ class ZentariEngine:
             confidence_result = {
                 **pattern,
                 'coordination_confidence': confidence_score,
+                'confidence_score': round(confidence_score * 100, 0),  # 0-100 scale
                 'confidence_class': confidence_class,
                 'confidence_band': [lower, upper],
                 'confidence_delta': delta,
+                'stability_score': round(pattern_stability, 2),  # Use pattern stability from LUMOZA
+                'persistence': round(persistence, 2),
+                'flow_strength': round(flow_strength, 2),
                 'demand_classification': demand_class,
                 'infrastructure_implication': infrastructure_implication,
                 'planning_reserve_note': planning_reserve_note,
@@ -292,19 +325,23 @@ class ZentariEngine:
                 'burst_ratio': pattern.get('burst_ratio', None),
                 'anomaly_flag': pattern.get('anomaly_flag', False),
                 'alignment_level': pattern.get('alignment_level', None),
+                'persistence': persistence,
+                'pattern_stability': pattern_stability,
+                'flow_strength': flow_strength,
             }
 
             interpretation = {
-                'stability_score': pattern.get('stability_score'),
-                'validation_strength': pattern.get('validation_strength'),
-                'confidence_calculation': f"confidence={confidence_score} derived from stability * validation multiplier",
+                'stability_score': pattern_stability,
+                'persistence': persistence,
+                'flow_strength': flow_strength,
+                'confidence_calculation': f"confidence={confidence_score} = (0.5×{persistence}) + (0.3×{pattern_stability}) + (0.2×{flow_strength})",
             }
 
             explanation = {
                 'why_accepted': (
-                    f"Pattern accepted because stability_score={stability_score} and "
-                    f"validation_strength='{validation_strength}', which meet coordination confidence requirements. "
-                    f"High integrity and alignment support this pattern as a planning signal."
+                    f"Pattern accepted because persistence={persistence}, stability={pattern_stability}, "
+                    f"and flow_strength={flow_strength}, which meet coordination confidence requirements. "
+                    f"Weighted confidence score {confidence_score} ({confidence_class})."
                 ),
                 'why_rejected': (
                     pattern.get('rejected_signals') and
@@ -324,8 +361,7 @@ class ZentariEngine:
                 'interpretation': interpretation,
                 'human_readable': (
                     f"{confidence_result['what_is_happening']}. "
-                    f"Integrity score {validation_process['lundai_integrity_score']}; "
-                    f"derived confidence {confidence_score} ({confidence_result['confidence_class']}). "
+                    f"Weighted confidence {confidence_score} (persistence={persistence}, stability={pattern_stability}, flow={flow_strength}). "
                     f"Action {'allowed' if action_allowed else 'refused'} by trust policy."
                 )
             }
@@ -336,6 +372,32 @@ class ZentariEngine:
             confidence_results.append(confidence_result)
 
         return confidence_results
+    
+    def _calculate_weighted_confidence(self, persistence: float, stability: float, flow_strength: float) -> float:
+        """
+        Calculate weighted composite confidence score (0-1).
+        
+        WEIGHTED CONFIDENCE MODEL:
+        - C = (0.5 × Persistence) + (0.3 × Stability) + (0.2 × Flow Strength)
+        - Persistence: how often pattern appears across multiple windows
+        - Stability: variance in pattern occurrence (lower variance = higher stability)
+        - Flow Strength: strength of sequence connections from LUNDAI
+        
+        All inputs should be normalized to 0-1 range.
+        
+        Args:
+            persistence: Pattern persistence score (0-1)
+            stability: Pattern stability score (0-1)
+            flow_strength: Flow strength score (0-1)
+            
+        Returns:
+            Weighted confidence score (0-1)
+        """
+        # Weighted composite formula
+        confidence = (0.5 * persistence) + (0.3 * stability) + (0.2 * flow_strength)
+        
+        # Ensure confidence stays in [0, 1]
+        return round(min(max(confidence, 0.0), 1.0), 2)
     
     def _calculate_confidence(self, stability_score: float, validation_strength: str) -> float:
         """

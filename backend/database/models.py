@@ -15,6 +15,7 @@ class Signal(Base):
     id = Column(String, primary_key=True)
     zone = Column(String, nullable=False, index=True)
     activity_type = Column(String, nullable=False)
+    sector = Column(String, nullable=False, index=True)  # Multi-sector support
     time_window = Column(String, nullable=False)
     timestamp = Column(DateTime, nullable=False, index=True)
     source = Column(String, nullable=False)

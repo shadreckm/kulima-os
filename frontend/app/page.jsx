@@ -225,6 +225,19 @@ export default function Home() {
                 <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px', color: '#1a1a1a' }}>Total Activities Detected</h4>
                 <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#4caf50', textAlign: 'center' }}>{summary.total_patterns}</p>
               </div>
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px', color: '#1a1a1a' }}>Confidence Breakdown</h4>
+                <div style={{ display: 'flex', gap: '20px' }}>
+                  <div style={{ flex: 1, padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', textAlign: 'center' }}>
+                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#2e7d32' }}>{summary.high_confidence_patterns}</p>
+                    <p style={{ fontSize: '14px', color: '#555' }}>High Confidence</p>
+                  </div>
+                  <div style={{ flex: 1, padding: '15px', backgroundColor: '#fff3e0', borderRadius: '8px', textAlign: 'center' }}>
+                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#e65100' }}>{summary.moderate_confidence_patterns}</p>
+                    <p style={{ fontSize: '14px', color: '#555' }}>Moderate Confidence</p>
+                  </div>
+                </div>
+              </div>
               <div>
                 <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px', color: '#1a1a1a' }}>Main Activities</h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>

@@ -10,12 +10,16 @@ from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Signal
 from pydantic import BaseModel, Field
+from core.coordination.multi_sector_coordinator import MultiSectorCoordinator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Initialize multi-sector coordinator
+sector_coordinator = MultiSectorCoordinator()
 
 
 class SignalCreate(BaseModel):
@@ -60,11 +64,15 @@ async def create_signal(signal_data: SignalCreate, db: Session = Depends(get_db)
             logger.warning(f"Invalid timestamp format for signal {signal_id}, using current time")
             timestamp = datetime.utcnow()
         
+        # Classify sector using multi-sector coordinator
+        sector = sector_coordinator.classify_sector(signal_data.activity_type)
+        
         # Store signal in database
         signal = Signal(
             id=signal_id,
             zone=zone,
             activity_type=signal_data.activity_type,
+            sector=sector,
             time_window=signal_data.time_window,
             timestamp=timestamp,
             source=signal_data.source,

@@ -133,6 +133,26 @@ class ProspectusGenerator:
             
             "risk_and_governance": self._generate_risk_governance(confidence_results),
             
+            "flow_insights": self._generate_flow_insights(lundai_analysis),
+            
+            "risk_model": self._calculate_risk_model(confidence_results, lundai_analysis),
+            
+            "decision_recommendations": self._generate_decision_recommendations(confidence_results, lundai_analysis),
+            
+            "long_term_coordination_insights": self._generate_long_term_insights(confidence_results, lundai_analysis),
+            
+            "regional_flow_analysis": self._generate_regional_flow_analysis(confidence_results, lundai_analysis),
+            
+            "infrastructure_roadmap": self._generate_infrastructure_roadmap(confidence_results, lundai_analysis),
+            
+            "scenario_projections": self._generate_scenario_projections(confidence_results, lundai_analysis),
+            
+            "policy_maker_section": self._generate_policy_maker_section(confidence_results, lundai_analysis),
+            
+            "investor_section": self._generate_investor_section(confidence_results, lundai_analysis),
+            
+            "infrastructure_planner_section": self._generate_infrastructure_planner_section(confidence_results, lundai_analysis),
+            
             "deployment_readiness": self._generate_deployment_readiness(confidence_results, lundai_analysis),
             
             "infrastructure_planning_guidance": self._generate_planning_guidance(confidence_results, lundai_analysis),
@@ -1372,6 +1392,668 @@ class ProspectusGenerator:
         }
         
         return risk_governance
+    
+    def _generate_flow_insights(self, lundai_analysis: Dict) -> Dict:
+        """
+        Generate activity flow insights from LUNDAI flow graph.
+        
+        Provides economic coordination graph and value chain visualization data.
+        """
+        if not lundai_analysis or lundai_analysis.get("status") == "LUNDAI analysis not included":
+            return {"status": "Flow insights not available"}
+        
+        flow_graph = lundai_analysis.get("flow_graph", {})
+        nodes = flow_graph.get("nodes", [])
+        edges = flow_graph.get("edges", [])
+        
+        # Analyze flow patterns
+        activity_sequences = []
+        for edge in edges:
+            activity_sequences.append({
+                "from": edge.get("from_activity"),
+                "to": edge.get("to_activity"),
+                "zone": edge.get("zone"),
+                "strength": edge.get("strength_score"),
+                "transition_probability": edge.get("transition_probability")
+            })
+        
+        # Identify strong flows
+        strong_flows = [seq for seq in activity_sequences if seq.get("strength", 0) >= 0.7]
+        
+        return {
+            "total_activities": len(nodes),
+            "total_flows": len(edges),
+            "strong_coordination_flows": len(strong_flows),
+            "activity_sequences": activity_sequences[:10],  # Top 10 flows
+            "economic_coordination_graph": {
+                "nodes": nodes,
+                "edges": edges
+            },
+            "value_chain_insights": {
+                "primary_sequences": [
+                    seq for seq in activity_sequences 
+                    if seq.get("transition_probability", 0) >= 0.6
+                ][:5]
+            }
+        }
+    
+    def _calculate_risk_model(self, confidence_results: List[Dict], lundai_analysis: Dict) -> Dict:
+        """
+        Calculate multi-factor risk model based on persistence, stability, and flow strength.
+        
+        Risk Factors:
+        - Low persistence → "Demand uncertainty risk"
+        - Low stability → "Volatility risk"
+        - Weak flow connections → "Fragmentation risk"
+        - Sparse signals → "Data insufficiency risk"
+        """
+        risk_factors = []
+        
+        # Analyze persistence
+        persistence_values = [r.get('persistence', 0) for r in confidence_results]
+        avg_persistence = sum(persistence_values) / len(persistence_values) if persistence_values else 0
+        
+        if avg_persistence < 0.4:
+            risk_factors.append({
+                "type": "Demand uncertainty risk",
+                "severity": "high" if avg_persistence < 0.2 else "moderate",
+                "description": f"Low persistence ({avg_persistence:.2f}) indicates patterns may not repeat consistently"
+            })
+        elif avg_persistence < 0.6:
+            risk_factors.append({
+                "type": "Demand uncertainty risk",
+                "severity": "low",
+                "description": f"Moderate persistence ({avg_persistence:.2f}) requires monitoring"
+            })
+        
+        # Analyze stability
+        stability_values = [r.get('stability_score', 0) for r in confidence_results]
+        avg_stability = sum(stability_values) / len(stability_values) if stability_values else 0
+        
+        if avg_stability < 0.4:
+            risk_factors.append({
+                "type": "Volatility risk",
+                "severity": "high" if avg_stability < 0.2 else "moderate",
+                "description": f"Low stability ({avg_stability:.2f}) indicates high variance in pattern occurrence"
+            })
+        elif avg_stability < 0.6:
+            risk_factors.append({
+                "type": "Volatility risk",
+                "severity": "low",
+                "description": f"Moderate stability ({avg_stability:.2f}) indicates some pattern variance"
+            })
+        
+        # Analyze flow strength
+        flow_strength_values = [r.get('flow_strength', 0) for r in confidence_results]
+        avg_flow_strength = sum(flow_strength_values) / len(flow_strength_values) if flow_strength_values else 0
+        
+        if avg_flow_strength < 0.3:
+            risk_factors.append({
+                "type": "Fragmentation risk",
+                "severity": "high",
+                "description": f"Weak flow connections ({avg_flow_strength:.2f}) indicate fragmented economic activity"
+            })
+        elif avg_flow_strength < 0.5:
+            risk_factors.append({
+                "type": "Fragmentation risk",
+                "severity": "moderate",
+                "description": f"Moderate flow strength ({avg_flow_strength:.2f}) indicates partial value chain integration"
+            })
+        
+        # Analyze signal density
+        total_patterns = len(confidence_results)
+        if total_patterns < 3:
+            risk_factors.append({
+                "type": "Data insufficiency risk",
+                "severity": "high",
+                "description": f"Low pattern count ({total_patterns}) indicates insufficient data for reliable planning"
+            })
+        elif total_patterns < 5:
+            risk_factors.append({
+                "type": "Data insufficiency risk",
+                "severity": "moderate",
+                "description": f"Limited pattern count ({total_patterns}) requires additional data collection"
+            })
+        
+        # Calculate overall risk level
+        high_risk_count = sum(1 for rf in risk_factors if rf.get("severity") == "high")
+        moderate_risk_count = sum(1 for rf in risk_factors if rf.get("severity") == "moderate")
+        
+        if high_risk_count >= 2:
+            risk_level = "high"
+            recommendation = "Significant risks detected. Recommend extensive data collection and monitoring before infrastructure commitment."
+        elif high_risk_count >= 1 or moderate_risk_count >= 2:
+            risk_level = "moderate"
+            recommendation = "Moderate risks present. Recommend phased deployment with continued monitoring and validation."
+        else:
+            risk_level = "low"
+            recommendation = "Low risk profile. Patterns show good persistence, stability, and flow integration. Suitable for infrastructure planning."
+        
+        return {
+            "risk_level": risk_level,
+            "risk_factors": risk_factors,
+            "recommendation": recommendation,
+            "risk_metrics": {
+                "average_persistence": round(avg_persistence, 2),
+                "average_stability": round(avg_stability, 2),
+                "average_flow_strength": round(avg_flow_strength, 2),
+                "total_patterns": total_patterns
+            }
+        }
+    
+    def _generate_decision_recommendations(self, confidence_results: List[Dict], lundai_analysis: Dict) -> Dict:
+        """
+        Generate decision recommendations using the Decision Engine.
+        
+        Args:
+            confidence_results: Confidence results from ZENTARI
+            lundai_analysis: Settlement and infrastructure analysis from LUNDAI
+            
+        Returns:
+            Decision recommendations with infrastructure needs and capacity requirements
+        """
+        from core.decision.decision_engine import DecisionEngine
+        
+        # Convert confidence results to patterns format
+        patterns = []
+        for result in confidence_results:
+            patterns.append({
+                'activity_type': result.get('activity_type'),
+                'zone': result.get('zone'),
+                'pattern_frequency': result.get('pattern_frequency', 1),
+                'time_window': result.get('time_window', 'morning')
+            })
+        
+        # Extract flow graph from LUNDAI analysis
+        flow_graph = lundai_analysis.get('flow_graph', {}) if lundai_analysis else {}
+        
+        # Use Decision Engine to generate recommendations
+        decision_engine = DecisionEngine()
+        recommendations = decision_engine.recommend_infrastructure(patterns, flow_graph, confidence_results)
+        
+        return {
+            "priority_zone": recommendations.get('priority_zone'),
+            "infrastructure_recommendations": recommendations.get('recommended_infrastructure', []),
+            "capacity_requirements": recommendations.get('required_capacity'),
+            "justification": recommendations.get('justification'),
+            "zone_scores": recommendations.get('zone_scores', {}),
+            "decision_summary": self._format_decision_summary(recommendations)
+        }
+    
+    def _format_decision_summary(self, recommendations: Dict) -> str:
+        """
+        Format decision recommendations into a summary for the prospectus.
+        
+        Args:
+            recommendations: Decision engine output
+            
+        Returns:
+            Formatted decision summary
+        """
+        if not recommendations.get('priority_zone'):
+            return "Insufficient coordination patterns to recommend infrastructure at this time."
+        
+        priority_zone = recommendations['priority_zone']
+        capacity = recommendations.get('required_capacity', {})
+        total_capacity = capacity.get('total_kw', 0)
+        
+        summary_parts = [
+            f"Zone {priority_zone} is identified as the priority zone for infrastructure deployment. "
+            f"Total required capacity is estimated at {total_capacity} kW. "
+        ]
+        
+        infra_recs = recommendations.get('recommended_infrastructure', [])
+        if infra_recs:
+            high_priority = [r for r in infra_recs if r.get('priority') == 'high']
+            if high_priority:
+                activities = ', '.join(r['activity_type'] for r in high_priority)
+                summary_parts.append(
+                    f"High-priority infrastructure is recommended for: {activities}. "
+                )
+        
+        summary_parts.append(recommendations.get('justification', ''))
+        
+        return ''.join(summary_parts)
+    
+    def _generate_long_term_insights(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
+        """
+        Generate long-term coordination insights using Long-Horizon Model.
+        
+        Args:
+            confidence_results: Confidence results from ZENTARI
+            lundai_analysis: Settlement and infrastructure analysis from LUNDAI
+            
+        Returns:
+            Long-term coordination insights with monthly and seasonal trends
+        """
+        from core.temporal.long_horizon_model import LongHorizonModel
+        
+        long_horizon = LongHorizonModel()
+        
+        # Convert confidence results to weekly patterns format
+        weekly_patterns = []
+        for result in confidence_results:
+            weekly_patterns.append({
+                'activity_type': result.get('activity_type'),
+                'zone': result.get('zone'),
+                'pattern_frequency': result.get('pattern_frequency', 1),
+                'pattern_persistence': result.get('persistence', 0),
+                'pattern_stability': result.get('stability_score', 0)
+            })
+        
+        # Add to history with current timestamp
+        from datetime import datetime
+        current_timestamp = datetime.utcnow().isoformat() + "Z"
+        long_horizon.add_weekly_patterns(weekly_patterns, current_timestamp)
+        
+        # Aggregate to monthly (using current data as proxy)
+        weekly_data = [{'timestamp': current_timestamp, 'patterns': weekly_patterns}]
+        monthly_patterns = long_horizon.aggregate_weekly_to_monthly(weekly_data)
+        
+        # Aggregate to seasonal (using monthly patterns as proxy)
+        seasonal_patterns = long_horizon.aggregate_monthly_to_seasonal(monthly_patterns)
+        
+        return {
+            "monthly_trends": monthly_patterns,
+            "seasonal_patterns": seasonal_patterns,
+            "trend_analysis": {
+                "increasing_patterns": len([p for p in monthly_patterns if p.get('trend') == 'increasing']),
+                "stable_patterns": len([p for p in monthly_patterns if p.get('trend') == 'stable']),
+                "declining_patterns": len([p for p in monthly_patterns if p.get('trend') == 'declining'])
+            }
+        }
+    
+    def _generate_regional_flow_analysis(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
+        """
+        Generate regional flow analysis using Cross-Zone Flow Detector.
+        
+        Args:
+            confidence_results: Confidence results from ZENTARI
+            lundai_analysis: Settlement and infrastructure analysis from LUNDAI
+            
+        Returns:
+            Regional flow analysis with dominant chains and bottlenecks
+        """
+        from core.flow.cross_zone_flow_detector import CrossZoneFlowDetector
+        
+        flow_detector = CrossZoneFlowDetector()
+        
+        # Group patterns by zone
+        patterns_by_zone = {}
+        for result in confidence_results:
+            zone = result.get('zone')
+            if zone not in patterns_by_zone:
+                patterns_by_zone[zone] = []
+            
+            patterns_by_zone[zone].append({
+                'activity_type': result.get('activity_type'),
+                'zone': zone,
+                'pattern_frequency': result.get('pattern_frequency', 1),
+                'pattern_persistence': result.get('persistence', 0),
+                'confidence_score': result.get('confidence_score', 0),
+                'temporal_weight': 1.0,
+                'persistence_weight': 1.0,
+                'time_window': result.get('time_window', 'morning')
+            })
+        
+        # Detect inter-zone flows
+        inter_zone_flows = flow_detector.detect_inter_zone_correlations(patterns_by_zone)
+        
+        # Build regional flow network
+        flow_network = flow_detector.build_regional_flow_network(patterns_by_zone)
+        
+        # Identify dominant chains (high-strength flows)
+        dominant_chains = [flow for flow in inter_zone_flows if flow.get('correlation_strength', 0) >= 0.6]
+        
+        # Identify bottlenecks (zones with high coordination but low infrastructure)
+        bottlenecks = []
+        if lundai_analysis:
+            infrastructure_gaps = lundai_analysis.get('infrastructure_gaps', [])
+            for gap in infrastructure_gaps:
+                if gap.get('signal_integrity', 0) >= 0.6:  # High coordination
+                    bottlenecks.append({
+                        'zone': gap.get('zone'),
+                        'gap_type': gap.get('gap_type'),
+                        'coordination_strength': gap.get('signal_integrity')
+                    })
+        
+        return {
+            "dominant_chains": dominant_chains,
+            "bottlenecks": bottlenecks,
+            "cross_zone_flows": inter_zone_flows,
+            "regional_flow_network": flow_network
+        }
+    
+    def _generate_infrastructure_roadmap(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
+        """
+        Generate infrastructure roadmap using Infrastructure Design Layer.
+        
+        Args:
+            confidence_results: Confidence results from ZENTARI
+            lundai_analysis: Settlement and infrastructure analysis from LUNDAI
+            
+        Returns:
+            Infrastructure roadmap with phased rollout and capacity estimates
+        """
+        from core.infrastructure.infrastructure_design import InfrastructureDesignLayer
+        from core.decision.decision_engine import DecisionEngine
+        
+        design_layer = InfrastructureDesignLayer()
+        decision_engine = DecisionEngine()
+        
+        # Get zone scores from Decision Engine
+        patterns = []
+        for result in confidence_results:
+            patterns.append({
+                'activity_type': result.get('activity_type'),
+                'zone': result.get('zone'),
+                'pattern_frequency': result.get('pattern_frequency', 1)
+            })
+        
+        flow_graph = lundai_analysis.get('flow_graph', {}) if lundai_analysis else {}
+        recommendations = decision_engine.recommend_infrastructure(patterns, flow_graph, confidence_results)
+        zone_scores = recommendations.get('zone_scores', {})
+        
+        # Rank zones by priority
+        ranked_zones = design_layer.rank_zones_by_priority(zone_scores)
+        
+        # Get infrastructure needs
+        infrastructure_needs = []
+        for result in confidence_results:
+            infrastructure_needs.append({
+                'zone': result.get('zone'),
+                'activity_type': result.get('activity_type'),
+                'recommended_capacity_kw': design_layer.determine_infrastructure_type(result.get('activity_type'))['base_capacity_kw']
+            })
+        
+        # Design phased rollout
+        phased_rollout = design_layer.design_phased_rollout(ranked_zones, infrastructure_needs)
+        
+        # Estimate load distribution
+        zones = list(zone_scores.keys())
+        infrastructure_types = list(set([design_layer.determine_infrastructure_type(result.get('activity_type'))['type'] for result in confidence_results]))
+        load_distribution = design_layer.estimate_load_distribution(zones, infrastructure_types)
+        
+        return {
+            "phased_rollout": phased_rollout,
+            "load_distribution": load_distribution,
+            "ranked_zones": ranked_zones,
+            "total_capacity_kw": phased_rollout.get('total_capacity_kw', 0),
+            "total_timeline_months": phased_rollout.get('total_timeline_months', 0)
+        }
+    
+    def _generate_scenario_projections(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
+        """
+        Generate scenario projections using Scenario Model.
+        
+        Args:
+            confidence_results: Confidence results from ZENTARI
+            lundai_analysis: Settlement and infrastructure analysis from LUNDAI
+            
+        Returns:
+            Scenario projections for infrastructure addition impact
+        """
+        from core.scenario.scenario_model import ScenarioModel
+        from core.decision.decision_engine import DecisionEngine
+        
+        scenario_model = ScenarioModel()
+        decision_engine = DecisionEngine()
+        
+        # Convert confidence results to patterns format
+        patterns = []
+        for result in confidence_results:
+            patterns.append({
+                'activity_type': result.get('activity_type'),
+                'zone': result.get('zone'),
+                'pattern_frequency': result.get('pattern_frequency', 1)
+            })
+        
+        flow_graph = lundai_analysis.get('flow_graph', {}) if lundai_analysis else {}
+        
+        # Get priority zone
+        recommendations = decision_engine.recommend_infrastructure(patterns, flow_graph, confidence_results)
+        priority_zone = recommendations.get('priority_zone')
+        
+        if not priority_zone:
+            return {
+                "infrastructure_addition_impact": [],
+                "note": "No priority zone identified for scenario simulation"
+            }
+        
+        # Simulate infrastructure addition for priority zone
+        infrastructure_type = 'three_phase_power'
+        simulation = scenario_model.simulate_infrastructure_addition(
+            patterns, flow_graph, confidence_results, infrastructure_type, priority_zone
+        )
+        
+        # Simulate capacity upgrade
+        current_capacity = recommendations.get('required_capacity', {}).get('total_kw', 50)
+        new_capacity = current_capacity * 1.5
+        capacity_simulation = scenario_model.simulate_capacity_upgrade(
+            patterns, confidence_results, current_capacity, new_capacity, priority_zone
+        )
+        
+        return {
+            "infrastructure_addition_impact": [simulation],
+            "capacity_upgrade_impact": capacity_simulation,
+            "priority_zone": priority_zone
+        }
+    
+    def _generate_policy_maker_section(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
+        """
+        Generate policy maker section focusing on infrastructure gaps, regional coordination, and essential load protection.
+        
+        Args:
+            confidence_results: Confidence results from ZENTARI
+            lundai_analysis: Settlement and infrastructure analysis from LUNDAI
+            
+        Returns:
+            Policy maker section with public value, equity impact, and infrastructure prioritization
+        """
+        # Extract infrastructure gaps
+        infrastructure_gaps = lundai_analysis.get('infrastructure_gaps', []) if lundai_analysis else []
+        
+        # Identify essential services
+        essential_patterns = [r for r in confidence_results if r.get('service_priority') == 'essential']
+        
+        # Calculate regional coordination summary
+        zone_distribution = {}
+        for result in confidence_results:
+            zone = result.get('zone')
+            if zone not in zone_distribution:
+                zone_distribution[zone] = 0
+            zone_distribution[zone] += 1
+        
+        # Calculate equity impact (zones with high coordination but low infrastructure)
+        equity_impact = []
+        for gap in infrastructure_gaps:
+            if gap.get('signal_integrity', 0) >= 0.6:  # High coordination
+                equity_impact.append({
+                    'zone': gap.get('zone'),
+                    'gap_type': gap.get('gap_type'),
+                    'coordination_strength': gap.get('signal_integrity'),
+                    'priority': 'high'
+                })
+        
+        return {
+            "public_value": {
+                "total_zones_served": len(zone_distribution),
+                "essential_services_detected": len(essential_patterns),
+                "coordination_patterns": len(confidence_results)
+            },
+            "equity_impact": {
+                "underserved_zones": len(equity_impact),
+                "high_coordination_low_infrastructure": equity_impact
+            },
+            "infrastructure_prioritization": {
+                "critical_gaps": [gap for gap in infrastructure_gaps if gap.get('gap_severity') == 'critical'],
+                "essential_load_protection": len(essential_patterns),
+                "regional_focus": sorted(zone_distribution.items(), key=lambda x: x[1], reverse=True)
+            },
+            "regional_coordination_summary": {
+                "zone_distribution": zone_distribution,
+                "cross_zone_flows": len(lundai_analysis.get('flow_graph', {}).get('edges', [])) if lundai_analysis else 0
+            }
+        }
+    
+    def _generate_investor_section(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
+        """
+        Generate investor section focusing on confidence scores, demand stability, and risk profile.
+        
+        Args:
+            confidence_results: Confidence results from ZENTARI
+            lundai_analysis: Settlement and infrastructure analysis from LUNDAI
+            
+        Returns:
+            Investor section with confidence summary, stability indicators, and risk profile
+        """
+        # Calculate confidence summary
+        high_confidence = [r for r in confidence_results if r.get('confidence_class') == 'high']
+        moderate_confidence = [r for r in confidence_results if r.get('confidence_class') == 'moderate']
+        low_confidence = [r for r in confidence_results if r.get('confidence_class') == 'low']
+        
+        # Calculate stability indicators
+        persistence_values = [r.get('persistence', 0) for r in confidence_results]
+        stability_values = [r.get('stability_score', 0) for r in confidence_results]
+        
+        avg_persistence = sum(persistence_values) / len(persistence_values) if persistence_values else 0
+        avg_stability = sum(stability_values) / len(stability_values) if stability_values else 0
+        
+        # Calculate trend indicators
+        increasing_patterns = len([r for r in confidence_results if r.get('trend') == 'increasing'])
+        stable_patterns = len([r for r in confidence_results if r.get('trend') == 'stable'])
+        declining_patterns = len([r for r in confidence_results if r.get('trend') == 'declining'])
+        
+        # Determine risk profile
+        if avg_persistence >= 0.7 and avg_stability >= 0.7:
+            risk_profile = 'low'
+        elif avg_persistence >= 0.5 and avg_stability >= 0.5:
+            risk_profile = 'medium'
+        else:
+            risk_profile = 'high'
+        
+        # Calculate demand reliability
+        demand_reliability = (avg_persistence + avg_stability) / 2
+        
+        return {
+            "coordination_confidence_summary": {
+                "high_confidence_count": len(high_confidence),
+                "moderate_confidence_count": len(moderate_confidence),
+                "low_confidence_count": len(low_confidence),
+                "total_patterns": len(confidence_results)
+            },
+            "stability_indicators": {
+                "average_persistence": round(avg_persistence, 2),
+                "average_stability": round(avg_stability, 2),
+                "demand_reliability": round(demand_reliability, 2)
+            },
+            "trend_analysis": {
+                "increasing_patterns": increasing_patterns,
+                "stable_patterns": stable_patterns,
+                "declining_patterns": declining_patterns
+            },
+            "risk_profile": {
+                "classification": risk_profile,
+                "risk_factors": [],
+                "mitigation_opportunities": []
+            },
+            "coordination_strength_indicators": {
+                "overall_strength": round(avg_persistence * avg_stability, 2),
+                "strength_distribution": {
+                    'high': len([r for r in confidence_results if r.get('persistence', 0) >= 0.7]),
+                    'medium': len([r for r in confidence_results if 0.5 <= r.get('persistence', 0) < 0.7]),
+                    'low': len([r for r in confidence_results if r.get('persistence', 0) < 0.5])
+                }
+            }
+        }
+    
+    def _generate_infrastructure_planner_section(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
+        """
+        Generate infrastructure planner section focusing on capacity requirements, load type, and spatial mismatch.
+        
+        Args:
+            confidence_results: Confidence results from ZENTARI
+            lundai_analysis: Settlement and infrastructure analysis from LUNDAI
+            
+        Returns:
+            Infrastructure planner section with technical demand profile, infrastructure recommendations, and rollout plan
+        """
+        from core.infrastructure.infrastructure_design import InfrastructureDesignLayer
+        from core.coordination.multi_sector_coordinator import MultiSectorCoordinator
+        
+        design_layer = InfrastructureDesignLayer()
+        sector_coordinator = MultiSectorCoordinator()
+        
+        # Calculate technical demand profile
+        demand_profile = []
+        for result in confidence_results:
+            activity_type = result.get('activity_type')
+            sector = sector_coordinator.classify_sector(activity_type)
+            infrastructure_mapping = sector_coordinator.get_sector_infrastructure_mapping(sector, activity_type)
+            
+            demand_profile.append({
+                'activity_type': activity_type,
+                'sector': sector,
+                'infrastructure_type': infrastructure_mapping['type'],
+                'load_type': infrastructure_mapping['load_type'],
+                'base_capacity_kw': infrastructure_mapping['base_capacity_kw'],
+                'zone': result.get('zone'),
+                'persistence': result.get('persistence', 0)
+            })
+        
+        # Calculate total capacity requirements by load type
+        capacity_by_load_type = defaultdict(float)
+        for item in demand_profile:
+            load_type = item['load_type']
+            capacity_by_load_type[load_type] += item['base_capacity_kw']
+        
+        # Calculate spatial mismatch
+        spatial_mismatch = []
+        if lundai_analysis:
+            infrastructure_gaps = lundai_analysis.get('infrastructure_gaps', [])
+            for gap in infrastructure_gaps:
+                spatial_mismatch.append({
+                    'zone': gap.get('zone'),
+                    'gap_type': gap.get('gap_type'),
+                    'signal_integrity': gap.get('signal_integrity'),
+                    'infrastructure_adequacy': gap.get('infrastructure_adequacy', 0)
+                })
+        
+        # Generate infrastructure recommendations
+        infrastructure_recommendations = []
+        for item in demand_profile:
+            if item['persistence'] >= 0.6:  # Only recommend for persistent patterns
+                infrastructure_recommendations.append({
+                    'zone': item['zone'],
+                    'activity_type': item['activity_type'],
+                    'infrastructure_type': item['infrastructure_type'],
+                    'load_type': item['load_type'],
+                    'recommended_capacity_kw': item['base_capacity_kw'],
+                    'priority': 'high' if item['persistence'] >= 0.8 else 'medium'
+                })
+        
+        return {
+            "technical_demand_profile": {
+                "total_activities": len(demand_profile),
+                "demand_breakdown": demand_profile
+            },
+            "capacity_requirements": {
+                "by_load_type": dict(capacity_by_load_type),
+                "total_capacity_kw": round(sum(capacity_by_load_type.values()), 1)
+            },
+            "spatial_mismatch_analysis": {
+                "zones_with_gaps": len(spatial_mismatch),
+                "mismatch_details": spatial_mismatch
+            },
+            "infrastructure_recommendations": {
+                "total_recommendations": len(infrastructure_recommendations),
+                "recommendations": infrastructure_recommendations
+            },
+            "rollout_plan": {
+                "phased_deployment": "See infrastructure_roadmap section for detailed rollout plan",
+                "priority_zones": sorted(set([r['zone'] for r in infrastructure_recommendations if r['priority'] == 'high']))
+            }
+        }
     
     def _generate_deployment_readiness(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
         """

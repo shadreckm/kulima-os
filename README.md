@@ -1,6 +1,35 @@
 ﻿# Kulima OS — Coordination Intelligence Infrastructure
 
-A coordination-first digital public infrastructure that transforms real-world activity into verified demand signals for infrastructure planning.
+A coordination-first infrastructure planning system that transforms real-world activity into decision-grade intelligence without relying on identity or assumptions.
+
+## System Identity
+
+**KULIMA OS** is a coordination-first infrastructure planning system that transforms real-world activity into decision-grade intelligence without relying on identity or assumptions.
+
+### Positioning
+
+Epistemic Digital Public Infrastructure (DPI) for infrastructure planning based on observed coordination patterns across time, space, and sectors — not assumptions or individual data.
+
+### Core Principles
+
+- **Identity-free coordination intelligence** — Operates only on aggregated patterns (never raw signals or individual data)
+- **Coordination-driven decision making** — Analyzes collective patterns, not individual behaviors
+- **Temporally grounded analysis** — Truth from repetition, not reporting or assumptions
+- **Decision-oriented outputs** — Designed for infrastructure planning, not surveillance or profiling
+
+### System Invariants
+
+- **Zero-PII**: Operates only on aggregated patterns (never raw signals or individual data)
+- **Coordination > Identity**: Analyzes collective patterns, not individual behaviors
+- **Semantic Guard**: Designed for infrastructure planning, not surveillance or profiling
+- **Epistemic Reliability**: Truth from repetition, not reporting or assumptions
+
+### Forbidden Operations
+
+- Track individuals
+- Infer identity
+- Perform behavioral prediction
+- Enable surveillance
 
 ## What it does
 

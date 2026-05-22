@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from backend.config import settings
-from backend.api import signals, summaries, prospectus, health
+from backend.api import signals, summaries, prospectus, health, twilio, system
 
 
 @asynccontextmanager
@@ -40,17 +40,22 @@ app.include_router(health.router, prefix=settings.API_PREFIX, tags=["Health"])
 app.include_router(signals.router, prefix=settings.API_PREFIX, tags=["Signals"])
 app.include_router(summaries.router, prefix=settings.API_PREFIX, tags=["Summaries"])
 app.include_router(prospectus.router, prefix=settings.API_PREFIX, tags=["Prospectus"])
+app.include_router(twilio.router, prefix=settings.API_PREFIX, tags=["Twilio"])
+app.include_router(system.router, prefix=settings.API_PREFIX, tags=["System"])
 
 
 @app.get("/")
 async def root():
-    """Root endpoint"""
+    """Root endpoint with system identity"""
     return {
         "name": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "status": "operational",
+        "type": "coordination-first infrastructure planning system",
+        "description": "A coordination-first infrastructure planning system that transforms real-world activity into decision-grade intelligence without relying on identity or assumptions.",
         "docs": "/docs",
-        "api_prefix": settings.API_PREFIX
+        "api_prefix": settings.API_PREFIX,
+        "system_info": "/api/system/info"
     }
 
 
