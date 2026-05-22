@@ -1,10 +1,11 @@
 """
 Twilio webhook endpoint for WhatsApp message processing
 """
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
 import logging
+
 from backend.database.connection import get_db
 from backend.database.models import Signal
 from backend.utils.signal_normalizer import normalize_signal_text
@@ -14,7 +15,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
 @router.post("/webhook/twilio")
 async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
     """
