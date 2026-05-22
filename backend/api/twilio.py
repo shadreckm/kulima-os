@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
 import logging
+from fastapi.responses import Response
 
 from backend.database.connection import get_db
 from backend.database.models import Signal
@@ -136,3 +137,21 @@ async def test_webhook(request: Request, db: Session = Depends(get_db)):
         import traceback
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Error processing test message")
+
+
+return Response(
+    content="""
+<Response>
+  <Message>
+🚀 Your activity has been successfully recorded in Kulima OS!
+
+🌱 You are contributing to real insights that help communities plan better farming, energy, and infrastructure.
+
+📊 Every signal you send helps turn local activity into powerful knowledge for smarter decisions.
+
+✅ Keep going — you are part of building a system that transforms how we understand and grow our economy.
+  </Message>
+</Response>
+""",
+    media_type="application/xml"
+)
