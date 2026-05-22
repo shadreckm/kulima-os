@@ -117,6 +117,7 @@ async def get_signals(zone: str, limit: int = 100, db: Session = Depends(get_db)
                 "id": signal.id,
                 "zone": signal.zone,
                 "activity_type": signal.activity_type,
+                "sector": signal.sector,
                 "time_window": signal.time_window,
                 "timestamp": signal.timestamp.isoformat(),
                 "source": signal.source,

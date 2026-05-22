@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from backend.config import settings
-from backend.api import signals, summaries, prospectus, health, twilio, system
+from backend.api import signals, summaries, prospectus, health, twilio, system, visualization
 
 
 @asynccontextmanager
@@ -42,6 +42,7 @@ app.include_router(summaries.router, prefix=settings.API_PREFIX, tags=["Summarie
 app.include_router(prospectus.router, prefix=settings.API_PREFIX, tags=["Prospectus"])
 app.include_router(twilio.router, prefix=settings.API_PREFIX, tags=["Twilio"])
 app.include_router(system.router, prefix=settings.API_PREFIX, tags=["System"])
+app.include_router(visualization.router, prefix=settings.API_PREFIX, tags=["Visualization"])
 
 
 @app.get("/")

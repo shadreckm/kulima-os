@@ -152,7 +152,7 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
         logger.info(f"Summary computed: {total_patterns} total, {high_confidence_patterns} high confidence, {moderate_confidence_patterns} moderate confidence")
         
         # Calculate risk model from confidence results
-        risk_model = self._calculate_risk_model(confidence_results, lundai_analysis)
+        risk_model = _calculate_risk_model(confidence_results, lundai_analysis)
         
         return {
             "status": "success",

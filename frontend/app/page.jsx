@@ -55,11 +55,13 @@ export default function Home() {
       if (data.status === 'success') {
         setMessage('Activity recorded successfully!');
         setSignalForm({ activity_type: '', time_window: '' });
-        fetchSummary();
+        // Auto-refresh summary after signal submit
+        await fetchSummary();
       } else {
         setMessage('Failed to record activity');
       }
     } catch (err) {
+      console.error('Error recording activity:', err);
       setMessage('Error recording activity');
     } finally {
       setSignalLoading(false);
@@ -69,20 +71,29 @@ export default function Home() {
   const handleGenerateReport = async () => {
     setReportLoading(true);
     setReportData(null);
+    setMessage('');
     try {
       const res = await fetch(`${BASE_URL}/generate-prospectus`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ zone })
       });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const data = await res.json();
+      
       if (data.status === 'success') {
         setReportData(data.data);
+        setMessage('Report generated successfully!');
       } else {
-        setMessage('Failed to generate report');
+        setMessage('Failed to generate report: ' + (data.data?.error || 'Unknown error'));
       }
     } catch (err) {
-      setMessage('Error generating report');
+      console.error('Error generating report:', err);
+      setMessage('Error generating report: ' + err.message);
     } finally {
       setReportLoading(false);
     }

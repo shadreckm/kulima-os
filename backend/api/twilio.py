@@ -70,12 +70,22 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
         logger.info(f"Signal stored in database with ID: {new_signal.id}")
         
         # Return Twilio-compatible response (TwiML)
-        # For now, just return a simple acknowledgment
-        return {
-            "status": "success",
-            "message": "Signal received and stored",
-            "signal_id": new_signal.id
-        }
+        return Response(
+            content="""
+<Response>
+  <Message>
+🚀 Your activity has been successfully recorded in Kulima OS!
+
+🌱 You are contributing to real insights that help communities plan better farming, energy, and infrastructure.
+
+📊 Every signal you send helps turn local activity into powerful knowledge for smarter decisions.
+
+✅ Keep going — you are part of building a system that transforms how we understand and grow our economy.
+  </Message>
+</Response>
+""",
+            media_type="application/xml"
+        )
         
     except Exception as e:
         logger.error(f"Error processing Twilio webhook: {str(e)}")
@@ -137,21 +147,3 @@ async def test_webhook(request: Request, db: Session = Depends(get_db)):
         import traceback
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Error processing test message")
-
-
-return Response(
-    content="""
-<Response>
-  <Message>
-🚀 Your activity has been successfully recorded in Kulima OS!
-
-🌱 You are contributing to real insights that help communities plan better farming, energy, and infrastructure.
-
-📊 Every signal you send helps turn local activity into powerful knowledge for smarter decisions.
-
-✅ Keep going — you are part of building a system that transforms how we understand and grow our economy.
-  </Message>
-</Response>
-""",
-    media_type="application/xml"
-)
