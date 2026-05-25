@@ -47,15 +47,22 @@ async def create_signal(signal_data: SignalCreate, db: Session = Depends(get_db)
         # Parse timestamp with validation
         try:
             if signal_data.timestamp:
-                timestamp = datetime.fromisoformat(signal_data.timestamp)
+                timestamp = datetime.fromisoformat(signal_data.timestamp.replace('Z', '+00:00'))
             else:
                 timestamp = datetime.utcnow()
         except ValueError:
             logger.warning(f"Invalid timestamp format for signal {signal_id}, using current time")
             timestamp = datetime.utcnow()
         
-        # Classify sector using multi-sector coordinator
-        sector = sector_coordinator.classify_sector(signal_data.activity_type)
+        # Classify sector using multi-sector coordinator with safe fallback
+        try:
+            activity_for_classify = signal_data.activity_type or "unknown"
+            sector = sector_coordinator.classify_sector(activity_for_classify)
+            if not sector:
+                sector = "general"
+        except Exception as e:
+            logger.warning(f"Sector classification failed: {e}; defaulting to 'general'")
+            sector = "general"
         
         # Store signal in database
         signal = Signal(
@@ -65,8 +72,8 @@ async def create_signal(signal_data: SignalCreate, db: Session = Depends(get_db)
             sector=sector,
             time_window=signal_data.time_window,
             timestamp=timestamp,
-            source=signal_data.source,
-            user_id=signal_data.user_id or "anonymous"
+            source=signal_data.source or "web",
+            user_id=signal_data.user_id if signal_data.user_id else "anonymous"
         )
         db.add(signal)
         db.commit()
@@ -85,7 +92,8 @@ async def create_signal(signal_data: SignalCreate, db: Session = Depends(get_db)
         logger.error(f"Error storing signal: {str(e)}")
         return {
             "status": "error",
-            "data": {
+            "message": str(e),
+            "details": {
                 "error": str(e)
             }
         }

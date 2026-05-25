@@ -91,11 +91,12 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                 "status": "success",
                 "data": {
                     "zone": zone,
+                    "signal_count": len(signals),
                     "total_patterns": 0,
                     "high_confidence_patterns": 0,
                     "moderate_confidence_patterns": 0,
                     "zones_with_coordinated_demand": [],
-                    "productive_activities_detected": [],
+                    "productive_activities_detected": list({s.activity_type for s in signals}),
                     "key_finding": "No coordination patterns detected yet",
                     "updated_at": datetime.utcnow().isoformat()
                 }

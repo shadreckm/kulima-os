@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
 import logging
+import uuid
 from fastapi.responses import Response
 
 from backend.database.connection import get_db
@@ -54,11 +55,13 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
         
         # Create new signal record
         new_signal = Signal(
+            id=f"sig_{uuid.uuid4().hex[:12]}",
             zone=normalized_signal['zone'],
             activity_type=normalized_signal['activity_type'],
+            sector=normalized_signal.get('sector') or 'general',
             time_window=normalized_signal['time_window'],
             source='whatsapp',
-            user_id=phone_number,
+            user_id=phone_number or 'anonymous',
             timestamp=datetime.utcnow()
         )
         
@@ -120,11 +123,13 @@ async def test_webhook(request: Request, db: Session = Depends(get_db)):
         
         # Create new signal record
         new_signal = Signal(
+            id=f"sig_{uuid.uuid4().hex[:12]}",
             zone=normalized_signal['zone'],
             activity_type=normalized_signal['activity_type'],
+            sector=normalized_signal.get('sector') or 'general',
             time_window=normalized_signal['time_window'],
             source='test',
-            user_id=from_number,
+            user_id=from_number or 'anonymous',
             timestamp=datetime.utcnow()
         )
         
