@@ -5,17 +5,35 @@ FastAPI application for coordination intelligence API
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import logging
 
 from backend.config import settings
 from backend.api import signals, summaries, prospectus, health, twilio, system, visualization
+from backend.middleware.logging import setup_logging, RequestIDMiddleware, StructuredLoggingMiddleware
+from backend.middleware.rate_limiter import rate_limit_middleware
+from backend.middleware.error_handler import setup_error_handlers
+from backend.database.connection import init_db
+from backend.services.cache import cache
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
+    setup_logging()
+    logging.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    
+    # Initialize database
+    init_db()
+    
+    # Store settings in app state
+    app.state.settings = settings
+    app.state.cache = cache
+    
+    logging.info("Application startup complete")
     yield
     # Shutdown
+    logging.info("Application shutdown")
 
 
 # Create FastAPI application
@@ -34,6 +52,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add custom middleware (order matters!)
+app.middleware("http")(RequestIDMiddleware())
+app.middleware("http")(StructuredLoggingMiddleware())
+app.middleware("http")(rate_limit_middleware)
+
+# Setup error handlers
+setup_error_handlers(app)
 
 # Include routers
 app.include_router(health.router, prefix=settings.API_PREFIX, tags=["Health"])

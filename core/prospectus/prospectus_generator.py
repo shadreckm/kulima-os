@@ -154,6 +154,8 @@ class ProspectusGenerator:
             "infrastructure_planner_section": self._generate_infrastructure_planner_section(confidence_results, lundai_analysis),
             
             "deployment_readiness": self._generate_deployment_readiness(confidence_results, lundai_analysis),
+
+            "production_readiness": self._generate_production_readiness_summary(confidence_results, lundai_analysis),
             
             "infrastructure_planning_guidance": self._generate_planning_guidance(confidence_results, lundai_analysis),
             
@@ -2196,6 +2198,32 @@ class ProspectusGenerator:
         }
         
         return deployment_readiness
+
+    def _generate_production_readiness_summary(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
+        """Generate a concise production readiness summary for institutional audiences."""
+        deployment_readiness = self._generate_deployment_readiness(confidence_results, lundai_analysis)
+        readiness_assessment = deployment_readiness.get("readiness_assessment", {})
+        stakeholder_status = deployment_readiness.get("stakeholder_engagement_status", {})
+        regulatory = deployment_readiness.get("regulatory_and_compliance", {})
+
+        return {
+            "overall_readiness": readiness_assessment.get("overall_readiness", "UNKNOWN"),
+            "technical_readiness": readiness_assessment.get("technical_readiness", "UNKNOWN"),
+            "financial_readiness": readiness_assessment.get("financial_readiness", "UNKNOWN"),
+            "institutional_readiness": readiness_assessment.get("institutional_readiness", "UNKNOWN"),
+            "community_readiness": readiness_assessment.get("community_readiness", "UNKNOWN"),
+            "top_priority_actions": deployment_readiness.get("next_steps_for_deployment", [])[:5],
+            "key_regulatory_requirements": [
+                f"{category}: {details.get('standards') or details.get('esia_required') or details.get('productive_use_tariff') or details.get('reliability', '')}" 
+                for category, details in regulatory.items() if isinstance(details, dict)
+            ],
+            "critical_stakeholder_gaps": [
+                f"{party}: {status}" for party, status in {
+                    **stakeholder_status.get("institutional_level", {}),
+                    **stakeholder_status.get("community_level", {})
+                }.items()
+            ]
+        }
 
     def _generate_planning_guidance(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
         """Generate infrastructure planning guidance with LUNDAI integration."""

@@ -83,6 +83,7 @@ The structured pilot evidence log is written to `pilot_log.json` in the reposito
 - **Render**: Deploy the Streamlit app using `streamlit_app.py` and `requirements.txt`.
 - **Streamlit**: The repo is ready for Streamlit deployment with a standard `requirements.txt` file.
 - **Procfile**: Included for platform deployment if needed.
+- **Production Readiness**: See `PRODUCTION_READINESS.md` for the deployment readiness criteria, prospectus readiness flow, and institutional readiness artifacts.
 
 ## WhatsApp usage
 

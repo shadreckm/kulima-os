@@ -1,7 +1,7 @@
 """
 Signal endpoints
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from datetime import datetime
 from typing import Optional
 import uuid
@@ -9,7 +9,7 @@ import logging
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Signal
-from pydantic import BaseModel, Field
+from backend.schemas.requests import SignalCreate, SignalsQuery
 from core.coordination.multi_sector_coordinator import MultiSectorCoordinator
 
 # Configure logging
@@ -20,16 +20,6 @@ router = APIRouter()
 
 # Initialize multi-sector coordinator
 sector_coordinator = MultiSectorCoordinator()
-
-
-class SignalCreate(BaseModel):
-    """Pydantic model for signal creation validation"""
-    zone: str = Field(..., min_length=1, description="Zone identifier")
-    activity_type: str = Field(..., min_length=1, description="Activity type")
-    time_window: str = Field(..., min_length=1, description="Time window (morning/afternoon/evening)")
-    timestamp: Optional[str] = Field(None, description="ISO format timestamp")
-    source: str = Field(default="manual", description="Signal source")
-    user_id: Optional[str] = Field(default="anonymous", description="User identifier")
 
 
 @router.post("/signal")
@@ -102,15 +92,57 @@ async def create_signal(signal_data: SignalCreate, db: Session = Depends(get_db)
 
 
 @router.get("/signals/{zone}")
-async def get_signals(zone: str, limit: int = 100, db: Session = Depends(get_db)):
+async def get_signals(
+    zone: str,
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    activity_type: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
     """
-    Get signals for a specific zone.
+    Get signals for a specific zone with pagination and filtering.
+    
+    Query parameters:
+    - limit: Maximum number of results (1-1000, default 100)
+    - offset: Number of results to skip (default 0)
+    - activity_type: Filter by activity type (optional)
+    - date_from: Filter from date (ISO format, optional)
+    - date_to: Filter to date (ISO format, optional)
     """
     try:
-        # Query database for signals in zone
+        # Validate zone
         zone_upper = zone.upper()
-        signals = db.query(Signal).filter(Signal.zone == zone_upper).limit(limit).all()
         
+        # Build query
+        query = db.query(Signal).filter(Signal.zone == zone_upper)
+        
+        # Apply filters
+        if activity_type:
+            query = query.filter(Signal.activity_type == activity_type.lower())
+        
+        if date_from:
+            try:
+                from_date = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
+                query = query.filter(Signal.timestamp >= from_date)
+            except ValueError:
+                logger.warning(f"Invalid date_from format: {date_from}")
+        
+        if date_to:
+            try:
+                to_date = datetime.fromisoformat(date_to.replace('Z', '+00:00'))
+                query = query.filter(Signal.timestamp <= to_date)
+            except ValueError:
+                logger.warning(f"Invalid date_to format: {date_to}")
+        
+        # Get total count
+        total = query.count()
+        
+        # Apply pagination
+        signals = query.order_by(Signal.timestamp.desc()).offset(offset).limit(limit).all()
+        
+        # Build response
         signal_list = []
         for signal in signals:
             signal_list.append({
@@ -125,15 +157,19 @@ async def get_signals(zone: str, limit: int = 100, db: Session = Depends(get_db)
                 "created_at": signal.created_at.isoformat()
             })
         
-        logger.info(f"Fetched {len(signal_list)} signals for zone {zone}")
+        logger.info(f"Fetched {len(signal_list)} signals for zone {zone} (total: {total})")
         
         return {
             "status": "success",
             "data": {
-                "zone": zone,
+                "zone": zone_upper,
                 "signals": signal_list,
-                "total": len(signal_list),
-                "limit": limit
+                "pagination": {
+                    "total": total,
+                    "limit": limit,
+                    "offset": offset,
+                    "has_more": offset + limit < total
+                }
             }
         }
     except Exception as e:

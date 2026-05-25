@@ -1,7 +1,7 @@
 """
 Prospectus endpoints
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi.responses import FileResponse
 from datetime import datetime
 from typing import Optional
@@ -12,12 +12,12 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Signal, Prospectus
+from backend.schemas.requests import ProspectusRequest
 from core.prospectus.prospectus_generator import ProspectusGenerator
 from core.lumoza.lumoza_engine import LumozaEngine
 from core.lundai.lundai_engine import LundaiEngine, evaluate_signal_integrity
 from core.zentari.zentari_engine import ZentariEngine
 from policy import compute_planning_reserve
-from pydantic import BaseModel, Field
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -28,12 +28,6 @@ router = APIRouter()
 # Ensure prospectus directory exists
 PROSPECTUS_DIR = Path("prospectuses")
 os.makedirs(PROSPECTUS_DIR, exist_ok=True)
-
-
-class ProspectusRequest(BaseModel):
-    """Pydantic model for prospectus generation validation"""
-    zone: str = Field(..., min_length=1, description="Zone identifier")
-    user_id: Optional[str] = Field(None, description="User identifier")
 
 
 @router.post("/generate-prospectus")

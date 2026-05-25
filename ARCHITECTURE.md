@@ -3,6 +3,18 @@
 ## Overview
 Transition from prototype to production-ready architecture with separated layers, API-first design, and multi-user support.
 
+## Production Readiness
+Kulima OS production readiness is defined by the system's ability to deliver institution-grade coordination intelligence while preserving privacy and auditability. The `core/prospectus/prospectus_generator.py` implementation generates a `deployment_readiness` package that covers:
+
+- Infrastructure requirements and sizing
+- Critical load protection and social reserve policy
+- Stakeholder engagement status
+- Regulatory and compliance checklist
+- Technical, financial, institutional, and community readiness assessment
+- Next steps for deployment
+
+See `PRODUCTION_READINESS.md` for the explicit readiness criteria, artifact mapping, and production deployment checklist.
+
 ## Current Architecture (Prototype)
 - Monolithic Streamlit application
 - JSON file-based storage

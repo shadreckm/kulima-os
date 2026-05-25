@@ -16,8 +16,11 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # Database Configuration
+    # Default to SQLite for development, override with PostgreSQL URL for production
     DATABASE_URL: str = "sqlite:///./kulima_os.db"
     DATABASE_ECHO: bool = False
+    DATABASE_POOL_SIZE: int = 5
+    DATABASE_MAX_OVERFLOW: int = 10
     
     # Security
     API_KEY: Optional[str] = None
@@ -28,6 +31,7 @@ class Settings(BaseSettings):
     
     # File Storage
     ARTIFACTS_DIR: str = "./artifacts"
+    PROSPECTUS_DIR: str = "./prospectuses"
     
     # WhatsApp Integration
     WHATSAPP_WEBHOOK_URL: Optional[str] = None
@@ -35,6 +39,13 @@ class Settings(BaseSettings):
     
     # Logging
     LOG_LEVEL: str = "INFO"
+    
+    # Rate Limiting
+    RATE_LIMIT_PER_MINUTE: int = 100
+    
+    # Caching
+    CACHE_TTL_SUMMARY: int = 300  # 5 minutes
+    CACHE_TTL_PATTERNS: int = 900  # 15 minutes
     
     class Config:
         env_file = ".env"

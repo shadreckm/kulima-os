@@ -19,6 +19,9 @@ LUMOZA transforms heterogeneous activity signals into:
 from typing import List, Dict, Tuple
 from collections import defaultdict
 import statistics
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class LumozaEngine:
@@ -53,89 +56,112 @@ class LumozaEngine:
         - Counts pattern occurrences across cycles
         - Produces aggregate outputs only
         
+        SAFE FALLBACK: Returns empty list on error to prevent pipeline failure
+        
         Args:
             signals: List of identity-free coordination signals
             
         Returns:
             List of coordination patterns with demand rhythms, stability scores, and persistence
         """
-        
-        # Increment window count for multi-cycle tracking
-        self.window_count += 1
-        
-        # Group signals by coordination pattern (activity, zone, time_window)
-        # ZERO-PII: No individual identifiers in grouping keys
-        pattern_groups = self._group_by_pattern(signals)
-        
-        # Track patterns across windows for persistence calculation
-        current_window_patterns = set(pattern_groups.keys())
-        
-        # Update pattern history with current window patterns
-        for pattern_key in current_window_patterns:
-            if pattern_key not in self.pattern_history:
-                self.pattern_history[pattern_key] = []
-            self.pattern_history[pattern_key].append(self.window_count)
-        
-        # Process each pattern through 7-cycle logic
-        coordination_patterns = []
-        
-        for pattern_key, pattern_signals in pattern_groups.items():
-            activity_type, zone, time_window = pattern_key
+        try:
+            # Validate input
+            if not signals or len(signals) == 0:
+                logger.warning("LUMOZA: No signals provided, returning empty patterns")
+                return []
             
-            # Analyze pattern across 7 cycles
-            pattern_analysis = self._analyze_pattern(pattern_signals)
+            # Increment window count for multi-cycle tracking
+            self.window_count += 1
             
-            # Calculate multi-cycle persistence
-            persistence_data = self._calculate_persistence(pattern_key)
+            # Group signals by coordination pattern (activity, zone, time_window)
+            # ZERO-PII: No individual identifiers in grouping keys
+            pattern_groups = self._group_by_pattern(signals)
             
-            # Apply coordination thresholds
-            if pattern_analysis['cycle_count'] < self.NOISE_THRESHOLD:
-                # Noise: discard pattern
-                continue
+            if not pattern_groups:
+                logger.warning("LUMOZA: No pattern groups found, returning empty patterns")
+                return []
             
-            # Determine stability classification
-            if pattern_analysis['cycle_count'] >= self.STABLE_THRESHOLD:
-                stability_class = "stable"
-            else:
-                stability_class = "intermediate"
+            # Track patterns across windows for persistence calculation
+            current_window_patterns = set(pattern_groups.keys())
             
-            # Calculate stability score (0-1)
-            stability_score = pattern_analysis['cycle_count'] / self.TOTAL_CYCLES
+            # Update pattern history with current window patterns
+            for pattern_key in current_window_patterns:
+                if pattern_key not in self.pattern_history:
+                    self.pattern_history[pattern_key] = []
+                self.pattern_history[pattern_key].append(self.window_count)
             
-            # Calculate pattern frequency (within current window)
-            pattern_frequency = len(pattern_signals)
+            # Process each pattern through 7-cycle logic
+            coordination_patterns = []
             
-            # Cross-validate with telemetry
-            validation_result = self._cross_validate(pattern_signals)
+            for pattern_key, pattern_signals in pattern_groups.items():
+                try:
+                    activity_type, zone, time_window = pattern_key
+                    
+                    # Analyze pattern across 7 cycles
+                    pattern_analysis = self._analyze_pattern(pattern_signals)
+                    
+                    # Calculate multi-cycle persistence
+                    persistence_data = self._calculate_persistence(pattern_key)
+                    
+                    # Apply coordination thresholds
+                    if pattern_analysis['cycle_count'] < self.NOISE_THRESHOLD:
+                        # Noise: discard pattern
+                        continue
+                    
+                    # Determine stability classification
+                    if pattern_analysis['cycle_count'] >= self.STABLE_THRESHOLD:
+                        stability_class = "stable"
+                    else:
+                        stability_class = "intermediate"
+                    
+                    # Calculate stability score (0-1)
+                    stability_score = pattern_analysis['cycle_count'] / self.TOTAL_CYCLES
+                    
+                    # Calculate pattern frequency (within current window)
+                    pattern_frequency = len(pattern_signals)
+                    
+                    # Cross-validate with telemetry
+                    validation_result = self._cross_validate(pattern_signals)
+                    
+                    # Determine service priority (essential vs productive)
+                    # CRITICAL LOAD PROTECTION: Essential services are identified and flagged
+                    service_priority = self._determine_service_priority(pattern_signals)
+                    
+                    # Build coordination pattern output with enhanced metrics
+                    # ZERO-PII: Output contains only aggregates, no individual data
+                    coordination_pattern = {
+                        "activity_type": activity_type,
+                        "zone": zone,
+                        "time_window": time_window,
+                        "service_priority": service_priority,
+                        "cycle_index": pattern_analysis.get('cycle_count', 0),
+                        "pattern_frequency": pattern_frequency,
+                        "pattern_persistence": persistence_data['persistence'],
+                        "pattern_stability": persistence_data['stability'],
+                        "demand_rhythm": {
+                            "frequency": f"{pattern_analysis['cycle_count']} of {self.TOTAL_CYCLES} cycles",
+                            "cycles_present": sorted(pattern_analysis['cycles_present']),
+                            "stability_class": stability_class
+                        },
+                        "stability_score": round(stability_score, 2),
+                        "validation_strength": validation_result['strength'],
+                        "validation_details": validation_result['details']
+                    }
+                    
+                    coordination_patterns.append(coordination_pattern)
+                    
+                except Exception as e:
+                    logger.error(f"LUMOZA: Error processing pattern {pattern_key}: {str(e)}")
+                    # Continue processing other patterns
+                    continue
             
-            # Determine service priority (essential vs productive)
-            # CRITICAL LOAD PROTECTION: Essential services are identified and flagged
-            service_priority = self._determine_service_priority(pattern_signals)
+            logger.info(f"LUMOZA: Processed {len(coordination_patterns)} coordination patterns")
+            return coordination_patterns
             
-            # Build coordination pattern output with enhanced metrics
-            # ZERO-PII: Output contains only aggregates, no individual data
-            coordination_pattern = {
-                "activity_type": activity_type,
-                "zone": zone,
-                "time_window": time_window,
-                "service_priority": service_priority,
-                "cycle_index": pattern_analysis.get('cycle_count', 0),
-                "pattern_frequency": pattern_frequency,
-                "pattern_persistence": persistence_data['persistence'],
-                "pattern_stability": persistence_data['stability'],
-                "demand_rhythm": {
-                    "frequency": f"{pattern_analysis['cycle_count']} of {self.TOTAL_CYCLES} cycles",
-                    "cycles_present": sorted(pattern_analysis['cycles_present']),
-                    "stability_class": stability_class
-                },
-                "stability_score": round(stability_score, 2),
-                "validation_strength": validation_result['strength'],
-                "validation_details": validation_result['details']
-            }
-            
-            coordination_patterns.append(coordination_pattern)
-        
-        return coordination_patterns
+        except Exception as e:
+            logger.error(f"LUMOZA: Fatal error in process_signals: {str(e)}")
+            # Safe fallback: return empty list to prevent pipeline failure
+            return []
     
     def _group_by_pattern(self, signals: List[Dict]) -> Dict[Tuple, List[Dict]]:
         """
