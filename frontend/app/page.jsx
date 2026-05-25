@@ -40,6 +40,8 @@ const SAMPLE_ACTIVITY_FEED = [
   { id: 3, time: '08:20 AM', activity: 'Cold Storage', zone: 'MZUZU', description: 'Cold room cycle began', source: 'infrastructure', status: 'confirmed' }
 ];
 
+const ACTIVITY_PILLS = ['Irrigation', 'Milling', 'Trading', 'Welding'];
+
 export default function Home() {
   const [zone, setZone] = useState('MZUZU');
   const [inputValue, setInputValue] = useState('');
@@ -54,6 +56,9 @@ export default function Home() {
   const [shareMessage, setShareMessage] = useState('');
   const inputRef = useRef(null);
   const insightsRef = useRef(null);
+  const analysisTimeoutsRef = useRef([]);
+  const [analysisStage, setAnalysisStage] = useState('');
+  const [insightExpanded, setInsightExpanded] = useState(false);
 
   const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   const BACKEND_BASE = BASE_URL.replace(/\/api\/v1$/, '');
@@ -123,6 +128,11 @@ export default function Home() {
     setLoading(true);
     setMessage('');
 
+    // Micro-feedback stages
+    setAnalysisStage('Analyzing activity...');
+    analysisTimeoutsRef.current.push(setTimeout(() => setAnalysisStage('Detecting patterns...'), 700));
+    analysisTimeoutsRef.current.push(setTimeout(() => setAnalysisStage('Generating insight...'), 1400));
+
     try {
       const response = await fetch(`${BASE_URL}/signal`, {
         method: 'POST',
@@ -164,6 +174,10 @@ export default function Home() {
       console.error('Error:', error);
       setMessage('Unable to record activity. Please check your connection.');
     } finally {
+      // clear micro-feedback timers
+      analysisTimeoutsRef.current.forEach(t => clearTimeout(t));
+      analysisTimeoutsRef.current = [];
+      setAnalysisStage('');
       setLoading(false);
     }
   };
@@ -321,229 +335,94 @@ export default function Home() {
 
       {/* Main Content */}
       <main style={{ maxWidth: 1000, margin: '0 auto', padding: '48px 24px' }}>
-        {/* Hero Section - Main Input */}
+        {/* Hero Section - Action-first Input */}
         {!reportData && (
-          <section style={{
-            marginBottom: 48,
+          <section id="what-is-happening" style={{
+            marginBottom: 28,
             animation: 'fadeIn 0.3s ease-in'
           }}>
-            <div style={{ textAlign: 'center', marginBottom: 48 }}>
-              <h1 style={{
-                fontSize: 44,
-                lineHeight: 1.2,
-                margin: 0,
-                fontWeight: 700,
-                color: '#172d20',
-                marginBottom: 12
-              }}>
-                What is happening in your area?
-              </h1>
-              <p style={{
-                fontSize: 18,
-                color: '#4a6b57',
-                margin: '12px 0 0',
-                maxWidth: 760,
-                marginLeft: 'auto',
-                marginRight: 'auto'
-              }}>
-                Kulima OS is a digital public infrastructure for planning energy and infrastructure using real-world activity.
-              </p>
-            </div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: 12,
-              flexWrap: 'wrap',
-              marginBottom: 32
-            }}>
-              <div style={{
-                padding: '12px 18px',
-                borderRadius: 999,
-                backgroundColor: '#eef7ee',
-                color: '#1f4d38',
-                fontSize: 12,
-                fontWeight: 700,
-                border: '1px solid #cde6d3'
-              }}>
-                Try the system
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div style={{ textAlign: 'center' }}>
+                <h1 style={{ fontSize: 36, margin: 0, fontWeight: 800, color: '#172d20' }}>What is happening?</h1>
+                <div style={{ fontSize: 14, color: '#4a6b57', marginTop: 6 }}>Tap an action or type briefly to record activity.</div>
               </div>
-              <div style={{
-                padding: '12px 18px',
-                borderRadius: 999,
-                backgroundColor: '#ffffff',
-                color: '#406e54',
-                fontSize: 12,
-                border: '1px solid #d4e0d9'
-              }}>
-                1. Type activity
-              </div>
-              <div style={{
-                padding: '12px 18px',
-                borderRadius: 999,
-                backgroundColor: '#ffffff',
-                color: '#406e54',
-                fontSize: 12,
-                border: '1px solid #d4e0d9'
-              }}>
-                2. See insight
-              </div>
-              <div style={{
-                padding: '12px 18px',
-                borderRadius: 999,
-                backgroundColor: '#ffffff',
-                color: '#406e54',
-                fontSize: 12,
-                border: '1px solid #d4e0d9'
-              }}>
-                3. Download report
-              </div>
-            </div>
 
-            {/* Input Card */}
-            <div style={{
-              backgroundColor: '#ffffff',
-              borderRadius: 16,
-              padding: '32px',
-              boxShadow: '0 4px 16px rgba(23, 45, 32, 0.08)',
-              border: '1px solid #e0e8e4',
-              marginBottom: 24
-            }}>
-              <form onSubmit={handleSubmitActivity}>
-                <textarea
-                  ref={inputRef}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Describe what is happening in your area… e.g. 'We are irrigating maize in the morning' or 'Grinding crops at the mill'"
-                  style={{
-                    width: '100%',
-                    padding: '16px 18px',
-                    borderRadius: 12,
-                    border: '1px solid #d4e0d9',
-                    backgroundColor: '#f5f7f6',
-                    fontSize: 15,
-                    fontFamily: 'inherit',
-                    color: '#172d20',
-                    resize: 'vertical',
-                    minHeight: 120,
-                    boxSizing: 'border-box',
-                    lineHeight: 1.5
-                  }}
-                  disabled={loading}
-                />
-                <div style={{ display: 'flex', gap: 12, marginTop: 20, justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    {isDemoMode && (
-                      <span style={{
-                        fontSize: 12,
-                        color: '#5a7a66',
-                        fontStyle: 'italic'
-                      }}>
-                        Try: "Irrigating in the morning" or "Cold storage running"
-                      </span>
-                    )}
-                  </div>
+              {/* Quick action pills */}
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+                {ACTIVITY_PILLS.map((pill) => (
                   <button
-                    type="submit"
-                    disabled={loading || !inputValue.trim()}
+                    key={pill}
+                    type="button"
+                    onClick={() => { setInputValue(pill); inputRef.current?.focus(); }}
                     style={{
-                      padding: '14px 32px',
-                      borderRadius: 10,
-                      backgroundColor: inputValue.trim() && !loading ? '#2d6a4f' : '#d4e0d9',
-                      color: '#fff',
-                      border: 'none',
-                      fontWeight: 600,
-                      fontSize: 15,
-                      cursor: inputValue.trim() && !loading ? 'pointer' : 'not-allowed',
-                      transition: 'background 0.2s'
-                    }}
-                    onMouseOver={(e) => {
-                      if (inputValue.trim() && !loading) {
-                        e.target.style.backgroundColor = '#1f4d38';
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if (inputValue.trim() && !loading) {
-                        e.target.style.backgroundColor = '#2d6a4f';
-                      }
+                      padding: '10px 16px',
+                      borderRadius: 999,
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #d4e0d9',
+                      color: '#2d6a4f',
+                      fontWeight: 700,
+                      cursor: 'pointer'
                     }}
                   >
-                    {loading ? 'Recording...' : 'Analyze Activity'}
+                    {pill}
                   </button>
+                ))}
+              </div>
+
+              {/* Input card */}
+              <div style={{ backgroundColor: '#ffffff', borderRadius: 14, padding: 18, border: '1px solid #e6efe8' }}>
+                <form onSubmit={handleSubmitActivity} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <textarea
+                    ref={inputRef}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder="e.g. Irrigation in the morning"
+                    style={{ flex: 1, minHeight: 100, padding: 12, borderRadius: 10, border: '1px solid #e8f0ea', resize: 'vertical' }}
+                    disabled={loading}
+                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 180 }}>
+                    <button
+                      type="submit"
+                      disabled={loading || !inputValue.trim()}
+                      style={{ padding: '12px 14px', borderRadius: 10, backgroundColor: inputValue.trim() && !loading ? '#2d6a4f' : '#d4e0d9', color: '#fff', border: 'none', fontWeight: 700, cursor: inputValue.trim() && !loading ? 'pointer' : 'not-allowed' }}
+                    >
+                      {loading ? 'Recording...' : 'Record'}
+                    </button>
+
+                    <button type="button" onClick={() => { setInputValue(''); inputRef.current?.focus(); }} style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #d4e0d9', backgroundColor: '#fff', color: '#2d6a4f', fontWeight: 700 }}>Clear</button>
+
+                    <div style={{ fontSize: 13, color: '#5a7a66', minHeight: 22 }}>
+                      {isDemoMode ? 'Demo mode: sample data shown' : ''}
+                    </div>
+                  </div>
+                </form>
+
+                {/* Micro-feedback */}
+                <div style={{ marginTop: 12, minHeight: 22 }}>
+                  {loading && analysisStage && (
+                    <div style={{ fontSize: 13, color: '#175a9f' }}>{analysisStage}</div>
+                  )}
                 </div>
-              </form>
+              </div>
+
+              {/* Compact visual insight preview */}
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', alignItems: 'stretch', marginTop: 10 }}>
+                <div style={{ display: 'flex', gap: 10, flex: 1, justifyContent: 'space-between', maxWidth: 760 }}>
+                  <div style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, border: '1px solid #e6efe8', flex: 1, textAlign: 'center', cursor: 'pointer' }} onClick={() => { setInsightExpanded(!insightExpanded); if (!insightExpanded) setTimeout(() => insightsRef.current?.scrollIntoView({ behavior: 'smooth' }), 80); }}>
+                    <div style={{ fontSize: 18 }}>🔥</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#172d20' }}>{displayedSummary?.productive_activities_detected?.[0] || 'Activity detected'}</div>
+                  </div>
+                  <div style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, border: '1px solid #e6efe8', flex: 1, textAlign: 'center', cursor: 'pointer' }} onClick={() => { setInsightExpanded(!insightExpanded); if (!insightExpanded) setTimeout(() => insightsRef.current?.scrollIntoView({ behavior: 'smooth' }), 80); }}>
+                    <div style={{ fontSize: 18 }}>🕒</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#172d20' }}>{displayedSummary?.demand_patterns?.[0]?.frequency || 'Time pattern'}</div>
+                  </div>
+                  <div style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, border: '1px solid #e6efe8', flex: 1, textAlign: 'center', cursor: 'pointer' }} onClick={() => { setInsightExpanded(!insightExpanded); if (!insightExpanded) setTimeout(() => insightsRef.current?.scrollIntoView({ behavior: 'smooth' }), 80); }}>
+                    <div style={{ fontSize: 18 }}>⚡</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#172d20' }}>{displayedSummary?.high_confidence_patterns ? 'Demand signal' : 'Demand signal'}</div>
+                  </div>
+                </div>
+              </div>
             </div>
-
-            <section style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: 16,
-              marginBottom: 32
-            }}>
-              <div style={{
-                backgroundColor: '#ffffff',
-                borderRadius: 16,
-                padding: '24px',
-                border: '1px solid #e0e8e4',
-                minHeight: 150
-              }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#2d6a4f', marginBottom: 12 }}>Who uses this system</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#172d20', marginBottom: 12 }}>Communities</div>
-                <div style={{ fontSize: 14, color: '#4a6b57' }}>Record real activity in the field and make demand visible.</div>
-              </div>
-              <div style={{
-                backgroundColor: '#ffffff',
-                borderRadius: 16,
-                padding: '24px',
-                border: '1px solid #e0e8e4',
-                minHeight: 150
-              }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#172d20', marginBottom: 12 }}>Planners</div>
-                <div style={{ fontSize: 14, color: '#4a6b57' }}>Understand where demand exists and where capacity is needed.</div>
-              </div>
-              <div style={{
-                backgroundColor: '#ffffff',
-                borderRadius: 16,
-                padding: '24px',
-                border: '1px solid #e0e8e4',
-                minHeight: 150
-              }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#172d20', marginBottom: 12 }}>Investors</div>
-                <div style={{ fontSize: 14, color: '#4a6b57' }}>Identify infrastructure opportunities backed by real coordination signals.</div>
-              </div>
-            </section>
-
-            <section style={{
-              marginBottom: 32,
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: 16
-            }}>
-              <div style={{
-                backgroundColor: '#ffffff',
-                borderRadius: 16,
-                padding: '24px',
-                border: '1px solid #e0e8e4'
-              }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#2d6a4f', marginBottom: 12 }}>Why it matters</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#172d20', marginBottom: 12 }}>Reduce risk, improve planning, grow economies.</div>
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <span style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#e7f6f1', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#2d6a4f', fontWeight: 700 }}>✓</span>
-                    <div style={{ color: '#4a6b57', fontSize: 14 }}>Reduce failed investments with verified demand signals.</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <span style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#eef5fb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#175a9f', fontWeight: 700 }}>⇄</span>
-                    <div style={{ color: '#4a6b57', fontSize: 14 }}>Improve infrastructure planning with clear coordination evidence.</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <span style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#fff3e0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#b9690b', fontWeight: 700 }}>↑</span>
-                    <div style={{ color: '#4a6b57', fontSize: 14 }}>Support real economic growth through demand-led investment.</div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Status Message */}
             {message && (
               <div style={{
                 padding: '16px 18px',
@@ -601,43 +480,45 @@ export default function Home() {
 
         {/* Insights Response Section */}
         {displayedSummary && !reportData && (
-          <section ref={insightsRef} style={{
+          <section id="what-it-means" ref={insightsRef} style={{
             marginBottom: 48,
             animation: 'slideUp 0.3s ease-out'
           }}>
             {/* Assistant Response - Structured Reasoning Card */}
-            <div style={{
-              backgroundColor: '#e7f6f1',
-              borderRadius: 16,
-              padding: '20px',
-              border: '1px solid #b8e6d5',
-              marginBottom: 24
-            }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#2d6a4f', marginBottom: 10 }}>
-                SYSTEM INSIGHT
+            {insightExpanded && (
+              <div style={{
+                backgroundColor: '#e7f6f1',
+                borderRadius: 16,
+                padding: '20px',
+                border: '1px solid #b8e6d5',
+                marginBottom: 24
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#2d6a4f', marginBottom: 10 }}>
+                  SYSTEM INSIGHT
+                </div>
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, alignItems: 'start', padding: 12, backgroundColor: '#ffffff', borderRadius: 12, border: '1px solid #dff0e8' }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#175a9f' }}>Observation</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#172d20', lineHeight: 1.4 }}>{observation}</div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, alignItems: 'start', padding: 12, backgroundColor: '#ffffff', borderRadius: 12, border: '1px solid #dfeff0' }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#175a9f' }}>Interpretation</div>
+                    <div style={{ fontSize: 14, color: '#2d6a4f', lineHeight: 1.5 }}>{interpretation}</div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, alignItems: 'start', padding: 12, backgroundColor: '#ffffff', borderRadius: 12, border: '1px solid #f6f0e6' }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#b9690b' }}>Implication</div>
+                    <div style={{ fontSize: 14, color: '#4a6b57', lineHeight: 1.5 }}>{implication}</div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, alignItems: 'start', padding: 12, backgroundColor: '#ffffff', borderRadius: 12, border: '1px solid #dfe7e0' }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#2d6a4f' }}>Recommendation</div>
+                    <div style={{ fontSize: 14, color: '#2d6a4f', lineHeight: 1.5 }}>{recommendation}</div>
+                  </div>
+                </div>
               </div>
-              <div style={{ display: 'grid', gap: 12 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, alignItems: 'start', padding: 12, backgroundColor: '#ffffff', borderRadius: 12, border: '1px solid #dff0e8' }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#175a9f' }}>Observation</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#172d20', lineHeight: 1.4 }}>{observation}</div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, alignItems: 'start', padding: 12, backgroundColor: '#ffffff', borderRadius: 12, border: '1px solid #dfeff0' }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#175a9f' }}>Interpretation</div>
-                  <div style={{ fontSize: 14, color: '#2d6a4f', lineHeight: 1.5 }}>{interpretation}</div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, alignItems: 'start', padding: 12, backgroundColor: '#ffffff', borderRadius: 12, border: '1px solid #f6f0e6' }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#b9690b' }}>Implication</div>
-                  <div style={{ fontSize: 14, color: '#4a6b57', lineHeight: 1.5 }}>{implication}</div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, alignItems: 'start', padding: 12, backgroundColor: '#ffffff', borderRadius: 12, border: '1px solid #dfe7e0' }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#2d6a4f' }}>Recommendation</div>
-                  <div style={{ fontSize: 14, color: '#2d6a4f', lineHeight: 1.5 }}>{recommendation}</div>
-                </div>
-              </div>
-            </div>
+            )}
 
             <div style={{
               backgroundColor: '#ffffff',
@@ -958,7 +839,7 @@ export default function Home() {
             </button>
           </section>
         )}
-        <section style={{
+        <section id="what-to-do" style={{
           backgroundColor: '#f1faf5',
           borderRadius: 24,
           padding: '32px',
@@ -1034,6 +915,14 @@ export default function Home() {
           </div>
         </section>
       </main>
+
+      {!reportData && (
+        <div style={{position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 1200, display: 'flex', gap: 10, backgroundColor: '#ffffff', padding: '8px', borderRadius: 12, border: '1px solid #e6efe8', boxShadow: '0 6px 20px rgba(23,45,32,0.12)'}}>
+          <button onClick={handleGenerateReport} disabled={reportLoading} style={{padding: '10px 14px', borderRadius: 10, backgroundColor: '#2d6a4f', color: '#fff', border: 'none', fontWeight: 700}}>Create Report</button>
+          <button onClick={handleViewInsights} style={{padding: '10px 14px', borderRadius: 10, backgroundColor: '#fff', color: '#2d6a4f', border: '1px solid #d4e0d9', fontWeight: 700}}>View Insights</button>
+          <button onClick={handleSharePartner} style={{padding: '10px 14px', borderRadius: 10, backgroundColor: '#fff', color: '#2d6a4f', border: '1px solid #d4e0d9', fontWeight: 700}}>Share</button>
+        </div>
+      )}
 
       {/* Footer */}
       <footer style={{
