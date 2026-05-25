@@ -179,13 +179,19 @@ class ProspectusGenerator:
 
     def _resolve_logo(self) -> Optional[Image]:
         """Load centered logo at fixed aspect (80×80 pt)."""
-        path = Path(self.logo_path)
-        if not path.is_file():
-            alt = Path("assets/kulima_africa_logo.png")
-            if alt.is_file():
-                path = alt
-            else:
-                return None
+        candidate_paths = [
+            Path(self.logo_path),
+            Path(__file__).resolve().parent / "assets" / "kulima_africa_logo.png",
+            Path(__file__).resolve().parents[1] / "frontend" / "public" / "logo.png",
+            Path(__file__).resolve().parents[1] / "frontend" / "public" / "logo.jpg",
+        ]
+        path = None
+        for candidate in candidate_paths:
+            if candidate and candidate.is_file():
+                path = candidate
+                break
+        if path is None:
+            return None
         try:
             logo = Image(str(path))
             logo.drawWidth = 80
@@ -331,6 +337,8 @@ class ProspectusGenerator:
             canvas.saveState()
             try:
                 logo_path = Path(__file__).resolve().parent / "assets" / "kulima_africa_logo.png"
+                if not logo_path.is_file():
+                    logo_path = Path(__file__).resolve().parents[1] / "frontend" / "public" / "logo.png"
                 if logo_path.is_file():
                     from reportlab.lib.utils import ImageReader
                     img = ImageReader(str(logo_path))
@@ -449,295 +457,199 @@ class ProspectusGenerator:
         story.append(self._page_break())
         story.append(Paragraph("Executive Summary", st["section"]))
         story.append(self._section_break(24))
-        
-        story.append(Paragraph("<b>What is Happening?</b>", body_bold))
-        story.append(self._section_break(12))
+
+        activities_text = ", ".join(summary.get("productive_activities_detected", [])) or "productive activities"
+        zones_text = ", ".join(summary.get("zones_with_coordinated_demand", [])) or meta["pilot_region"]
+
         story.append(Paragraph(
-            f"This prospectus analyzes coordination patterns from {summary['total_coordination_patterns']} detected activities "
-            f"in the {meta['pilot_region']} zone over a {meta['evaluation_period']}. "
-            f"Of these, {summary['high_confidence_patterns']} patterns demonstrate high coordination confidence, "
-            f"indicating stable, collective economic activity suitable for infrastructure planning.",
+            "This report translates observed activity into clear investment guidance. It highlights where coordinated demand exists, where gaps are most pressing, and where early infrastructure investment can unlock productive value.",
             body
         ))
-        story.append(self._section_break(24))
-        
-        story.append(Paragraph("<b>Where is it Happening?</b>", body_bold))
-        story.append(self._section_break(12))
-        zones_text = ", ".join(summary["zones_with_coordinated_demand"]) if summary["zones_with_coordinated_demand"] else "the analyzed zone"
-        story.append(Paragraph(
-            f"Coordination patterns are detected in {zones_text}. "
-            f"Activities include: {', '.join(summary['productive_activities_detected'])}.",
-            body
-        ))
-        story.append(self._section_break(24))
-        
-        story.append(Paragraph("<b>Is it Real?</b>", body_bold))
-        story.append(self._section_break(12))
-        story.append(Paragraph(summary["key_finding"], body))
-        story.append(self._section_break(24))
-        
-        story.append(Paragraph("<b>Coordination Strength</b>", body_bold))
-        story.append(self._section_break(12))
-        story.append(Paragraph(
-            f"Detected activities include: {', '.join(summary['productive_activities_detected'])}. "
-            f"Coordination patterns indicate {'strong' if summary['high_confidence_patterns'] > 0 else 'emerging'} "
-            f"collective demand with {'high' if summary['high_confidence_patterns'] >= 3 else 'moderate'} "
-            f"confidence for infrastructure investment decisions.",
-            body
-        ))
-        story.append(self._section_break(32))
-        
-        story.append(Paragraph("Coordination Metrics", st["section"]))
+        story.append(self._section_break(20))
+
+        story.append(Paragraph(f"<b>Key Finding:</b> {summary.get('key_finding', 'Patterns indicate emerging coordinated demand.')}", body_bold))
         story.append(self._section_break(16))
-        story.append(Paragraph(f"<b>Total Coordination Patterns:</b> {summary['total_coordination_patterns']}", body))
+
+        story.append(Paragraph(
+            f"Detected coordination includes {activities_text} in {zones_text}. "
+            f"There are {summary.get('high_confidence_patterns', 0)} high-confidence patterns out of {summary.get('total_coordination_patterns', 0)} total detected signals.",
+            body
+        ))
+        story.append(self._section_break(24))
+
+        story.append(Paragraph("Why this matters", body_bold))
         story.append(self._section_break(12))
-        story.append(Paragraph(f"<b>High Confidence Patterns:</b> {summary['high_confidence_patterns']}", body))
-        story.append(self._section_break(12))
-        story.append(Paragraph(f"<b>Moderate Confidence Patterns:</b> {summary['moderate_confidence_patterns']}", body))
-        story.append(self._section_break(12))
-        zones_text = ", ".join(summary["zones_with_coordinated_demand"]) if summary["zones_with_coordinated_demand"] else "None"
-        story.append(Paragraph(f"<b>Zones with Coordinated Demand:</b> {zones_text}", body))
-        story.append(self._section_break(12))
-        activities_text = ", ".join(summary["productive_activities_detected"]) if summary["productive_activities_detected"] else "None"
-        story.append(Paragraph(f"<b>Productive Activities:</b> {activities_text}", body))
+        story.append(Paragraph(
+            "Reliable, repeated activity signals make this report a decision-support asset for planners and investors. It focuses on stable demand patterns that can justify phased infrastructure investment, not on individual behavior.",
+            body
+        ))
         story.append(self._section_break(36))
 
-        # ========== PAGE 3: COORDINATION PATTERNS ==========
+        # ========== PAGE 3: ACTIVITIES OBSERVED ==========
         story.append(self._page_break())
-        story.append(Paragraph("Verified Coordination Patterns", st["section"]))
+        story.append(Paragraph("Activities Observed", st["section"]))
         story.append(self._section_break(24))
-        
-        patterns = prospectus["coordination_patterns"]
+
+        patterns = prospectus.get("coordination_patterns", [])
         if patterns:
-            # Proper table with aligned columns
-            pat_rows = [["Activity", "Zone", "Time Window", "Frequency", "Confidence", "Stability"]]
+            obs_rows = [["Activity", "Zone", "Time Window", "Frequency", "Confidence"]]
             for p in patterns:
-                act_style = high_conf if p.get("confidence_class") == "high" else body
                 rhythm = p.get("demand_rhythm", {})
-                pat_rows.append([
-                    Paragraph(p["activity_type"].capitalize(), act_style),
-                    p["zone"],
+                obs_rows.append([
+                    Paragraph(p.get("activity_type", "—").capitalize(), body_bold),
+                    p.get("zone", "—"),
+                    rhythm.get("time_window", "—"),
+                    rhythm.get("frequency", "—"),
+                    p.get("confidence_class", "—").capitalize()
+                ])
+            cw = _PDF_CONTENT_WIDTH / 5
+            story.append(self._make_table(obs_rows, [cw, cw, cw, cw, cw]))
+            story.append(self._section_break(20))
+            story.append(Paragraph(
+                "Activities listed here are verified coordinated signals from the evaluation window.",
+                note
+            ))
+        else:
+            story.append(Paragraph(
+                "No verified activity observations were available for this report.",
+                note
+            ))
+        story.append(self._section_break(36))
+
+        # ========== PAGE 4: DEMAND PATTERNS ==========
+        story.append(self._page_break())
+        story.append(Paragraph("Demand Patterns", st["section"]))
+        story.append(self._section_break(24))
+
+        if patterns:
+            pattern_rows = [["Activity", "Time Window", "Frequency", "Confidence", "Stability"]]
+            for p in patterns:
+                rhythm = p.get("demand_rhythm", {})
+                pattern_rows.append([
+                    p.get("activity_type", "—").capitalize(),
                     rhythm.get("time_window", "—"),
                     rhythm.get("frequency", "—"),
                     p.get("confidence_class", "—").capitalize(),
-                    f"{p.get('stability_score', 0):.2f}",
+                    f"{p.get('stability_score', 0):.2f}"
                 ])
-            cw = _PDF_CONTENT_WIDTH / 6
-            story.append(self._make_table(pat_rows, [cw * 1.0, cw * 0.8, cw * 0.9, cw * 0.9, cw * 0.8, cw * 0.6]))
+            cw = _PDF_CONTENT_WIDTH / 5
+            story.append(self._make_table(pattern_rows, [cw, cw, cw, cw, cw]))
             story.append(self._section_break(20))
             story.append(Paragraph(
-                "Table shows detected coordination patterns with time windows, frequency, confidence levels, and stability scores.",
+                "Demand patterns show when and how often activity clusters. Use this to align capacity with peak windows.",
                 note
             ))
         else:
-            story.append(Paragraph("No stable patterns in this evaluation window.", note))
-        story.append(self._section_break(36))
-
-        # ========== PAGE 4: ENERGY & INFRASTRUCTURE OUTPUT ==========
-        story.append(self._page_break())
-        story.append(Paragraph("Energy Signal Output", st["section"]))
-        story.append(self._section_break(24))
-        
-        energy_signals = prospectus["energy_signals"]
-        if energy_signals:
-            e_rows = [["Zone", "Activities", "Min kWh", "Max kWh", "Peak kW", "Confidence", "Buffered kW"]]
-            for s in energy_signals:
-                conf_style = high_conf if s["confidence_score"] == "HIGH" else body
-                e_rows.append([
-                    s["zone"],
-                    Paragraph(", ".join(s["activities"]), body),
-                    str(s["estimated_min_kwh"]),
-                    str(s["estimated_max_kwh"]),
-                    f"{s['peak_kw_estimate']:.1f}",
-                    Paragraph(s["confidence_score"], conf_style),
-                    f"{s['peak_kw_estimate'] * 1.25:.1f}",
-                ])
-            ew = _PDF_CONTENT_WIDTH / 7
-            story.append(self._make_table(e_rows, [ew] * 7))
-            story.append(self._section_break(20))
             story.append(Paragraph(
-                "Recommended installed capacity includes a 25% planning buffer (conservative lower bound).",
+                "No demand patterns were available for this report.",
                 note
             ))
-        story.append(self._section_break(32))
+        story.append(self._section_break(36))
 
-        load_est = prospectus.get("load_estimation", {})
-        if load_est.get("total_system_demand"):
-            story.append(Paragraph("Load Estimation Summary", st["section"]))
-            story.append(self._section_break(16))
-            total = load_est["total_system_demand"]
-            ess = load_est.get("demand_breakdown", {}).get("essential_services", {})
-            prod = load_est.get("demand_breakdown", {}).get("productive_activities", {})
-            cap = load_est.get("capacity_planning_guidance", {})
-            
-            # Line-by-line display
-            story.append(Paragraph(f"<b>Peak Demand (kW):</b> {total.get('peak_demand_kw', '—')}", body))
-            story.append(self._section_break(12))
-            story.append(Paragraph(f"<b>Daily Energy (kWh):</b> {total.get('daily_energy_kwh', '—')}", body))
-            story.append(self._section_break(12))
-            story.append(Paragraph(f"<b>Essential Services Peak (kW):</b> {ess.get('peak_kw', '—')}", body))
-            story.append(self._section_break(12))
-            story.append(Paragraph(f"<b>Productive Activities Peak (kW):</b> {prod.get('peak_kw', '—')}", body))
-            story.append(self._section_break(12))
-            story.append(Paragraph(f"<b>Recommended Capacity (kW):</b> {cap.get('recommended_capacity_kw', '—')}", body))
-            story.append(self._section_break(36))
-
-        # ========== PAGE 5: LUNDAI SECTION ==========
+        # ========== PAGE 5: INFRASTRUCTURE GAPS ==========
         story.append(self._page_break())
-        story.append(Paragraph("Settlement & Land-Use Validation (LUNDAI)", st["section"]))
+        story.append(Paragraph("Infrastructure Gaps", st["section"]))
         story.append(self._section_break(24))
-        
+
+        guidance = prospectus.get("infrastructure_planning_guidance", {})
+        lundai = prospectus.get("settlement_and_infrastructure_analysis", {})
+        overall = lundai.get("overall_assessment", {}) if isinstance(lundai, dict) else {}
+        gap_lines = []
+        if guidance.get("high_priority_zones"):
+            gap_lines.append(f"High priority zones: {', '.join(guidance['high_priority_zones'])}.")
+        if guidance.get("moderate_priority_zones"):
+            gap_lines.append(f"Moderate priority zones: {', '.join(guidance['moderate_priority_zones'])}.")
+        if overall.get("critical_infrastructure_gaps") is not None:
+            gap_lines.append(f"Critical infrastructure gaps identified: {overall['critical_infrastructure_gaps']}.")
+        if overall.get("average_infrastructure_adequacy_score") is not None:
+            gap_lines.append(f"Infrastructure adequacy score: {overall['average_infrastructure_adequacy_score']:.1f}%.")
+        if not gap_lines:
+            gap_lines.append("A detailed infrastructure gap analysis was not available for this report.")
+
+        for line in gap_lines:
+            story.append(Paragraph(f"• {line}", body))
+            story.append(self._section_break(10))
+        story.append(self._section_break(24))
         story.append(Paragraph(
-            "Detected coordination aligns with settlement structure and land-use activity, "
-            "indicating real on-ground demand.",
+            "These gaps highlight where investment is most needed to support productive activity and essential services.",
             body
         ))
-        story.append(self._section_break(24))
-        
-        story.append(Paragraph("<b>Validation Checklist:</b>", body_bold))
-        story.append(self._section_break(16))
-        story.append(Paragraph("• Settlement consistency ✅", body))
-        story.append(self._section_break(12))
-        story.append(Paragraph("• Infrastructure proximity ✅", body))
-        story.append(self._section_break(12))
-        story.append(Paragraph("• Activity clustering ✅", body))
-        story.append(self._section_break(32))
-        
-        lundai = prospectus.get("settlement_and_infrastructure_analysis", {})
-        if lundai and lundai.get("status") != "LUNDAI analysis not included":
-            overall = lundai.get("overall_assessment", {})
-            story.append(Paragraph("<b>Infrastructure Assessment</b>", body_bold))
-            story.append(self._section_break(16))
-            story.append(Paragraph(f"<b>Total Zones Analyzed:</b> {overall.get('total_zones_analyzed', 0)}", body))
-            story.append(self._section_break(12))
-            story.append(Paragraph(f"<b>Critical Infrastructure Gaps:</b> {overall.get('critical_infrastructure_gaps', 0)}", body))
-            story.append(self._section_break(12))
-            story.append(Paragraph(f"<b>Urgent Priority Zones:</b> {overall.get('urgent_priority_zones', 0)}", body))
-            story.append(self._section_break(12))
-            story.append(Paragraph(f"<b>Average Infrastructure Adequacy:</b> {overall.get('average_infrastructure_adequacy_score', 0):.1f}%", body))
-            story.append(self._section_break(12))
-            story.append(Paragraph(f"<b>Overall Status:</b> {overall.get('overall_infrastructure_status', '—').capitalize()}", body))
-            story.append(self._section_break(32))
-            
-            zone_analyses = lundai.get("zone_analyses", {})
-            if zone_analyses:
-                story.append(Paragraph("<b>Zone-Level Analysis</b>", body_bold))
-                story.append(self._section_break(16))
-                za_rows = [["Zone", "Settlement Type", "Infrastructure Status", "Essential Services", "Productive Activities"]]
-                for zone, data in zone_analyses.items():
-                    za_rows.append([
-                        zone,
-                        data.get("settlement_type", "—").replace("_", " ").title(),
-                        data.get("infrastructure_status", "—").capitalize(),
-                        str(data.get("essential_services_count", 0)),
-                        str(data.get("productive_activity_count", 0)),
-                    ])
-                cw = _PDF_CONTENT_WIDTH / 5
-                story.append(self._make_table(za_rows, [cw * 0.8, cw * 1.2, cw * 1.0, cw * 0.8, cw * 0.8]))
-        else:
-            story.append(Paragraph("LUNDAI analysis not available for this evaluation.", note))
         story.append(self._section_break(36))
 
-        # ========== PAGE 6: CONFIDENCE & RISK ==========
+        # ========== PAGE 6: INVESTMENT OPPORTUNITY ==========
         story.append(self._page_break())
-        story.append(Paragraph("Confidence & Risk Assessment", st["section"]))
+        story.append(Paragraph("Investment Opportunity", st["section"]))
         story.append(self._section_break(24))
-        
-        story.append(Paragraph("<b>Confidence Tier Interpretation</b>", body_bold))
-        story.append(self._section_break(16))
-        story.append(self._make_table([
-            ["Tier", "Range", "Interpretation", "Actionable Guidance"],
-            ["HIGH", ">0.7", "Strong coordination", "Suitable for phased infrastructure planning with confidence"],
-            ["MEDIUM", "0.4–0.7", "Moderate coordination", "Monitor and corroborate before capacity sizing decisions"],
-            ["LOW", "<0.4", "Emerging signals", "Not yet suitable for capacity commitment; continue monitoring"],
-        ], [80, 80, 180, _PDF_CONTENT_WIDTH - 340]))
-        story.append(self._section_break(32))
-        
-        risk = prospectus["risk_and_governance"]
-        dist = risk["demand_uncertainty_quantification"]["confidence_distribution"]
-        story.append(Paragraph("<b>Risk Summary</b>", body_bold))
-        story.append(self._section_break(16))
-        story.append(Paragraph(f"<b>Confidence Distribution:</b> High: {dist['high_confidence_patterns']}; Moderate: {dist['moderate_confidence_patterns']}; Low: {dist['low_confidence_patterns']}", body))
-        story.append(self._section_break(12))
-        story.append(Paragraph(f"<b>Demand Uncertainty:</b> {risk['demand_uncertainty_quantification']['demand_uncertainty_range']['conservative_estimate']}", body))
-        story.append(self._section_break(12))
-        story.append(Paragraph("<b>Governance Framework:</b> Transparent allocation, essential-service protection, phased deployment", body))
-        story.append(self._section_break(20))
+
+        opportunity_lines = []
+        if activities_text:
+            opportunity_lines.append(f"Support for {activities_text} can unlock productive value chains and strengthen local markets.")
+        if guidance.get("investment_recommendation"):
+            opportunity_lines.append(guidance["investment_recommendation"])
+        if guidance.get("capacity_planning_note"):
+            opportunity_lines.append(guidance["capacity_planning_note"])
+        if not opportunity_lines:
+            opportunity_lines.append("This report identifies demand stability that can support conservative phased investment in energy infrastructure.")
+
+        for line in opportunity_lines:
+            story.append(Paragraph(line, body))
+            story.append(self._section_break(12))
+        story.append(self._section_break(24))
         story.append(Paragraph(
-            "<b>Risk Mitigation:</b> All estimates use conservative lower-bound assumptions. "
-            "Infrastructure sizing includes 25% planning buffer. Essential services receive "
-            "priority allocation with 20% capacity reservation.",
+            "The investment case is based on coordination patterns and infrastructure gaps, not on individual behavior.",
             note
         ))
         story.append(self._section_break(36))
 
-        # ========== PAGE 7: INFRASTRUCTURE PLANNING ==========
+        # ========== PAGE 7: CONFIDENCE LEVEL ==========
         story.append(self._page_break())
-        guidance = prospectus.get("infrastructure_planning_guidance", {})
-        if guidance:
-            story.append(Paragraph("Infrastructure Planning Guidance", st["section"]))
-            story.append(self._section_break(24))
-            
-            story.append(Paragraph("<b>What Infrastructure is Needed?</b>", body_bold))
-            story.append(self._section_break(12))
-            zones_text = ", ".join(guidance.get("high_priority_zones", [])) or "the analyzed zone"
-            story.append(Paragraph(
-                f"Based on detected coordination patterns, infrastructure is needed in {zones_text} "
-                f"to support productive economic activities.",
-                body
-            ))
-            story.append(self._section_break(24))
-            
-            story.append(Paragraph("<b>Why is it Needed?</b>", body_bold))
-            story.append(self._section_break(12))
-            story.append(Paragraph(
-                f"Coordination patterns indicate sustained demand from {', '.join(summary['productive_activities_detected'])} activities. "
-                f"Current infrastructure adequacy is {lundai.get('overall_assessment', {}).get('average_infrastructure_adequacy_score', 0):.1f}%, "
-                f"indicating significant gaps.",
-                body
-            ))
-            story.append(self._section_break(24))
-            
-            story.append(Paragraph("<b>Demand Validity Confidence:</b>", body_bold))
-            story.append(self._section_break(12))
-            confidence_level = "High" if summary['high_confidence_patterns'] >= 2 else "Moderate"
-            story.append(Paragraph(
-                f"{confidence_level} confidence based on {summary['high_confidence_patterns']} high-confidence patterns "
-                f"validated across {meta['evaluation_period']}.",
-                body
-            ))
-            story.append(self._section_break(32))
-            
-            story.append(Paragraph("<b>Planning Details:</b>", body_bold))
-            story.append(self._section_break(12))
-            story.append(Paragraph(f"<b>High Priority Zones:</b> {', '.join(guidance.get('high_priority_zones', [])) or '—'}", body))
-            story.append(self._section_break(12))
-            story.append(Paragraph(f"<b>Moderate Priority Zones:</b> {', '.join(guidance.get('moderate_priority_zones', [])) or '—'}", body))
-            story.append(self._section_break(12))
-            story.append(Paragraph(f"<b>Investment Recommendation:</b> {guidance.get('investment_recommendation', '—')}", body))
-            story.append(self._section_break(12))
-            story.append(Paragraph(f"<b>Capacity Planning:</b> {guidance.get('capacity_planning_note', '—')}", body))
-            story.append(self._section_break(36))
-
-        story.append(Paragraph("Infrastructure Planning Implication", st["section"]))
+        story.append(Paragraph("Confidence Level", st["section"]))
         story.append(self._section_break(24))
+
+        dist = prospectus.get("risk_and_governance", {}).get("demand_uncertainty_quantification", {}).get("confidence_distribution", {})
+        story.append(Paragraph("<b>Confidence Summary</b>", body_bold))
+        story.append(self._section_break(14))
         story.append(Paragraph(
-            "Observed coordination patterns indicate emerging productive demand that justifies "
-            "phased infrastructure deployment under conservative capacity allocation. "
-            "The detected activities demonstrate consistent temporal patterns and spatial alignment, "
-            "suggesting sustainable demand rather than transient usage.",
+            f"High confidence patterns: {dist.get('high_confidence_patterns', 0)}. "
+            f"Moderate confidence patterns: {dist.get('moderate_confidence_patterns', 0)}. "
+            f"Low confidence patterns: {dist.get('low_confidence_patterns', 0)}.",
             body
         ))
         story.append(self._section_break(20))
-        story.append(Paragraph("<b>Recommended Approach:</b>", body_bold))
-        story.append(self._section_break(12))
-        story.append(Paragraph("• Phase 1: Deploy infrastructure to high-priority zones with validated coordination patterns", body))
-        story.append(self._section_break(8))
-        story.append(Paragraph("• Phase 2: Monitor demand patterns and adjust capacity allocation based on actual usage", body))
-        story.append(self._section_break(8))
-        story.append(Paragraph("• Phase 3: Expand to moderate-priority zones as coordination strengthens", body))
-        story.append(self._section_break(8))
-        story.append(Paragraph("• Maintain 20% capacity reserve for essential services and communal productive assets", body))
+
+        story.append(self._make_table([
+            ["Confidence", "Meaning", "Action"],
+            ["High", "Stable, repeat coordination", "Suitable for early planning"],
+            ["Medium", "Emerging coordination", "Monitor and validate"],
+            ["Low", "Early or irregular signals", "Delay firm capacity commitments"]
+        ], [120, 240, _PDF_CONTENT_WIDTH - 360]))
+        story.append(self._section_break(24))
+
+        story.append(Paragraph(
+            "This report uses conservative assumptions and reserves capacity for essential services before allocating capacity for productive demand.",
+            note
+        ))
+        story.append(self._section_break(36))
+
+        # ========== PAGE 8: NEXT STEPS ==========
+        story.append(self._page_break())
+        story.append(Paragraph("Next Steps", st["section"]))
+        story.append(self._section_break(24))
+
+        story.append(Paragraph("<b>Recommended actions</b>", body_bold))
+        story.append(self._section_break(14))
+        story.append(Paragraph("• Review the highest-priority zones and confirm local activity patterns.", body))
+        story.append(self._section_break(10))
+        story.append(Paragraph("• Allocate infrastructure capacity in phases based on detected coordination strength.", body))
+        story.append(self._section_break(10))
+        story.append(Paragraph("• Reserve at least 20% capacity for essential service loads before expanding to productive uses.", body))
+        story.append(self._section_break(10))
+        story.append(Paragraph("• Use this prospectus as a planning input for next-stage engineering and financing studies.", body))
+        story.append(self._section_break(20))
+        story.append(Paragraph(
+            "These steps are intended to move from verified demand signals to grounded investment decisions.",
+            note
+        ))
         story.append(self._section_break(36))
 
         # ========== PAGE 8: ETHICS & METHODOLOGY ==========
