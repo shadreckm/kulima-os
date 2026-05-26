@@ -2,46 +2,52 @@
 Database connection management
 Supports both SQLite (development) and PostgreSQL (production)
 """
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.orm import sessionmaker, Session
 from pathlib import Path
 from backend.config import settings
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
+# Resolve DATABASE_URL — Render provides it without the dialect prefix sometimes
+_raw_url = settings.DATABASE_URL
+if _raw_url.startswith("postgres://"):
+    _raw_url = _raw_url.replace("postgres://", "postgresql://", 1)
+
 # Determine database type
-is_postgresql = "postgresql" in settings.DATABASE_URL
-is_sqlite = "sqlite" in settings.DATABASE_URL
+is_postgresql = "postgresql" in _raw_url
+is_sqlite = "sqlite" in _raw_url
 
 # SQLite-specific setup
 if is_sqlite:
-    db_path = Path(settings.DATABASE_URL.replace("sqlite:///", ""))
+    db_path = Path(_raw_url.replace("sqlite:///", ""))
     if db_path.parent != Path("."):
         db_path.parent.mkdir(parents=True, exist_ok=True)
     logger.info(f"Using SQLite database: {db_path}")
 
 # PostgreSQL-specific setup
 if is_postgresql:
-    logger.info(f"Using PostgreSQL database")
+    logger.info("Using PostgreSQL database")
 
 # Create database engine with appropriate configuration
 if is_sqlite:
     engine = create_engine(
-        settings.DATABASE_URL,
+        _raw_url,
         echo=settings.DATABASE_ECHO,
         connect_args={"check_same_thread": False}
     )
 elif is_postgresql:
     engine = create_engine(
-        settings.DATABASE_URL,
+        _raw_url,
         echo=settings.DATABASE_ECHO,
         pool_size=settings.DATABASE_POOL_SIZE,
         max_overflow=settings.DATABASE_MAX_OVERFLOW,
-        pool_pre_ping=True  # Verify connections before using
+        pool_pre_ping=True
     )
 else:
-    raise ValueError(f"Unsupported database URL scheme: {settings.DATABASE_URL}")
+    raise ValueError(f"Unsupported database URL scheme: {_raw_url}")
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -75,53 +81,30 @@ def init_db(reset: bool = False):
         logger.info("Creating database tables...")
         Base.metadata.create_all(bind=engine, checkfirst=True)
 
-        # Ensure SQLite schema upgrades (add missing columns safely)
-        def _ensure_sqlite_schema():
-            """
-            For SQLite only: inspect table schema via PRAGMA and add missing
-            columns (non-destructive). This uses raw SQL via SQLAlchemy's
-            text() to run the PRAGMA and ALTER TABLE statements.
-            """
-            if not is_sqlite:
-                return
-
+        # Ensure schema upgrades (add missing columns safely)
+        def _ensure_schema():
+            """Inspect table schema and add missing columns (non-destructive)."""
+            required_columns = {
+                'sector': "TEXT NOT NULL DEFAULT ''",
+                'original_text': "TEXT NOT NULL DEFAULT ''",
+                'source': "TEXT NOT NULL DEFAULT 'web'",
+                'user_id': "TEXT NOT NULL DEFAULT 'anonymous'",
+            }
             try:
-                with engine.connect() as conn:
-                    # Get existing columns for the signals table
-                    res = conn.execute(text("PRAGMA table_info('signals')"))
-                    cols = [row[1] for row in res.fetchall()]
-
-                    if 'sector' not in cols:
-                        logger.info("'sector' column missing from 'signals' table; adding it now")
-                        conn.execute(text("ALTER TABLE signals ADD COLUMN sector TEXT NOT NULL DEFAULT ''"))
-                        logger.info("Added 'sector' column to 'signals' table")
-                    else:
-                        logger.debug("'sector' column already present in 'signals' table")
-
-                    if 'original_text' not in cols:
-                        logger.info("'original_text' column missing from 'signals' table; adding it now")
-                        conn.execute(text("ALTER TABLE signals ADD COLUMN original_text TEXT NOT NULL DEFAULT ''"))
-                        logger.info("Added 'original_text' column to 'signals' table")
-                    else:
-                        logger.debug("'original_text' column already present in 'signals' table")
-
-                    if 'source' not in cols:
-                        logger.info("'source' column missing from 'signals' table; adding it now")
-                        conn.execute(text("ALTER TABLE signals ADD COLUMN source TEXT NOT NULL DEFAULT 'web'"))
-                        logger.info("Added 'source' column to 'signals' table")
-                    else:
-                        logger.debug("'source' column already present in 'signals' table")
-
-                    if 'user_id' not in cols:
-                        logger.info("'user_id' column missing from 'signals' table; adding it now")
-                        conn.execute(text("ALTER TABLE signals ADD COLUMN user_id TEXT NOT NULL DEFAULT 'anonymous'"))
-                        logger.info("Added 'user_id' column to 'signals' table")
-                    else:
-                        logger.debug("'user_id' column already present in 'signals' table")
+                insp = inspect(engine)
+                if not insp.has_table('signals'):
+                    return
+                existing = {c['name'] for c in insp.get_columns('signals')}
+                with engine.begin() as conn:
+                    for col_name, col_def in required_columns.items():
+                        if col_name not in existing:
+                            logger.info(f"'{col_name}' column missing from 'signals' table; adding it now")
+                            conn.execute(text(f"ALTER TABLE signals ADD COLUMN {col_name} {col_def}"))
+                            logger.info(f"Added '{col_name}' column to 'signals' table")
             except Exception as e:
-                logger.error(f"Failed to ensure sqlite schema: {e}")
+                logger.error(f"Failed to ensure schema: {e}")
 
-        _ensure_sqlite_schema()
+        _ensure_schema()
 
         logger.info("Database initialization complete")
     except Exception as e:

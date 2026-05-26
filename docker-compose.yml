@@ -1,6 +1,18 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kulima_os
+      POSTGRES_USER: kulima
+      POSTGRES_PASSWORD: kulima_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
   backend:
     build:
       context: .
@@ -9,10 +21,11 @@ services:
       - "8000:8000"
     volumes:
       - ./artifacts:/app/artifacts
-      - ./kulima_os.db:/app/kulima_os.db
     environment:
-      - DATABASE_URL=sqlite:///./kulima_os.db
+      - DATABASE_URL=postgresql://kulima:kulima_secret@db:5432/kulima_os
       - DEBUG=False
+    depends_on:
+      - db
     restart: unless-stopped
 
   # Frontend (for future React/Next.js deployment)
@@ -27,3 +40,6 @@ services:
   #   depends_on:
   #     - backend
   #   restart: unless-stopped
+
+volumes:
+  pgdata:
