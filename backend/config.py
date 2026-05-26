@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # Database Configuration
-    # Default to SQLite for development, override with PostgreSQL URL for production
+    # Set DATABASE_URL env var for production PostgreSQL, falls back to SQLite for local dev
     DATABASE_URL: str = "sqlite:///./kulima_os.db"
     DATABASE_ECHO: bool = False
     DATABASE_POOL_SIZE: int = 5
