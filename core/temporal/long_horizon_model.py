@@ -366,36 +366,40 @@ class LongHorizonModel:
 
 
 def print_long_horizon_results(monthly_patterns: List[Dict], seasonal_patterns: List[Dict]) -> None:
-    """Print long-horizon analysis results in a readable format."""
-    print("\n" + "=" * 60)
-    print("LONG-HORIZON MODEL OUTPUT - MONTHLY & SEASONAL PATTERNS")
-    print("=" * 60)
-    
-    print("\nMonthly Patterns:")
+    """Log long-horizon analysis results in a readable format."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("\n" + "=" * 60)
+    logger.info("LONG-HORIZON MODEL OUTPUT - MONTHLY & SEASONAL PATTERNS")
+    logger.info("=" * 60)
+
+    logger.info("\nMonthly Patterns:")
     for pattern in monthly_patterns:
-        print(f"  {pattern['month']} - {pattern['activity_type']} in {pattern['zone']}:")
-        print(f"    Persistence: {pattern['persistence']}")
-        print(f"    Stability: {pattern['stability']}")
-        print(f"    Trend: {pattern['trend']}")
-    
-    print("\nSeasonal Patterns:")
+        logger.info(f"  {pattern['month']} - {pattern['activity_type']} in {pattern['zone']}:")
+        logger.info(f"    Persistence: {pattern['persistence']}")
+        logger.info(f"    Stability: {pattern['stability']}")
+        logger.info(f"    Trend: {pattern['trend']}")
+
+    logger.info("\nSeasonal Patterns:")
     for pattern in seasonal_patterns:
-        print(f"  {pattern['season']} - {pattern['activity_type']} in {pattern['zone']}:")
-        print(f"    Persistence: {pattern['persistence']}")
-        print(f"    Stability: {pattern['stability']}")
-        print(f"    Trend: {pattern['trend']}")
-    
-    print("\n" + "=" * 60)
-    print("INVARIANT COMPLIANCE:")
-    print("✓ Zero-PII: Analysis based on aggregated patterns only")
-    print("✓ Coordination > Identity: Long-term patterns, not individual tracking")
-    print("✓ Semantic Guard: Designed for planning, not surveillance")
-    print("=" * 60)
+        logger.info(f"  {pattern['season']} - {pattern['activity_type']} in {pattern['zone']}:")
+        logger.info(f"    Persistence: {pattern['persistence']}")
+        logger.info(f"    Stability: {pattern['stability']}")
+        logger.info(f"    Trend: {pattern['trend']}")
+
+    logger.info("\n" + "=" * 60)
+    logger.info("INVARIANT COMPLIANCE:")
+    logger.info("✓ Zero-PII: Analysis based on aggregated patterns only")
+    logger.info("✓ Coordination > Identity: Long-term patterns, not individual tracking")
+    logger.info("✓ Semantic Guard: Designed for planning, not surveillance")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":
     # Test with sample data
-    print("Testing Long-Horizon Model...")
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("Testing Long-Horizon Model...")
     
     model = LongHorizonModel()
     

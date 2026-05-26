@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 import logging
 
 from backend.config import settings
-from backend.api import signals, summaries, prospectus, health, twilio, system, visualization
+from backend.api import signals, summaries, prospectus, health, twilio, system, visualization, recent_signals
 from backend.middleware.logging import setup_logging, RequestIDMiddleware, StructuredLoggingMiddleware
 from backend.middleware.rate_limiter import rate_limit_middleware
 from backend.middleware.error_handler import setup_error_handlers
@@ -64,6 +64,7 @@ setup_error_handlers(app)
 # Include routers
 app.include_router(health.router, prefix=settings.API_PREFIX, tags=["Health"])
 app.include_router(signals.router, prefix=settings.API_PREFIX, tags=["Signals"])
+app.include_router(recent_signals.router, prefix=settings.API_PREFIX, tags=["Signals"])
 app.include_router(summaries.router, prefix=settings.API_PREFIX, tags=["Summaries"])
 app.include_router(prospectus.router, prefix=settings.API_PREFIX, tags=["Prospectus"])
 app.include_router(twilio.router, prefix=settings.API_PREFIX, tags=["Twilio"])

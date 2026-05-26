@@ -364,8 +364,14 @@ class ProspectusGenerator:
         Professional document layout engine with proper table rendering,
         typography system, and layout grid enforcement.
         """
-        print("USING PROFESSIONAL PROSPECTUS GENERATOR - generate_pdf()")
-        print(f"Output path: {output_path}")
+        # Use logger instead of printing to stdout
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info("USING PROFESSIONAL PROSPECTUS GENERATOR - generate_pdf()")
+            logger.info(f"Output path: {output_path}")
+        except Exception:
+            pass
         
         doc = SimpleDocTemplate(
             output_path,

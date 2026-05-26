@@ -378,8 +378,10 @@ class ProspectusGenerator:
         Professional document layout engine with proper table rendering,
         typography system, and layout grid enforcement.
         """
-        print("USING PROFESSIONAL PROSPECTUS GENERATOR - generate_pdf()")
-        print(f"Output path: {output_path}")
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("USING PROFESSIONAL PROSPECTUS GENERATOR - generate_pdf()")
+        logger.info(f"Output path: {output_path}")
         
         doc = SimpleDocTemplate(
             output_path,
@@ -2277,7 +2279,8 @@ class ProspectusGenerator:
         """Save prospectus as JSON file."""
         with open(filename, 'w') as f:
             json.dump(prospectus, f, indent=2)
-        print(f"\nProspectus saved to: {filename}")
+        import logging
+        logging.getLogger(__name__).info(f"\nProspectus saved to: {filename}")
     
     def save_prospectus_markdown(self, prospectus: Dict, filename: str = "demand_signal_prospectus.md") -> None:
         """
@@ -2637,7 +2640,8 @@ class ProspectusGenerator:
         # Use UTF-8 encoding explicitly for cross-platform compatibility (fixes Windows UnicodeEncodeError)
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(md_content)
-        print(f"Prospectus saved to: {filename}")
+        import logging
+        logging.getLogger(__name__).info(f"Prospectus saved to: {filename}")
 
 
 if __name__ == "__main__":
@@ -2646,7 +2650,8 @@ if __name__ == "__main__":
     from lumoza_engine import LumozaEngine
     from zentari_engine import ZentariEngine
     
-    print("Generating Demand-Signal Prospectus...")
+    import logging
+    logging.getLogger(__name__).info("Generating Demand-Signal Prospectus...")
     
     # Process signals through engines
     signals = generate_pilot_signals()
@@ -2675,5 +2680,6 @@ if __name__ == "__main__":
     generator.save_prospectus_markdown(prospectus)
     generator.generate_pdf(prospectus, "demand_signal_prospectus.pdf")
 
-    print("\n[SUCCESS] Demand-Signal Prospectus generated successfully (JSON, Markdown, PDF)")
+    import logging
+    logging.getLogger(__name__).info("\n[SUCCESS] Demand-Signal Prospectus generated successfully (JSON, Markdown, PDF)")
 

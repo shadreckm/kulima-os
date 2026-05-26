@@ -50,7 +50,8 @@ class WhatsAppMessageHandler:
         if not parsed_signal:
             return True, self._format_meaningless_message()
         
-        print("Parsed activity:", parsed_signal.activity_type)
+        import logging
+        logging.getLogger(__name__).info("Parsed activity: %s", parsed_signal.activity_type)
         
         # Store signal
         signal_id = store_signal(
@@ -79,9 +80,11 @@ class WhatsAppMessageHandler:
                 )
 
             summary = integrate_whatsapp_to_lumoza(zone=zone_key, mark_processed=False)
-            print(
-                f"Processing zone {zone_key}: {summary['signals_in_window']} signals in window, "
-                f"{summary['patterns_processed']} coordination patterns"
+            logging.getLogger(__name__).info(
+                "Processing zone %s: %s signals in window, %s coordination patterns",
+                zone_key,
+                summary['signals_in_window'],
+                summary['patterns_processed'],
             )
 
             if summary["patterns"]:
@@ -221,9 +224,9 @@ class WhatsAppMessageHandler:
             json_path = artifacts_dir / json_filename
             json_path.write_text(json.dumps(prospectus, indent=2))
 
-            print(f"Artifact generated: {pdf_path}")
+            logging.getLogger(__name__).info("Artifact generated: %s", pdf_path)
         except Exception as e:
-            print(f"Error generating artifact: {e}")
+            logging.getLogger(__name__).exception("Error generating artifact: %s", e)
 
     def _format_meaningless_message(self) -> str:
         """Friendly response when message has no interpretable content."""

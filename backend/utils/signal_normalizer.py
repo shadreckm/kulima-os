@@ -1,201 +1,90 @@
 """
-Signal normalization utility for converting text input to structured signals
+Simple signal normalizer that extracts a small set of activities, zones, and time windows.
+This file intentionally implements a minimal, robust parser used by webhooks and quick inputs.
 """
-from typing import Dict, Optional
-import re
+from typing import Dict
 
-class SignalNormalizer:
-    """
-    Normalizes natural language text input into structured signal format.
-    
-    Maps common Malawian farming and trading terms to standardized activity types.
-    """
-    
-    # Activity type mappings with comprehensive synonym support
-    ACTIVITY_MAPPINGS = {
-        # Irrigation-related terms
-        'watering': 'irrigation',
-        'watering crops': 'irrigation',
-        'irrigating': 'irrigation',
-        'pumping water': 'irrigation',
-        'water pump': 'irrigation',
-        'pumping': 'irrigation',
-        'pump': 'irrigation',
-        'watering my crops': 'irrigation',
-        'irrigation': 'irrigation',
-        'watering the garden': 'irrigation',
-        'watering farm': 'irrigation',
-        'using water pump': 'irrigation',
-        
-        # Milling-related terms
-        'milling': 'milling',
-        'grinding': 'milling',
-        'grinding maize': 'milling',
-        'milling maize': 'milling',
-        'processing': 'milling',
-        'processing maize': 'milling',
-        'mill': 'milling',
-        'grind': 'milling',
-        'grinding corn': 'milling',
-        'milling corn': 'milling',
-        'maize mill': 'milling',
-        'grinding my maize': 'milling',
-        'milling my maize': 'milling',
-        'going to mill': 'milling',
-        'going to grind': 'milling',
-        
-        # Cold storage-related terms
-        'cold storage': 'cold storage',
-        'refrigeration': 'cold storage',
-        'storing': 'cold storage',
-        'keeping cold': 'cold storage',
-        'cold room': 'cold storage',
-        'refrigerator': 'cold storage',
-        'fridge': 'cold storage',
-        'cooling': 'cold storage',
-        'keeping produce cold': 'cold storage',
-        'storing vegetables': 'cold storage',
-        'cold storage room': 'cold storage',
-        
-        # Welding-related terms
-        'welding': 'welding',
-        'metal work': 'welding',
-        'fabrication': 'welding',
-        'weld': 'welding',
-        'metalworking': 'welding',
-        'fabricating': 'welding',
-        'metal fabrication': 'welding',
-        'welding metal': 'welding',
-        
-        # Trading-related terms
-        'selling': 'trading',
-        'trading': 'trading',
-        'selling crops': 'trading',
-        'market': 'trading',
-        'selling produce': 'trading',
-        'selling goods': 'trading',
-        'selling at market': 'trading',
-        'going to market': 'trading',
-        'selling my crops': 'trading',
-        'selling my produce': 'trading',
-        'trade': 'trading',
-        'trading goods': 'trading',
-    }
-    
-    # Time window mappings
-    TIME_WINDOW_MAPPINGS = {
-        'morning': 'morning',
-        'am': 'morning',
-        'early': 'morning',
-        'before noon': 'morning',
-        
-        'afternoon': 'afternoon',
-        'pm': 'afternoon',
-        'midday': 'afternoon',
-        'after noon': 'afternoon',
-        
-        'evening': 'evening',
-        'night': 'evening',
-        'late': 'evening',
-    }
-    
-    # Zone mappings (case-insensitive)
-    ZONE_MAPPINGS = {
-        'mzuzu': 'MZUZU',
-        'lilongwe': 'LILONGWE',
-        'blantyre': 'BLANTYRE',
-        'zomba': 'ZOMBA',
-    }
-    
-    def normalize_text(self, text: str) -> Dict:
-        """
-        Normalize natural language text into structured signal.
-        
-        Args:
-            text: Natural language input (e.g., "watering crops in Mzuzu this morning")
-            
-        Returns:
-            Structured signal dictionary with activity_type, zone, time_window
-        """
-        text_lower = text.lower()
-        
-        # Extract activity type
-        activity_type = self._extract_activity_type(text_lower)
-        
-        # Extract zone
-        zone = self._extract_zone(text_lower)
-        
-        # Extract time window
-        time_window = self._extract_time_window(text_lower)
-        
-        return {
-            'activity_type': activity_type,
-            'zone': zone,
-            'time_window': time_window,
-            'original_text': text
-        }
-    
-    def _extract_activity_type(self, text: str) -> str:
-        """Extract activity type from text using keyword matching."""
-        for keyword, activity in self.ACTIVITY_MAPPINGS.items():
-            if keyword in text:
-                return activity
-        return 'unknown'
-    
-    def _extract_zone(self, text: str) -> str:
-        """Extract zone from text using keyword matching."""
-        for keyword, zone in self.ZONE_MAPPINGS.items():
-            if keyword in text:
-                return zone
-        return 'UNKNOWN'
-    
-    def _extract_time_window(self, text: str) -> str:
-        """Extract time window from text using keyword matching."""
-        for keyword, window in self.TIME_WINDOW_MAPPINGS.items():
-            if keyword in text:
-                return window
-        return 'unknown'
-    
-    def normalize_structured(self, data: Dict) -> Dict:
-        """
-        Normalize structured input (e.g., from frontend form) to standard format.
-        
-        Args:
-            data: Dictionary with activity_type, zone, time_window fields
-            
-        Returns:
-            Normalized signal dictionary
-        """
-        activity_type = data.get('activity_type', '').lower()
-        zone = data.get('zone', '').upper()
-        time_window = data.get('time_window', '').lower()
-        
-        # Map activity type if it's a natural language term
-        if activity_type in self.ACTIVITY_MAPPINGS:
-            activity_type = self.ACTIVITY_MAPPINGS[activity_type]
-        
-        # Normalize zone
-        if zone in self.ZONE_MAPPINGS:
-            zone = self.ZONE_MAPPINGS[zone]
-        
-        # Normalize time window
-        if time_window in self.TIME_WINDOW_MAPPINGS:
-            time_window = self.TIME_WINDOW_MAPPINGS[time_window]
-        
-        return {
-            'activity_type': activity_type,
-            'zone': zone,
-            'time_window': time_window
-        }
+# Allowed activities, zones and time windows
+_ACTIVITIES = ['irrigation', 'milling', 'trading', 'welding']
+_ZONES = {
+    'mzuzu': 'MZUZU',
+    'lilongwe': 'LILONGWE',
+    'blantyre': 'BLANTYRE',
+    'zomba': 'ZOMBA'
+}
 
+_TIME_KEYWORDS = {
+    'morning': ['morning', 'am', 'early'],
+    'afternoon': ['afternoon', 'pm', 'midday'],
+    'evening': ['evening', 'night', 'late']
+}
 
-# Singleton instance
-normalizer = SignalNormalizer()
 
 def normalize_signal_text(text: str) -> Dict:
-    """Convenience function to normalize text input."""
-    return normalizer.normalize_text(text)
+    """
+    Normalize a free-text message into a minimal structured signal dictionary.
+
+    Returns keys: activity_type, zone, time_window, original_text
+    Always returns original_text and uses robust contains checks on lowercase input.
+    """
+    if not isinstance(text, str):
+        text = '' if text is None else str(text)
+    lowered = text.lower()
+
+    # Detect activity
+    activity = 'unknown'
+    for a in _ACTIVITIES:
+        if a in lowered:
+            activity = a
+            break
+    # some heuristics for common synonyms
+    if activity == 'unknown':
+        if 'mill' in lowered or 'grind' in lowered:
+            activity = 'milling'
+        elif 'sell' in lowered or 'market' in lowered:
+            activity = 'trading'
+        elif 'pump' in lowered or 'water' in lowered or 'irrigat' in lowered:
+            activity = 'irrigation'
+        elif 'weld' in lowered or 'metal' in lowered:
+            activity = 'welding'
+
+    # Detect zone
+    zone = 'UNKNOWN'
+    for k, v in _ZONES.items():
+        if k in lowered:
+            zone = v
+            break
+
+    # Detect time window
+    time_window = 'unknown'
+    for window, keywords in _TIME_KEYWORDS.items():
+        for kw in keywords:
+            if kw in lowered:
+                time_window = window
+                break
+        if time_window != 'unknown':
+            break
+
+    return {
+        'activity_type': activity,
+        'zone': zone,
+        'time_window': time_window,
+        'original_text': text
+    }
+
 
 def normalize_signal_data(data: Dict) -> Dict:
-    """Convenience function to normalize structured data."""
-    return normalizer.normalize_structured(data)
+    """Normalize already-structured data (compat helper)."""
+    if not isinstance(data, dict):
+        return {
+            'activity_type': 'unknown',
+            'zone': 'UNKNOWN',
+            'time_window': 'unknown',
+            'original_text': str(data)
+        }
+    return {
+        'activity_type': data.get('activity_type', 'unknown') or 'unknown',
+        'zone': (data.get('zone') or 'UNKNOWN').upper(),
+        'time_window': data.get('time_window', 'unknown') or 'unknown',
+        'original_text': data.get('original_text') or data.get('raw_text') or ''
+    }

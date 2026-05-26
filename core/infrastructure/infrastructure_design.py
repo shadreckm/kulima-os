@@ -269,56 +269,59 @@ class InfrastructureDesignLayer:
 
 
 def print_infrastructure_design_results(ranked_zones: List[Dict], phased_rollout: Dict, load_distribution: Dict) -> None:
-    """Print infrastructure design results in a readable format."""
-    print("\n" + "=" * 60)
-    print("INFRASTRUCTURE DESIGN LAYER OUTPUT")
-    print("=" * 60)
-    
-    print("\nRanked Zones by Priority:")
+    """Log infrastructure design results in a readable format."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("\n" + "=" * 60)
+    logger.info("INFRASTRUCTURE DESIGN LAYER OUTPUT")
+    logger.info("=" * 60)
+
+    logger.info("\nRanked Zones by Priority:")
     for i, zone_data in enumerate(ranked_zones, 1):
-        print(f"  {i}. {zone_data['zone']}:")
-        print(f"     Priority Score: {zone_data['priority_score']}")
-        print(f"     Persistence: {zone_data['persistence']}")
-        print(f"     Stability: {zone_data['stability']}")
-        print(f"     Coordination Strength: {zone_data['coordination_strength']}")
-    
-    print("\nPhased Rollout Plan:")
-    print(f"\nPhase 1: {phased_rollout['phase_1']['description']}")
-    print(f"  Timeline: {phased_rollout['phase_1']['timeline_months']} months")
-    print(f"  Total Capacity: {phased_rollout['phase_1']['total_capacity_kw']} kW")
+        logger.info("  %s. %s:", i, zone_data['zone'])
+        logger.info("     Priority Score: %s", zone_data['priority_score'])
+        logger.info("     Persistence: %s", zone_data['persistence'])
+        logger.info("     Stability: %s", zone_data['stability'])
+        logger.info("     Coordination Strength: %s", zone_data['coordination_strength'])
+
+    logger.info("\nPhased Rollout Plan:")
+    logger.info("\nPhase 1: %s", phased_rollout['phase_1']['description'])
+    logger.info("  Timeline: %s months", phased_rollout['phase_1']['timeline_months'])
+    logger.info("  Total Capacity: %s kW", phased_rollout['phase_1']['total_capacity_kw'])
     for zone_data in phased_rollout['phase_1']['zones']:
-        print(f"    - {zone_data['zone']}: {zone_data['capacity_kw']} kW")
-    
-    print(f"\nPhase 2: {phased_rollout['phase_2']['description']}")
-    print(f"  Timeline: {phased_rollout['phase_2']['timeline_months']} months")
-    print(f"  Total Capacity: {phased_rollout['phase_2']['total_capacity_kw']} kW")
+        logger.info("    - %s: %s kW", zone_data['zone'], zone_data['capacity_kw'])
+
+    logger.info("\nPhase 2: %s", phased_rollout['phase_2']['description'])
+    logger.info("  Timeline: %s months", phased_rollout['phase_2']['timeline_months'])
+    logger.info("  Total Capacity: %s kW", phased_rollout['phase_2']['total_capacity_kw'])
     for zone_data in phased_rollout['phase_2']['zones']:
-        print(f"    - {zone_data['zone']}: {zone_data['capacity_kw']} kW")
-    
-    print(f"\nPhase 3: {phased_rollout['phase_3']['description']}")
-    print(f"  Timeline: {phased_rollout['phase_3']['timeline_months']} months")
-    print(f"  Total Capacity: {phased_rollout['phase_3']['total_capacity_kw']} kW")
+        logger.info("    - %s: %s kW", zone_data['zone'], zone_data['capacity_kw'])
+
+    logger.info("\nPhase 3: %s", phased_rollout['phase_3']['description'])
+    logger.info("  Timeline: %s months", phased_rollout['phase_3']['timeline_months'])
+    logger.info("  Total Capacity: %s kW", phased_rollout['phase_3']['total_capacity_kw'])
     for zone_data in phased_rollout['phase_3']['zones']:
-        print(f"    - {zone_data['zone']}: {zone_data['capacity_kw']} kW")
-    
-    print(f"\nTotal Capacity: {phased_rollout['total_capacity_kw']} kW")
-    print(f"Total Timeline: {phased_rollout['total_timeline_months']} months")
-    
-    print("\nLoad Distribution:")
+        logger.info("    - %s: %s kW", zone_data['zone'], zone_data['capacity_kw'])
+
+    logger.info("\nTotal Capacity: %s kW", phased_rollout['total_capacity_kw'])
+    logger.info("Total Timeline: %s months", phased_rollout['total_timeline_months'])
+
+    logger.info("\nLoad Distribution:")
     for zone, load in load_distribution.items():
-        print(f"  {zone}: {load} kW")
-    
-    print("\n" + "=" * 60)
-    print("INVARIANT COMPLIANCE:")
-    print("✓ Zero-PII: Planning based on aggregated patterns only")
-    print("✓ Coordination > Identity: Infrastructure for collective benefit")
-    print("✓ Semantic Guard: Designed for planning, not surveillance")
-    print("=" * 60)
+        logger.info("  %s: %s kW", zone, load)
+
+    logger.info("\n" + "=" * 60)
+    logger.info("INVARIANT COMPLIANCE:")
+    logger.info("✓ Zero-PII: Planning based on aggregated patterns only")
+    logger.info("✓ Coordination > Identity: Infrastructure for collective benefit")
+    logger.info("✓ Semantic Guard: Designed for planning, not surveillance")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":
     # Test with sample data
-    print("Testing Infrastructure Design Layer...")
+    import logging
+    logging.getLogger(__name__).info("Testing Infrastructure Design Layer...")
     
     design_layer = InfrastructureDesignLayer()
     

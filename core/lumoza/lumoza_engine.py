@@ -336,40 +336,43 @@ class LumozaEngine:
 
 
 def print_coordination_patterns(patterns: List[Dict]) -> None:
-    """Print coordination patterns in a readable format."""
-    print("\n" + "=" * 60)
-    print("LUMOZA OUTPUT - COORDINATION PATTERNS")
-    print("=" * 60)
-    
+    """Log coordination patterns in a readable format."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("\n" + "=" * 60)
+    logger.info("LUMOZA OUTPUT - COORDINATION PATTERNS")
+    logger.info("=" * 60)
+
     if not patterns:
-        print("\nNo stable coordination patterns detected.")
+        logger.info("\nNo stable coordination patterns detected.")
         return
-    
+
     for i, pattern in enumerate(patterns, 1):
-        print(f"\nPattern {i}:")
-        print(f"  Activity: {pattern['activity_type']}")
-        print(f"  Zone: {pattern['zone']}")
-        print(f"  Time Window: {pattern['time_window']}")
-        print(f"  Service Priority: {pattern['service_priority'].upper()}")
-        print(f"  Demand Rhythm: {pattern['demand_rhythm']['frequency']}")
-        print(f"  Cycles Present: {pattern['demand_rhythm']['cycles_present']}")
-        print(f"  Stability: {pattern['demand_rhythm']['stability_class']} (score: {pattern['stability_score']})")
-        print(f"  Validation: {pattern['validation_strength']}")
-        print(f"  Details: {pattern['validation_details']}")
-    
-    print("\n" + "=" * 60)
-    print("INVARIANT COMPLIANCE:")
-    print("[OK] Zero-PII: No individual identifiers in outputs")
-    print("[OK] Temporal Moat: Cycle-level aggregation (no precise timestamps)")
-    print("[OK] Coordination > Identity: Patterns represent collective activity")
-    print("=" * 60)
+        logger.info(f"\nPattern {i}:")
+        logger.info(f"  Activity: {pattern['activity_type']}")
+        logger.info(f"  Zone: {pattern['zone']}")
+        logger.info(f"  Time Window: {pattern['time_window']}")
+        logger.info(f"  Service Priority: {pattern['service_priority'].upper()}")
+        logger.info(f"  Demand Rhythm: {pattern['demand_rhythm']['frequency']}")
+        logger.info(f"  Cycles Present: {pattern['demand_rhythm']['cycles_present']}")
+        logger.info(f"  Stability: {pattern['demand_rhythm']['stability_class']} (score: {pattern['stability_score']})")
+        logger.info(f"  Validation: {pattern['validation_strength']}")
+        logger.info(f"  Details: {pattern['validation_details']}")
+
+    logger.info("\n" + "=" * 60)
+    logger.info("INVARIANT COMPLIANCE:")
+    logger.info("[OK] Zero-PII: No individual identifiers in outputs")
+    logger.info("[OK] Temporal Moat: Cycle-level aggregation (no precise timestamps)")
+    logger.info("[OK] Coordination > Identity: Patterns represent collective activity")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":
     # Test with synthetic signals
     from pilot_signals import generate_pilot_signals
     
-    print("Testing LUMOZA Engine with synthetic signals...")
+    import logging
+    logging.getLogger(__name__).info("Testing LUMOZA Engine with synthetic signals...")
     
     signals = generate_pilot_signals()
     lumoza = LumozaEngine()

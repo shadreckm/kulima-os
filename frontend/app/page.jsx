@@ -33,14 +33,11 @@ export default function Home() {
   const [inputValue, setInputValue] = useState('');
   const [summary, setSummary] = useState(null);
   const [recentSignals, setRecentSignals] = useState([]);
-  const [activityFeed, setActivityFeed] = useState([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [liveLoading, setLiveLoading] = useState(false);
-  const [assistantResponse, setAssistantResponse] = useState('');
-  const [assistantExplanation, setAssistantExplanation] = useState('');
   const [shareMessage, setShareMessage] = useState('');
   const inputRef = useRef(null);
   const insightsRef = useRef(null);
@@ -54,7 +51,7 @@ export default function Home() {
   const [analysisStage, setAnalysisStage] = useState('');
   const [insightExpanded, setInsightExpanded] = useState(false);
 
-  const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+  const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
   const BACKEND_BASE = BASE_URL.replace(/\/api\/v1$/, '');
   // Production behavior: rely on backend summary only
   const reportUrl = reportData?.pdf_url ? `${BACKEND_BASE}${reportData.pdf_url}` : '';
@@ -173,10 +170,10 @@ export default function Home() {
         await fetchSummary();
         await fetchRecentSignals();
       } else {
-        setMessage('Something went wrong, try again');
+        setMessage("Unable to process activity. Try: 'irrigation mzuzu morning'");
       }
     } catch (err) {
-      setMessage('Something went wrong, try again');
+      setMessage("Unable to process activity. Try: 'irrigation mzuzu morning'");
     } finally {
       // clear micro-feedback timers
       analysisTimeoutsRef.current.forEach(t => clearTimeout(t));
@@ -187,6 +184,10 @@ export default function Home() {
   };
 
   const handleGenerateReport = async () => {
+    if (!summary || (typeof summary.signal_count !== 'undefined' && summary.signal_count === 0)) {
+      setMessage('Record at least one activity before generating a report.');
+      return;
+    }
     setReportLoading(true);
     setMessage('Generating report...');
     try {
@@ -207,7 +208,7 @@ export default function Home() {
         setMessage('Report generation failed. Please try again.');
       }
     } catch (err) {
-      setMessage('Something went wrong, try again');
+      setMessage("Unable to process activity. Try: 'irrigation mzuzu morning'");
     } finally {
       setReportLoading(false);
     }
@@ -243,17 +244,15 @@ export default function Home() {
   };
 
   // Prepare structured insight pieces for display (simple, human language)
-  const observation = (assistantResponse && assistantResponse.length > 0)
-    ? assistantResponse
-    : (summary?.key_finding || 'No clear observation available.');
+  const observation = summary?.key_finding || 'No clear observation available.';
 
-  const interpretation = (assistantExplanation && assistantExplanation.length > 0)
-    ? assistantExplanation
-    : (summary?.insights?.[0] || 'Interpretation not available yet.');
+  const interpretation = summary?.productive_activities_detected?.length
+    ? `Detected activities: ${summary.productive_activities_detected.join(', ')}.`
+    : 'Interpretation not available yet.';
 
-  const implication = summary?.demand_patterns && summary.demand_patterns.length > 0
-    ? `This suggests ${summary.demand_patterns[0].impact.toLowerCase()}.`
-    : 'This may create demand for nearby energy and water infrastructure.';
+  const implication = summary?.high_confidence_patterns > 0
+    ? 'Stable coordination means this zone may be ready for infrastructure planning.'
+    : 'More activity records are needed to confirm infrastructure demand.';
 
   const recommendation = 'Create an investment report to translate this insight into planning guidance.';
 

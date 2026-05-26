@@ -93,12 +93,31 @@ def init_db(reset: bool = False):
 
                     if 'sector' not in cols:
                         logger.info("'sector' column missing from 'signals' table; adding it now")
-                        # Add the column as TEXT NOT NULL with empty-string default
-                        # so existing rows receive a valid value and match model
                         conn.execute(text("ALTER TABLE signals ADD COLUMN sector TEXT NOT NULL DEFAULT ''"))
                         logger.info("Added 'sector' column to 'signals' table")
                     else:
                         logger.debug("'sector' column already present in 'signals' table")
+
+                    if 'original_text' not in cols:
+                        logger.info("'original_text' column missing from 'signals' table; adding it now")
+                        conn.execute(text("ALTER TABLE signals ADD COLUMN original_text TEXT NOT NULL DEFAULT ''"))
+                        logger.info("Added 'original_text' column to 'signals' table")
+                    else:
+                        logger.debug("'original_text' column already present in 'signals' table")
+
+                    if 'source' not in cols:
+                        logger.info("'source' column missing from 'signals' table; adding it now")
+                        conn.execute(text("ALTER TABLE signals ADD COLUMN source TEXT NOT NULL DEFAULT 'web'"))
+                        logger.info("Added 'source' column to 'signals' table")
+                    else:
+                        logger.debug("'source' column already present in 'signals' table")
+
+                    if 'user_id' not in cols:
+                        logger.info("'user_id' column missing from 'signals' table; adding it now")
+                        conn.execute(text("ALTER TABLE signals ADD COLUMN user_id TEXT NOT NULL DEFAULT 'anonymous'"))
+                        logger.info("Added 'user_id' column to 'signals' table")
+                    else:
+                        logger.debug("'user_id' column already present in 'signals' table")
             except Exception as e:
                 logger.error(f"Failed to ensure sqlite schema: {e}")
 

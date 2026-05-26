@@ -382,56 +382,59 @@ class ScenarioModel:
 
 
 def print_scenario_results(results: Dict) -> None:
-    """Print scenario simulation results in a readable format."""
-    print("\n" + "=" * 60)
-    print("SCENARIO MODEL OUTPUT - INFRASTRUCTURE SIMULATION")
-    print("=" * 60)
-    
+    """Log scenario simulation results in a readable format."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("\n" + "=" * 60)
+    logger.info("SCENARIO MODEL OUTPUT - INFRASTRUCTURE SIMULATION")
+    logger.info("=" * 60)
+
     if results.get('status') == 'error':
-        print(f"\nError: {results.get('message', 'Unknown error')}")
+        logger.error(f"\nError: {results.get('message', 'Unknown error')}")
         return
-    
-    print(f"\nZone: {results['zone']}")
-    print(f"Infrastructure: {results['infrastructure_type']}")
-    print(f"Description: {results.get('infrastructure_description', 'N/A')}")
-    
-    print("\nCurrent Metrics:")
+
+    logger.info(f"\nZone: {results['zone']}")
+    logger.info(f"Infrastructure: {results['infrastructure_type']}")
+    logger.info(f"Description: {results.get('infrastructure_description', 'N/A')}")
+
+    logger.info("\nCurrent Metrics:")
     current = results['current_metrics']
-    print(f"  Persistence: {current['persistence_score']}")
-    print(f"  Stability: {current['stability_score']}")
-    print(f"  Coordination Strength: {current['coordination_strength']}")
-    print(f"  Overall Rating: {current['overall_rating']} ({current['rating_category']})")
-    
-    print("\nProjected Metrics:")
+    logger.info(f"  Persistence: {current['persistence_score']}")
+    logger.info(f"  Stability: {current['stability_score']}")
+    logger.info(f"  Coordination Strength: {current['coordination_strength']}")
+    logger.info(f"  Overall Rating: {current['overall_rating']} ({current['rating_category']})")
+
+    logger.info("\nProjected Metrics:")
     projected = results['projected_metrics']
-    print(f"  Persistence: {projected['persistence_score']}")
-    print(f"  Stability: {projected['stability_score']}")
-    print(f"  Coordination Strength: {projected['coordination_strength']}")
-    print(f"  Overall Rating: {projected['overall_rating']} ({projected['rating_category']})")
-    
-    print("\nChanges:")
+    logger.info(f"  Persistence: {projected['persistence_score']}")
+    logger.info(f"  Stability: {projected['stability_score']}")
+    logger.info(f"  Coordination Strength: {projected['coordination_strength']}")
+    logger.info(f"  Overall Rating: {projected['overall_rating']} ({projected['rating_category']})")
+
+    logger.info("\nChanges:")
     changes = results['changes']
-    print(f"  Persistence Change: {changes['persistence_change']:+.2f}")
-    print(f"  Coordination Strength Change: {changes['coordination_strength_change']:+.2f}")
-    print(f"  Overall Rating Change: {changes['overall_rating_change']:+.2f}")
-    
+    logger.info(f"  Persistence Change: {changes['persistence_change']:+.2f}")
+    logger.info(f"  Coordination Strength Change: {changes['coordination_strength_change']:+.2f}")
+    logger.info(f"  Overall Rating Change: {changes['overall_rating_change']:+.2f}")
+
     if results.get('potential_new_activities'):
-        print(f"\nPotential New Activities: {', '.join(results['potential_new_activities'])}")
-    
-    print(f"\nImpact Narrative: {results['impact_narrative']}")
-    print(f"Recommendation: {results['recommendation']}")
-    
-    print("\n" + "=" * 60)
-    print("INVARIANT COMPLIANCE:")
-    print("✓ Zero-PII: Simulations based on aggregated patterns only")
-    print("✓ Coordination > Identity: Infrastructure for collective benefit")
-    print("✓ Semantic Guard: Designed for planning, not surveillance")
-    print("=" * 60)
+        logger.info(f"\nPotential New Activities: {', '.join(results['potential_new_activities'])}")
+
+    logger.info(f"\nImpact Narrative: {results['impact_narrative']}")
+    logger.info(f"Recommendation: {results['recommendation']}")
+
+    logger.info("\n" + "=" * 60)
+    logger.info("INVARIANT COMPLIANCE:")
+    logger.info("✓ Zero-PII: Simulations based on aggregated patterns only")
+    logger.info("✓ Coordination > Identity: Infrastructure for collective benefit")
+    logger.info("✓ Semantic Guard: Designed for planning, not surveillance")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":
     # Test with sample data
-    print("Testing Scenario Model...")
+    import logging
+    logging.getLogger(__name__).info("Testing Scenario Model...")
     
     scenario_model = ScenarioModel()
     

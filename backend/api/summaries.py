@@ -51,6 +51,7 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                 "status": "success",
                 "data": {
                     "zone": zone,
+                    "signal_count": 0,
                     "total_patterns": 0,
                     "high_confidence_patterns": 0,
                     "moderate_confidence_patterns": 0,
@@ -159,6 +160,7 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
             "status": "success",
             "data": {
                 "zone": zone,
+                "signal_count": len(signals),
                 "total_patterns": total_patterns,
                 "high_confidence_patterns": high_confidence_patterns,
                 "moderate_confidence_patterns": moderate_confidence_patterns,

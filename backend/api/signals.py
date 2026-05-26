@@ -1,7 +1,7 @@
 """
 Signal endpoints
 """
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from datetime import datetime
 from typing import Optional
 import uuid
@@ -23,63 +23,74 @@ sector_coordinator = MultiSectorCoordinator()
 
 
 @router.post("/signal")
-async def create_signal(signal_data: SignalCreate, db: Session = Depends(get_db)):
+async def create_signal(request: Request, db: Session = Depends(get_db)):
     """
     Receive activity input from WhatsApp or manual entry.
-    
-    Request body:
-    {
-      "zone": "MZUZU",
-      "activity_type": "irrigation",
-      "time_window": "morning",
-      "timestamp": "2026-05-20T10:00:00Z",
-      "source": "whatsapp",
-      "user_id": "user_123"
-    }
+
+    Accepts either structured JSON or a `raw_text` field which will be normalized server-side.
     """
     try:
+        payload = {}
+        try:
+            payload = await request.json()
+        except Exception:
+            # If the client doesn't send JSON, return an error
+            return {"status": "error", "message": "Invalid JSON payload"}
+
         # Generate signal ID
         signal_id = f"sig_{uuid.uuid4().hex[:12]}"
-        
-        # Standardize zone to uppercase
-        zone = signal_data.zone.upper()
-        
+
+        # If raw_text is provided, normalize it
+        if 'raw_text' in payload and payload.get('raw_text'):
+            from backend.utils.signal_normalizer import normalize_signal_text
+            normalized = normalize_signal_text(payload.get('raw_text'))
+            zone = (payload.get('zone') or normalized.get('zone') or 'UNKNOWN').upper()
+            activity = normalized.get('activity_type', 'unknown')
+            time_window = normalized.get('time_window', 'unknown')
+            original_text = normalized.get('original_text', payload.get('raw_text'))
+        else:
+            # Expect structured fields
+            zone = (payload.get('zone') or 'UNKNOWN').upper()
+            activity = payload.get('activity_type') or 'unknown'
+            time_window = payload.get('time_window') or 'unknown'
+            original_text = payload.get('original_text') or ''
+
         # Parse timestamp with validation
         try:
-            if signal_data.timestamp:
-                timestamp = datetime.fromisoformat(signal_data.timestamp.replace('Z', '+00:00'))
+            if payload.get('timestamp'):
+                timestamp = datetime.fromisoformat(payload.get('timestamp').replace('Z', '+00:00'))
             else:
                 timestamp = datetime.utcnow()
         except ValueError:
             logger.warning(f"Invalid timestamp format for signal {signal_id}, using current time")
             timestamp = datetime.utcnow()
-        
+
         # Classify sector using multi-sector coordinator with safe fallback
         try:
-            activity_for_classify = signal_data.activity_type or "unknown"
-            sector = sector_coordinator.classify_sector(activity_for_classify)
+            sector = sector_coordinator.classify_sector(activity)
             if not sector:
                 sector = "general"
         except Exception as e:
             logger.warning(f"Sector classification failed: {e}; defaulting to 'general'")
             sector = "general"
-        
-        # Store signal in database
+
+        # Store signal in database (include original_text)
         signal = Signal(
             id=signal_id,
             zone=zone,
-            activity_type=signal_data.activity_type,
+            activity_type=activity,
             sector=sector,
-            time_window=signal_data.time_window,
+            time_window=time_window,
             timestamp=timestamp,
-            source=signal_data.source or "web",
-            user_id=signal_data.user_id if signal_data.user_id else "anonymous"
+            source=payload.get('source') or "web",
+            user_id=payload.get('user_id') if payload.get('user_id') else "anonymous",
+            original_text=original_text or ''
         )
         db.add(signal)
         db.commit()
-        
-        logger.info(f"Signal stored: {signal_id} - {signal_data.activity_type} in {zone}")
-        
+
+        logger.info(f"Signal stored: {signal_id} - {activity} in {zone}")
+
         return {
             "status": "success",
             "data": {

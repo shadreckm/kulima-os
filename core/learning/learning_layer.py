@@ -367,40 +367,43 @@ class LearningLayer:
 
 
 def print_learning_status(learning_layer: LearningLayer) -> None:
-    """Print learning layer status in a readable format."""
-    print("\n" + "=" * 60)
-    print("LEARNING LAYER STATUS")
-    print("=" * 60)
-    
+    """Log learning layer status in a readable format."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("\n" + "=" * 60)
+    logger.info("LEARNING LAYER STATUS")
+    logger.info("=" * 60)
+
     status = learning_layer.get_learning_status()
-    
-    print(f"\nUnknown Phrases: {status['unknown_phrases_count']}")
-    print(f"Triggered Phrases: {status['triggered_phrases_count']}")
-    print(f"Approved Mappings: {status['approved_mappings_count']}")
-    print(f"Total Synonyms: {status['total_synonyms_count']}")
-    
+
+    logger.info(f"\nUnknown Phrases: {status['unknown_phrases_count']}")
+    logger.info(f"Triggered Phrases: {status['triggered_phrases_count']}")
+    logger.info(f"Approved Mappings: {status['approved_mappings_count']}")
+    logger.info(f"Total Synonyms: {status['total_synonyms_count']}")
+
     if status['triggered_phrases']:
-        print("\nTriggered Phrases (ready for approval):")
+        logger.info("\nTriggered Phrases (ready for approval):")
         for phrase in status['triggered_phrases']:
-            print(f"  - {phrase}")
-    
-    print("\nLearning Criteria:")
-    print(f"  Min Signal Count: {status['learning_criteria']['min_signal_count']}")
-    print(f"  Min Time Windows: {status['learning_criteria']['min_time_windows']}")
-    print(f"  Min Consistency: {status['learning_criteria']['min_consistency']}")
-    
-    print("\n" + "=" * 60)
-    print("INVARIANT COMPLIANCE:")
-    print("✓ Zero-PII: System learns vocabulary, NOT user behavior")
-    print("✓ Coordination > Identity: Phrase patterns, not individual tracking")
-    print("✓ Semantic Guard: Controlled approval layer prevents uncontrolled expansion")
-    print("=" * 60)
+            logger.info(f"  - {phrase}")
+
+    logger.info("\nLearning Criteria:")
+    logger.info(f"  Min Signal Count: {status['learning_criteria']['min_signal_count']}")
+    logger.info(f"  Min Time Windows: {status['learning_criteria']['min_time_windows']}")
+    logger.info(f"  Min Consistency: {status['learning_criteria']['min_consistency']}")
+
+    logger.info("\n" + "=" * 60)
+    logger.info("INVARIANT COMPLIANCE:")
+    logger.info("✓ Zero-PII: System learns vocabulary, NOT user behavior")
+    logger.info("✓ Coordination > Identity: Phrase patterns, not individual tracking")
+    logger.info("✓ Semantic Guard: Controlled approval layer prevents uncontrolled expansion")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":
     # Test with sample data
-    print("Testing Learning Layer...")
-    
+    import logging
+    logging.getLogger(__name__).info("Testing Learning Layer...")
+
     learning_layer = LearningLayer()
     
     # Sample signals with unknown phrases
@@ -419,29 +422,29 @@ if __name__ == "__main__":
     
     # Stage 1: Detect unknown phrases
     unknown_detections = learning_layer.detect_unknown_phrases(signals)
-    print(f"\nStage 1: Detected {len(unknown_detections)} unknown phrases")
+    logging.getLogger(__name__).info(f"\nStage 1: Detected {len(unknown_detections)} unknown phrases")
     
     # Stage 2: Evaluate phrase consistency
     for phrase in ['watering crops', 'grinding']:
         evaluation = learning_layer.evaluate_phrase_consistency(phrase, learning_layer.unknown_phrases.get(phrase, []))
-        print(f"\nStage 2: Evaluation for '{phrase}':")
-        print(f"  Trigger Status: {evaluation['trigger_status']}")
-        print(f"  Signal Count: {evaluation['signal_count']}")
-        print(f"  Time Windows: {evaluation['time_windows']}")
-        print(f"  Consistency: {evaluation['consistency']}")
+        logging.getLogger(__name__).info(f"\nStage 2: Evaluation for '{phrase}':")
+        logging.getLogger(__name__).info(f"  Trigger Status: {evaluation['trigger_status']}")
+        logging.getLogger(__name__).info(f"  Signal Count: {evaluation['signal_count']}")
+        logging.getLogger(__name__).info(f"  Time Windows: {evaluation['time_windows']}")
+        logging.getLogger(__name__).info(f"  Consistency: {evaluation['consistency']}")
     
     # Stage 3: Propose and approve mappings
     proposal1 = learning_layer.propose_new_mapping('watering crops', 'irrigation')
     proposal2 = learning_layer.propose_new_mapping('grinding', 'milling')
     
-    print(f"\nStage 3: Proposed mappings")
+    logging.getLogger(__name__).info(f"\nStage 3: Proposed mappings")
     approved1 = learning_layer.approve_mapping(proposal1)
     approved2 = learning_layer.approve_mapping(proposal2)
     
     # Stage 4: Test normalization
-    print(f"\nStage 4: Normalization test")
-    print(f"  'watering crops' -> {learning_layer.normalize_phrase('watering crops')}")
-    print(f"  'grinding' -> {learning_layer.normalize_phrase('grinding')}")
-    
-    # Print final status
+    logging.getLogger(__name__).info(f"\nStage 4: Normalization test")
+    logging.getLogger(__name__).info(f"  'watering crops' -> {learning_layer.normalize_phrase('watering crops')}")
+    logging.getLogger(__name__).info(f"  'grinding' -> {learning_layer.normalize_phrase('grinding')}")
+
+    # Log final status
     print_learning_status(learning_layer)

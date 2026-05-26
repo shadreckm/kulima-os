@@ -97,21 +97,23 @@ def get_all_zones() -> list:
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("KULIMA OS PILOT - ZONE METADATA")
-    print("=" * 60)
-    
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("" + "=" * 60)
+    logger.info("KULIMA OS PILOT - ZONE METADATA")
+    logger.info("" + "=" * 60)
+
     for zone_id in get_all_zones():
         metadata = get_zone_metadata(zone_id)
-        print(f"\n{zone_id.upper()}:")
-        print(f"  Settlement Type: {metadata['settlement_type']}")
-        print(f"  Infrastructure Status: {metadata['infrastructure_status']}")
-        print(f"  Grid Connection: {metadata['grid_connection']}")
-        print(f"  Essential Services: {', '.join(metadata['essential_services_present'])}")
-        print(f"  Grid Edge Exposure: {metadata['grid_edge_exposure']}")
-    
-    print("\n" + "=" * 60)
-    print("[OK] Zero-PII: No individual identifiers in metadata")
-    print("[OK] Coordination > Identity: Zone-level aggregates only")
-    print("=" * 60)
+        logger.info(f"\n{zone_id.upper()}:")
+        logger.info(f"  Settlement Type: {metadata['settlement_type']}")
+        logger.info(f"  Infrastructure Status: {metadata['infrastructure_status']}")
+        logger.info(f"  Grid Connection: {metadata['grid_connection']}")
+        logger.info(f"  Essential Services: {', '.join(metadata['essential_services_present'])}")
+        logger.info(f"  Grid Edge Exposure: {metadata['grid_edge_exposure']}")
+
+    logger.info("\n" + "=" * 60)
+    logger.info("[OK] Zero-PII: No individual identifiers in metadata")
+    logger.info("[OK] Coordination > Identity: Zone-level aggregates only")
+    logger.info("" + "=" * 60)
 

@@ -476,33 +476,35 @@ class ZentariEngine:
 
 
 def print_confidence_results(results: List[Dict]) -> None:
-    """Print coordination confidence results in a readable format."""
-    print("\n" + "=" * 60)
-    print("ZENTARI OUTPUT - COORDINATION CONFIDENCE")
-    print("=" * 60)
-    
+    """Log coordination confidence results in a readable format."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("\n" + "=" * 60)
+    logger.info("ZENTARI OUTPUT - COORDINATION CONFIDENCE")
+    logger.info("=" * 60)
+
     if not results:
-        print("\nNo coordination patterns to evaluate.")
+        logger.info("\nNo coordination patterns to evaluate.")
         return
-    
+
     for i, result in enumerate(results, 1):
-        print(f"\nPattern {i}:")
-        print(f"  Activity: {result['activity_type']}")
-        print(f"  Zone: {result['zone']}")
-        print(f"  Time Window: {result['time_window']}")
-        print(f"  Stability Score: {result['stability_score']}")
-        print(f"  Validation: {result['validation_strength']}")
-        print(f"  Coordination Confidence: {result['coordination_confidence']} ({result['confidence_class']})")
-        print(f"  Bankability: {result['bankability_note']}")
-        print(f"  Decay Logic: {result['decay_logic']}")
-    
-    print("\n" + "=" * 60)
-    print("INVARIANT COMPLIANCE:")
-    print("✓ Zero-PII: Confidence scores are about patterns, not people")
-    print("✓ Coordination > Identity: Trust is property of coordination")
-    print("✓ Semantic Guard: No credit scoring or individual profiling")
-    print("✓ Trust decays without sustained coordination (no permanent reputations)")
-    print("=" * 60)
+        logger.info(f"\nPattern {i}:")
+        logger.info(f"  Activity: {result['activity_type']}")
+        logger.info(f"  Zone: {result['zone']}")
+        logger.info(f"  Time Window: {result['time_window']}")
+        logger.info(f"  Stability Score: {result['stability_score']}")
+        logger.info(f"  Validation: {result['validation_strength']}")
+        logger.info(f"  Coordination Confidence: {result['coordination_confidence']} ({result['confidence_class']})")
+        logger.info(f"  Bankability: {result['bankability_note']}")
+        logger.info(f"  Decay Logic: {result['decay_logic']}")
+
+    logger.info("\n" + "=" * 60)
+    logger.info("INVARIANT COMPLIANCE:")
+    logger.info("✓ Zero-PII: Confidence scores are about patterns, not people")
+    logger.info("✓ Coordination > Identity: Trust is property of coordination")
+    logger.info("✓ Semantic Guard: No credit scoring or individual profiling")
+    logger.info("✓ Trust decays without sustained coordination (no permanent reputations)")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":
@@ -511,7 +513,9 @@ if __name__ == "__main__":
     from lumoza_engine import LumozaEngine
     from policy import compute_planning_reserve
     
-    print("Testing ZENTARI Engine with LUMOZA outputs...")
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("Testing ZENTARI Engine with LUMOZA outputs...")
     
     # Generate signals and process through LUMOZA
     signals = generate_pilot_signals()

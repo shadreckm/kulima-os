@@ -358,7 +358,9 @@ if __name__ == "__main__":
     from zentari_engine import ZentariEngine
     from policy import compute_planning_reserve
     
-    print("Testing Energy Demand Estimator...")
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("Testing Energy Demand Estimator...")
     
     # Process signals
     signals = generate_pilot_signals()
@@ -373,12 +375,12 @@ if __name__ == "__main__":
     estimator = EnergyDemandEstimator()
     demand_estimate = estimator.estimate_total_demand(confidence_results)
     
-    print("\n=== TOTAL DEMAND ESTIMATE ===")
-    print(f"Peak Demand: {demand_estimate['total_demand']['peak_kw']} kW")
-    print(f"Daily Energy: {demand_estimate['total_demand']['daily_kwh']} kWh")
-    print(f"Monthly Energy: {demand_estimate['total_demand']['monthly_kwh']} kWh")
-    print(f"\nEssential: {demand_estimate['essential_demand']['peak_kw']} kW ({demand_estimate['essential_demand']['percentage_of_total']}%)")
-    print(f"Productive: {demand_estimate['productive_demand']['peak_kw']} kW ({demand_estimate['productive_demand']['percentage_of_total']}%)")
+    logger.info("\n=== TOTAL DEMAND ESTIMATE ===")
+    logger.info(f"Peak Demand: {demand_estimate['total_demand']['peak_kw']} kW")
+    logger.info(f"Daily Energy: {demand_estimate['total_demand']['daily_kwh']} kWh")
+    logger.info(f"Monthly Energy: {demand_estimate['total_demand']['monthly_kwh']} kWh")
+    logger.info(f"\nEssential: {demand_estimate['essential_demand']['peak_kw']} kW ({demand_estimate['essential_demand']['percentage_of_total']}%)")
+    logger.info(f"Productive: {demand_estimate['productive_demand']['peak_kw']} kW ({demand_estimate['productive_demand']['percentage_of_total']}%)")
     
-    print("\n✓ Energy demand estimation complete")
+    logger.info("\n✓ Energy demand estimation complete")
 

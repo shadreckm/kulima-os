@@ -887,8 +887,9 @@ if __name__ == "__main__":
     from pilot_signals import generate_pilot_signals
     from lumoza_engine import LumozaEngine
     
-    print("Testing LUNDAI Engine...")
-    print("=" * 70)
+    import logging
+    logging.getLogger(__name__).info("Testing LUNDAI Engine...")
+    logging.getLogger(__name__).info("=" * 70)
     
     # Generate signals and process through LUMOZA
     signals = generate_pilot_signals()
@@ -899,25 +900,26 @@ if __name__ == "__main__":
     lundai = LundaiEngine()
     analysis = lundai.analyze_settlement_context(patterns)
     
-    print("\nLUNDAI SETTLEMENT & INFRASTRUCTURE GAP ANALYSIS")
-    print("=" * 70)
+    logging.getLogger(__name__).info("\nLUNDAI SETTLEMENT & INFRASTRUCTURE GAP ANALYSIS")
+    logging.getLogger(__name__).info("=" * 70)
     
+    logger = logging.getLogger(__name__)
     for zone, zone_analysis in analysis['zone_analyses'].items():
-        print(f"\n{zone.upper()}:")
-        print(f"  Settlement Type: {zone_analysis['settlement_type']}")
-        print(f"  Infrastructure Status: {zone_analysis['infrastructure_status']}")
-        print(f"  Gap Severity: {zone_analysis['gap_severity']}")
-        print(f"  Priority: {zone_analysis['priority_classification']}")
-        print(f"  Adequacy Score: {zone_analysis['infrastructure_adequacy_score']}/100")
-        print(f"  Essential Services: {zone_analysis['essential_services_count']}")
-        print(f"  Justification: {zone_analysis['gap_justification']}")
+        logger.info(f"\n{zone.upper()}:")
+        logger.info(f"  Settlement Type: {zone_analysis['settlement_type']}")
+        logger.info(f"  Infrastructure Status: {zone_analysis['infrastructure_status']}")
+        logger.info(f"  Gap Severity: {zone_analysis['gap_severity']}")
+        logger.info(f"  Priority: {zone_analysis['priority_classification']}")
+        logger.info(f"  Adequacy Score: {zone_analysis['infrastructure_adequacy_score']}/100")
+        logger.info(f"  Essential Services: {zone_analysis['essential_services_count']}")
+        logger.info(f"  Justification: {zone_analysis['gap_justification']}")
     
-    print("\n" + "=" * 70)
-    print("OVERALL ASSESSMENT:")
+    logger.info("\n" + "=" * 70)
+    logger.info("OVERALL ASSESSMENT:")
     overall = analysis['overall_assessment']
-    print(f"  Zones Analyzed: {overall['total_zones_analyzed']}")
-    print(f"  Critical Gaps: {overall['critical_infrastructure_gaps']}")
-    print(f"  Urgent Priority: {overall['urgent_priority_zones']}")
+    logger.info(f"  Zones Analyzed: {overall['total_zones_analyzed']}")
+    logger.info(f"  Critical Gaps: {overall['critical_infrastructure_gaps']}")
+    logger.info(f"  Urgent Priority: {overall['urgent_priority_zones']}")
     print(f"  Average Adequacy: {overall['average_infrastructure_adequacy_score']}/100")
     print(f"  Status: {overall['overall_infrastructure_status']}")
     print("=" * 70)

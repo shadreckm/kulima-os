@@ -222,28 +222,32 @@ def generate_pilot_signals() -> List[Dict]:
 
 
 def print_signal_summary(signals: List[Dict]) -> None:
-    """Print a summary of the synthetic signals for verification."""
-    print("=" * 60)
-    print("KULIMA OS PILOT - SYNTHETIC COORDINATION SIGNALS")
-    print("=" * 60)
-    print(f"\nTotal signals generated: {len(signals)}")
-    print(f"Signal sources: {set(s['signal_source'] for s in signals)}")
-    print(f"Activity types: {set(s['activity_type'] for s in signals)}")
-    print(f"Zones: {set(s['zone'] for s in signals)}")
-    print(f"Cycle range: {min(s['cycle_index'] for s in signals)} - {max(s['cycle_index'] for s in signals)}")
-    print("\nINVARIANT COMPLIANCE:")
-    print("[OK] Zero-PII: No personal identifiers in signals")
-    print("[OK] Temporal Moat: Pre-batched into 7-cycle windows")
-    print("[OK] Coordination > Identity: Signals represent activity types only")
-    print("=" * 60)
+    """Log a summary of the synthetic signals for verification."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("=" * 60)
+    logger.info("KULIMA OS PILOT - SYNTHETIC COORDINATION SIGNALS")
+    logger.info("=" * 60)
+    logger.info(f"\nTotal signals generated: {len(signals)}")
+    logger.info(f"Signal sources: {set(s['signal_source'] for s in signals)}")
+    logger.info(f"Activity types: {set(s['activity_type'] for s in signals)}")
+    logger.info(f"Zones: {set(s['zone'] for s in signals)}")
+    logger.info(f"Cycle range: {min(s['cycle_index'] for s in signals)} - {max(s['cycle_index'] for s in signals)}")
+    logger.info("\nINVARIANT COMPLIANCE:")
+    logger.info("[OK] Zero-PII: No personal identifiers in signals")
+    logger.info("[OK] Temporal Moat: Pre-batched into 7-cycle windows")
+    logger.info("[OK] Coordination > Identity: Signals represent activity types only")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":
     signals = generate_pilot_signals()
     print_signal_summary(signals)
-    
-    # Display first few signals as examples
-    print("\nSample signals:")
+
+    # Display first few signals as examples (logged)
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("\nSample signals:")
     for signal in signals[:5]:
-        print(f"  {signal}")
+        logger.info(f"  {signal}")
 

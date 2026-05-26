@@ -45,6 +45,11 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
         
         logger.info(f"Received WhatsApp message from {from_number}: {message_body}")
         
+        # Validate message
+        if not message_body or not message_body.strip():
+            logger.warning("Empty message received from Twilio webhook")
+            raise HTTPException(status_code=400, detail="Empty message body")
+
         # Normalize the message text to structured signal
         normalized_signal = normalize_signal_text(message_body)
         
@@ -53,16 +58,17 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
         # Extract phone number (remove 'whatsapp:' prefix)
         phone_number = from_number.replace('whatsapp:', '') if from_number else 'unknown'
         
-        # Create new signal record
+        # Create new signal record (store original_text)
         new_signal = Signal(
             id=f"sig_{uuid.uuid4().hex[:12]}",
-            zone=normalized_signal['zone'],
-            activity_type=normalized_signal['activity_type'],
+            zone=normalized_signal.get('zone', 'UNKNOWN'),
+            activity_type=normalized_signal.get('activity_type', 'unknown'),
             sector=normalized_signal.get('sector') or 'general',
-            time_window=normalized_signal['time_window'],
+            time_window=normalized_signal.get('time_window', 'unknown'),
             source='whatsapp',
             user_id=phone_number or 'anonymous',
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
+            original_text=normalized_signal.get('original_text', message_body)
         )
         
         # Store in database
@@ -72,23 +78,8 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
         
         logger.info(f"Signal stored in database with ID: {new_signal.id}")
         
-        # Return Twilio-compatible response (TwiML)
-        return Response(
-            content="""
-<Response>
-  <Message>
-🚀 Your activity has been successfully recorded in Kulima OS!
-
-🌱 You are contributing to real insights that help communities plan better farming, energy, and infrastructure.
-
-📊 Every signal you send helps turn local activity into powerful knowledge for smarter decisions.
-
-✅ Keep going — you are part of building a system that transforms how we understand and grow our economy.
-  </Message>
-</Response>
-""",
-            media_type="application/xml"
-        )
+        # Return simple JSON success response
+        return {"status": "success"}
         
     except Exception as e:
         logger.error(f"Error processing Twilio webhook: {str(e)}")
@@ -109,28 +100,36 @@ async def test_webhook(request: Request, db: Session = Depends(get_db)):
     }
     """
     try:
-        body_data = await request.json()
+        try:
+            body_data = await request.json()
+        except Exception:
+            logger.warning("Invalid JSON received at test webhook")
+            return {"status": "error", "message": "Invalid JSON payload"}
         
         from_number = body_data.get('from', '')
         message_body = body_data.get('body', '')
         
         logger.info(f"Test webhook - Received message from {from_number}: {message_body}")
         
+        if not message_body or not str(message_body).strip():
+            return {"status": "error", "message": "Empty message"}
+        
         # Normalize the message text
         normalized_signal = normalize_signal_text(message_body)
         
         logger.info(f"Normalized signal: {normalized_signal}")
         
-        # Create new signal record
+        # Create new signal record (store original_text)
         new_signal = Signal(
             id=f"sig_{uuid.uuid4().hex[:12]}",
-            zone=normalized_signal['zone'],
-            activity_type=normalized_signal['activity_type'],
+            zone=normalized_signal.get('zone', 'UNKNOWN'),
+            activity_type=normalized_signal.get('activity_type', 'unknown'),
             sector=normalized_signal.get('sector') or 'general',
-            time_window=normalized_signal['time_window'],
+            time_window=normalized_signal.get('time_window', 'unknown'),
             source='test',
             user_id=from_number or 'anonymous',
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
+            original_text=normalized_signal.get('original_text', message_body)
         )
         
         # Store in database
@@ -146,9 +145,8 @@ async def test_webhook(request: Request, db: Session = Depends(get_db)):
             "signal_id": new_signal.id,
             "normalized_signal": normalized_signal
         }
-        
     except Exception as e:
         logger.error(f"Error in test webhook: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail="Error processing test message")
+        return {"status": "error", "message": str(e)}

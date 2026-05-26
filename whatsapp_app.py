@@ -14,12 +14,16 @@ Then configure Twilio webhook to point to:
 from flask import Flask, request, jsonify, Response
 import os
 import xml.sax.saxutils
+import logging
 from whatsapp_handler import process_message
 from signal_storage import get_unprocessed_signals
 from twilio.twiml.messaging_response import MessagingResponse
 from threading import Thread
 
 app = Flask(__name__)
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def twiml_response(message: str) -> Response:
@@ -54,16 +58,16 @@ def webhook():
         resp = MessagingResponse()
 
         if not incoming_msg or not sender_phone:
-            print("Incoming message: <missing or empty>")
+            logger.warning("Incoming message missing or empty")
             resp.message(
                 "Activity recorded (best effort interpretation). We could not read your message — please try again."
             )
-            print("Response:", resp)
-            print("Webhook latency-safe response sent")
+            logger.debug("Response: %s", resp)
+            logger.info("Webhook latency-safe response sent")
             return str(resp)
 
-        print("Incoming message:", incoming_msg)
-        print(f"Message SID: {message_sid} From: {sender_phone}")
+        logger.info("Incoming message received from %s", sender_phone)
+        logger.debug("Message SID: %s Body: %s", message_sid, incoming_msg)
 
         # Immediate, fast acknowledgement to avoid Twilio timeouts
         resp.message("✅ Activity recorded. Processing signal...")
@@ -71,20 +75,20 @@ def webhook():
         # Background processing so the webhook can return immediately
         def _background_process(msg, phone, sid):
             try:
-                print(f"Background processing started for SID {sid}")
+                logger.info("Background processing started for SID %s", sid)
                 success, response_msg = process_message(msg, phone)
-                print(f"Background processing complete for SID {sid}: success={success}")
+                logger.info("Background processing complete for SID %s: success=%s", sid, success)
             except Exception as e:
-                print("Background processing ERROR:", str(e))
+                logger.error("Background processing error for SID %s: %s", sid, str(e), exc_info=True)
 
         thread = Thread(target=_background_process, args=(incoming_msg, sender_phone, message_sid), daemon=True)
         thread.start()
 
-        print("Webhook latency-safe response sent")
+        logger.info("Webhook latency-safe response sent")
         return str(resp)
 
     except Exception as e:
-        print("ERROR:", str(e))
+        logger.error("Error in webhook handler: %s", str(e), exc_info=True)
         resp = MessagingResponse()
         resp.message("System error occurred. Please try again.")
         return str(resp)

@@ -20,6 +20,7 @@ class Signal(Base):
     timestamp = Column(DateTime, nullable=False, index=True)
     source = Column(String, nullable=False)
     user_id = Column(String, nullable=False, index=True)
+    original_text = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
