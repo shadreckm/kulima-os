@@ -733,10 +733,13 @@ export default function Home() {
             {(() => {
               const activities = summary?.productive_activities_detected || [];
               const gaps = summary?.infrastructure_gaps || [];
-              const hasHighActivity = (summary?.signal_count || 0) >= 3;
+              const signalCount = summary?.signal_count || 0;
+              const patternCount = summary?.total_patterns || 0;
               const hasGaps = gaps.length > 0;
               const dominantActivity = activities[0] || 'productive';
-              if (!hasHighActivity && !hasGaps) return null;
+              const hasRepeatedActivity = signalCount > 2;
+              const noPatternYet = patternCount === 0;
+              if (!hasRepeatedActivity && !hasGaps) return null;
               return (
                 <div style={{
                   backgroundColor: '#f0f7ff',
@@ -746,16 +749,18 @@ export default function Home() {
                   marginBottom: 24
                 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#1a5276', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    \u26A0\uFE0F INFRASTRUCTURE OPPORTUNITY
+                    \u26A0\uFE0F {hasGaps ? 'INFRASTRUCTURE GAP DETECTED' : 'INFRASTRUCTURE OPPORTUNITY'}
                   </div>
                   <div style={{ fontSize: 14, color: '#1a3a5c', lineHeight: 1.6, marginBottom: 10 }}>
                     {hasGaps
-                      ? `High ${dominantActivity} activity detected in ${zone} with limited infrastructure presence.`
-                      : `Repeated ${dominantActivity} activity in ${zone} suggests emerging coordination.`
+                      ? `High ${dominantActivity} activity in ${zone} with limited infrastructure presence.`
+                      : hasRepeatedActivity && noPatternYet
+                        ? `Repeated ${dominantActivity} activity detected but no confirmed infrastructure pattern yet.`
+                        : `Repeated ${dominantActivity} activity in ${zone} suggests emerging coordination.`
                     }
                   </div>
                   <div style={{ fontSize: 13, color: '#2d6a4f', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    \u2192 {hasGaps ? 'Opportunity emerging for investment' : 'Continue recording to strengthen the signal'}
+                    \u2192 {hasGaps ? 'Opportunity emerging for investment' : 'Opportunity emerging'}
                   </div>
                 </div>
               );
@@ -986,9 +991,10 @@ export default function Home() {
                 transition: 'all 0.6s ease',
                 animation: isFlashing ? 'signalGlow 2.5s ease-out' : 'none'
               }}>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>{sig.activity_type || sig.activity || sig.type || 'Activity'}</div>
-                <div style={{ fontSize: 12, color: '#666' }}>{sig.zone || sig.zone_name || sig.location || '—'}</div>
-                <div style={{ marginTop: 6, fontSize: 12, color: '#444' }}>{sig.original_text?.slice(0, 80) || sig.summary || sig.note || sig.raw_text?.slice(0, 80)}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'capitalize' }}>{sig.activity_type || sig.activity || sig.type || 'Activity'}</div>
+                <div style={{ fontSize: 12, color: '#666' }}>{sig.zone || sig.zone_name || sig.location || '—'} {sig.time_window && sig.time_window !== 'unknown' ? `• ${sig.time_window}` : ''}</div>
+                <div style={{ marginTop: 6, fontSize: 12, color: '#444' }}>{sig.original_text?.slice(0, 80) || sig.raw_text?.slice(0, 80) || ''}</div>
+                {sig.timestamp && <div style={{ marginTop: 4, fontSize: 11, color: '#999' }}>{new Date(sig.timestamp).toLocaleString()}</div>}
               </div>
               );
             })}

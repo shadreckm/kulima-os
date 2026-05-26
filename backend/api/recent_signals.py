@@ -25,19 +25,21 @@ async def get_recent_signals(response: Response, limit: int = 15, db: Session = 
         
         result = []
         for s in signals:
+            activity = s.activity_type or 'unknown'
             signal_dict = {
                 'id': s.id,
-                'zone': s.zone,
-                'activity_type': s.activity_type,
-                'activity': s.activity_type,  # Include both for compatibility
-                'time_window': s.time_window,
+                'zone': s.zone or 'UNKNOWN',
+                'activity_type': activity,
+                'activity': activity,
+                'time_window': s.time_window or 'unknown',
                 'timestamp': s.timestamp.isoformat() if s.timestamp else None,
-                'source': s.source,
+                'source': s.source or 'web',
                 'user_id': s.user_id,
-                'original_text': s.original_text
+                'original_text': s.original_text or ''
             }
             result.append(signal_dict)
-            logger.debug(f"Added signal {s.id} (activity: {s.activity_type}, zone: {s.zone})")
+        
+        logger.info(f"RECENT SIGNALS: {[{'id': r['id'], 'activity_type': r['activity_type'], 'zone': r['zone']} for r in result]}")
         
         return {"status": "success", "data": result}
     except Exception as e:
