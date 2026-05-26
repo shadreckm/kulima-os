@@ -20,6 +20,9 @@ _TIME_KEYWORDS = {
 }
 
 
+_DEFAULT_ZONE = 'MZUZU'
+
+
 def normalize_signal_text(text: str) -> Dict:
     """
     Normalize a free-text message into a minimal structured signal dictionary.
@@ -49,11 +52,14 @@ def normalize_signal_text(text: str) -> Dict:
             activity = 'welding'
 
     # Detect zone
-    zone = 'UNKNOWN'
+    zone = None
     for k, v in _ZONES.items():
         if k in lowered:
             zone = v
             break
+
+    if not zone:
+        zone = _DEFAULT_ZONE
 
     # Detect time window
     time_window = 'unknown'
@@ -84,7 +90,7 @@ def normalize_signal_data(data: Dict) -> Dict:
         }
     return {
         'activity_type': data.get('activity_type', 'unknown') or 'unknown',
-        'zone': (data.get('zone') or 'UNKNOWN').upper(),
+        'zone': (data.get('zone') or _DEFAULT_ZONE).upper(),
         'time_window': data.get('time_window', 'unknown') or 'unknown',
         'original_text': data.get('original_text') or data.get('raw_text') or ''
     }

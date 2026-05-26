@@ -7,6 +7,10 @@ const PUBLIC_LOGO = '/logo.png';
 
 const ACTIVITY_PILLS = ['Irrigation', 'Milling', 'Trading', 'Welding'];
 const ZONES = ['MZUZU', 'LILONGWE', 'BLANTYRE', 'ZOMBA'];
+const WHATSAPP_NUMBER = '+1 415 523 8886';
+const WHATSAPP_JOIN_CODE = 'join%20KULIMA';
+const WHATSAPP_ONBOARDING_LINK = `https://wa.me/14155238886?text=${WHATSAPP_JOIN_CODE}`;
+const WHATSAPP_QR_IMAGE = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(WHATSAPP_ONBOARDING_LINK)}`;
 
 // Button styles for consistent CTAs
 const BUTTON_PRIMARY = {
@@ -63,7 +67,7 @@ export default function Home() {
   const fetchSummary = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/summary/${zone}`);
+      const response = await fetch(`${BASE_URL}/summary/${zone}`, { cache: 'no-store' });
       const data = await response.json();
       if (data.status === 'success') {
         setSummary(data.data);
@@ -91,7 +95,7 @@ export default function Home() {
   const fetchRecentSignals = async () => {
     setLiveLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/signals/recent`);
+      const response = await fetch(`${BASE_URL}/signals/recent`, { cache: 'no-store' });
       const data = await response.json();
       if (data.status === 'success' && Array.isArray(data.data)) {
         const fetched = data.data.slice(0, 15);
@@ -119,7 +123,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchRecentSignals();
-    signalPollRef.current = setInterval(fetchRecentSignals, 7000);
+    signalPollRef.current = setInterval(fetchRecentSignals, 5000);
     return () => clearInterval(signalPollRef.current);
   }, []);
 
@@ -918,26 +922,32 @@ export default function Home() {
             ))}
           </div>
         </div>
-      </div>
-    </div>
-  </div>
 
-  {toastMessage && (
-    <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 1400 }}>
-      <div style={{ padding: '10px 14px', borderRadius: 10, backgroundColor: '#173f2b', color: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>{toastMessage}</div>
-    </div>
-  )}
-</main>
-
-      {!reportData && (
-        <div style={{position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 1200, display: 'flex', gap: 10, backgroundColor: '#ffffff', padding: '8px', borderRadius: 12, border: '1px solid #e6efe8', boxShadow: '0 6px 20px rgba(23,45,32,0.12)'}}>
-          <button onClick={handleGenerateReport} disabled={reportLoading} style={{padding: '10px 14px', borderRadius: 10, backgroundColor: '#2d6a4f', color: '#fff', border: 'none', fontWeight: 700}}>Create Report</button>
-          <button onClick={handleViewInsights} style={{padding: '10px 14px', borderRadius: 10, backgroundColor: '#fff', color: '#2d6a4f', border: '1px solid #d4e0d9', fontWeight: 700}}>View Insights</button>
-          <button onClick={handleSharePartner} style={{padding: '10px 14px', borderRadius: 10, backgroundColor: '#fff', color: '#2d6a4f', border: '1px solid #d4e0d9', fontWeight: 700}}>Share</button>
+          <div style={{ marginTop: 20, background: '#f7fbf7', borderRadius: 16, padding: 18, border: '1px solid #d8e8d6' }}>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: 16, color: '#14532d' }}>Connect via WhatsApp</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: 14, alignItems: 'center' }}>
+              <img src={WHATSAPP_QR_IMAGE} alt="WhatsApp onboarding QR code" style={{ width: 100, height: 100, borderRadius: 18, border: '1px solid #cfe8d4' }} />
+              <div>
+                <div style={{ fontSize: 13, color: '#0f5132', marginBottom: 10 }}>
+                  Scan to start sending activities and join the Kulima OS pilot.
+                </div>
+                <div style={{ fontSize: 13, color: '#2d6a4f', lineHeight: 1.6 }}>
+                  <strong>1.</strong> Scan the QR code.
+                  <br />
+                  <strong>2.</strong> Send the join code: <strong>join KULIMA</strong>.
+                  <br />
+                  <strong>3.</strong> Start sending activity updates.
+                </div>
+                <div style={{ marginTop: 12, fontSize: 13, color: '#0f5132' }}>
+                  Twilio number: <strong>{WHATSAPP_NUMBER}</strong>
+                </div>
+              </div>
+            </div>
+            <a href={WHATSAPP_ONBOARDING_LINK} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 16, padding: '10px 14px', borderRadius: 12, backgroundColor: '#2d6a4f', color: '#fff', textDecoration: 'none', fontWeight: 700 }}>
+              Open WhatsApp onboarding
+            </a>
+          </div>
         </div>
-      )}
-
-      {/* Footer */}
       <footer style={{
         backgroundColor: '#2d6a4f',
         color: '#e0e8e4',

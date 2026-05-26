@@ -57,29 +57,47 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
         
         # Extract phone number (remove 'whatsapp:' prefix)
         phone_number = from_number.replace('whatsapp:', '') if from_number else 'unknown'
+        phone_number = phone_number or 'anonymous'
+
+        # Determine whether this sender is new to the WhatsApp flow
+        first_time_sender = db.query(Signal).filter(Signal.user_id == phone_number, Signal.source == 'whatsapp').count() == 0
         
         # Create new signal record (store original_text)
         new_signal = Signal(
             id=f"sig_{uuid.uuid4().hex[:12]}",
-            zone=normalized_signal.get('zone', 'UNKNOWN'),
+            zone=normalized_signal.get('zone', 'MZUZU'),
             activity_type=normalized_signal.get('activity_type', 'unknown'),
             sector=normalized_signal.get('sector') or 'general',
             time_window=normalized_signal.get('time_window', 'unknown'),
             source='whatsapp',
-            user_id=phone_number or 'anonymous',
+            user_id=phone_number,
             timestamp=datetime.utcnow(),
             original_text=normalized_signal.get('original_text', message_body)
         )
         
-        # Store in database
+        # Store in database synchronously
         db.add(new_signal)
         db.commit()
         db.refresh(new_signal)
         
         logger.info(f"Signal stored in database with ID: {new_signal.id}")
-        
-        # Return simple JSON success response
-        return {"status": "success"}
+
+        if first_time_sender:
+            twiml_message = (
+                "Welcome to Kulima OS 👋\n"
+                "Send a message like:\n"
+                "'irrigation mzuzu morning'\n"
+                "and we will analyze your area."
+            )
+        else:
+            twiml_message = (
+                "✅ Activity recorded.\n"
+                "Kulima OS is analyzing patterns in your area.\n"
+                "Keep sending activities to improve insights."
+            )
+
+        response_content = f"<Response><Message>{twiml_message}</Message></Response>"
+        return Response(content=response_content, media_type='application/xml')
         
     except Exception as e:
         logger.error(f"Error processing Twilio webhook: {str(e)}")

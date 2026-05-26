@@ -1,7 +1,7 @@
 """
 Simple recent signals endpoint used by frontend live feed polling.
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Signal
@@ -11,8 +11,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.get("/signals/recent")
-async def get_recent_signals(limit: int = 15, db: Session = Depends(get_db)):
+async def get_recent_signals(response: Response, limit: int = 15, db: Session = Depends(get_db)):
     try:
+        response.headers["Cache-Control"] = "no-store, max-age=0"
         signals = db.query(Signal).order_by(Signal.timestamp.desc()).limit(limit).all()
         result = []
         for s in signals:
