@@ -43,17 +43,21 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
         message_body = form_data.get('Body', '')
         message_sid = form_data.get('MessageSid', '')
         
-        logger.info(f"Received WhatsApp message from {from_number}: {message_body}")
+        print(f"[TWILIO] Received WhatsApp message from {from_number}")
+        print(f"[TWILIO] Raw message body: '{message_body}'")
+        logger.info(f"[TWILIO] Received WhatsApp message from {from_number}: {message_body}")
         
         # Validate message
         if not message_body or not message_body.strip():
-            logger.warning("Empty message received from Twilio webhook")
-            raise HTTPException(status_code=400, detail="Empty message body")
+            logger.warning("[TWILIO] Empty message received from Twilio webhook")
+            error_twiml = "<Response><Message>Please send a message like 'irrigation mzuzu morning'.</Message></Response>"
+            return Response(content=error_twiml, media_type='application/xml')
 
         # Normalize the message text to structured signal
         normalized_signal = normalize_signal_text(message_body)
         
-        logger.info(f"Normalized signal: {normalized_signal}")
+        print(f"[TWILIO] Normalized signal: {normalized_signal}")
+        logger.info(f"[TWILIO] Normalized signal: {normalized_signal}")
         
         # Extract phone number (remove 'whatsapp:' prefix)
         phone_number = from_number.replace('whatsapp:', '') if from_number else 'unknown'
@@ -75,13 +79,15 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
             original_text=normalized_signal.get('original_text', message_body)
         )
         
-        # Store in database synchronously
+        # Store in database BEFORE responding
         db.add(new_signal)
         db.commit()
         db.refresh(new_signal)
         
-        logger.info(f"Signal stored in database with ID: {new_signal.id}")
+        print(f"[TWILIO] Signal stored in database with ID: {new_signal.id}")
+        logger.info(f"[TWILIO] Signal stored in database with ID: {new_signal.id}")
 
+        # Build response message
         if first_time_sender:
             twiml_message = (
                 "Welcome to Kulima OS 👋\n"
@@ -96,14 +102,20 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
                 "Keep sending activities to improve insights."
             )
 
+        # Return proper TwiML response (must be XML, not JSON)
         response_content = f"<Response><Message>{twiml_message}</Message></Response>"
+        print(f"[TWILIO] Returning TwiML response")
         return Response(content=response_content, media_type='application/xml')
         
     except Exception as e:
-        logger.error(f"Error processing Twilio webhook: {str(e)}")
+        logger.error(f"[TWILIO] Error processing webhook: {str(e)}")
+        print(f"[TWILIO] Error: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail="Error processing message")
+        print(traceback.format_exc())
+        # Return error TwiML response
+        error_twiml = "<Response><Message>Error processing message. Please try again.</Message></Response>"
+        return Response(content=error_twiml, media_type='application/xml')
 
 
 @router.post("/webhook/test")

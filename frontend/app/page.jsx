@@ -8,7 +8,7 @@ const PUBLIC_LOGO = '/logo.png';
 const ACTIVITY_PILLS = ['Irrigation', 'Milling', 'Trading', 'Welding'];
 const ZONES = ['MZUZU', 'LILONGWE', 'BLANTYRE', 'ZOMBA'];
 const WHATSAPP_NUMBER = '+1 415 523 8886';
-const WHATSAPP_JOIN_CODE = 'join%20KULIMA';
+const WHATSAPP_JOIN_CODE = 'join%20week-saved';
 const WHATSAPP_ONBOARDING_LINK = `https://wa.me/14155238886?text=${WHATSAPP_JOIN_CODE}`;
 const WHATSAPP_QR_IMAGE = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(WHATSAPP_ONBOARDING_LINK)}`;
 
@@ -915,9 +915,9 @@ export default function Home() {
                 boxShadow: flashIds.includes(sig.id) ? '0 8px 20px rgba(45,106,79,0.08)' : 'none',
                 border: '1px solid rgba(18, 60, 38, 0.04)'
               }}>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>{sig.activity || sig.type || 'Activity'}</div>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>{sig.activity_type || sig.activity || sig.type || 'Activity'}</div>
                 <div style={{ fontSize: 12, color: '#666' }}>{sig.zone || sig.zone_name || sig.location || '—'}</div>
-                <div style={{ marginTop: 6, fontSize: 12, color: '#444' }}>{sig.summary || sig.note || sig.raw_text?.slice(0, 80)}</div>
+                <div style={{ marginTop: 6, fontSize: 12, color: '#444' }}>{sig.original_text?.slice(0, 80) || sig.summary || sig.note || sig.raw_text?.slice(0, 80)}</div>
               </div>
             ))}
           </div>
@@ -934,7 +934,7 @@ export default function Home() {
                 <div style={{ fontSize: 13, color: '#2d6a4f', lineHeight: 1.6 }}>
                   <strong>1.</strong> Scan the QR code.
                   <br />
-                  <strong>2.</strong> Send the join code: <strong>join KULIMA</strong>.
+                  <strong>2.</strong> Send the join code: <strong>join week-saved</strong>.
                   <br />
                   <strong>3.</strong> Start sending activity updates.
                 </div>
