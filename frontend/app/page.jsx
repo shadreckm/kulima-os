@@ -948,6 +948,10 @@ export default function Home() {
             </a>
           </div>
         </div>
+      </div>
+    </div>
+    </main>
+
       <footer style={{
         backgroundColor: '#2d6a4f',
         color: '#e0e8e4',
