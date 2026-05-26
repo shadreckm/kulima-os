@@ -73,7 +73,7 @@ export default function Home() {
         setSummary(data.data);
       } else {
         setSummary(null);
-        setMessage('No summary available for this zone yet.');
+        setMessage('Patterns are forming. Continue recording activity to unlock insights.');
       }
     } catch (error) {
       setSummary(null);
@@ -169,7 +169,7 @@ export default function Home() {
 
       const data = await response.json();
       if (data.status === 'success') {
-        setMessage('Activity submitted. Refreshing insights...');
+        setMessage('\u2705 Activity recorded. System is learning from your area.');
         setInputValue('');
         await fetchSummary();
         await fetchRecentSignals();
@@ -248,11 +248,11 @@ export default function Home() {
   };
 
   // Prepare structured insight pieces for display (simple, human language)
-  const observation = summary?.key_finding || 'No clear observation available.';
+  const observation = summary?.key_finding || 'Patterns are forming. Continue recording activity to unlock insights.';
 
   const interpretation = summary?.productive_activities_detected?.length
     ? `Detected activities: ${summary.productive_activities_detected.join(', ')}.`
-    : 'Interpretation not available yet.';
+    : 'Continue recording activity to detect coordination patterns.';
 
   const implication = summary?.high_confidence_patterns > 0
     ? 'Stable coordination means this zone may be ready for infrastructure planning.'
@@ -358,8 +358,11 @@ export default function Home() {
                       border: '1px solid #d4e0d9',
                       color: '#2d6a4f',
                       fontWeight: 700,
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
                     }}
+                    onMouseOver={(e) => { e.target.style.transform = 'scale(1.05)'; e.target.style.backgroundColor = '#e7f6f1'; }}
+                    onMouseOut={(e) => { e.target.style.transform = 'scale(1)'; e.target.style.backgroundColor = '#ffffff'; }}
                   >
                     {pill}
                   </button>
@@ -381,7 +384,9 @@ export default function Home() {
                     <button
                       type="submit"
                       disabled={loading || !inputValue.trim()}
-                      style={{ padding: '12px 14px', borderRadius: 10, backgroundColor: inputValue.trim() && !loading ? '#2d6a4f' : '#d4e0d9', color: '#fff', border: 'none', fontWeight: 700, cursor: inputValue.trim() && !loading ? 'pointer' : 'not-allowed' }}
+                      style={{ padding: '12px 14px', borderRadius: 10, backgroundColor: inputValue.trim() && !loading ? '#2d6a4f' : '#d4e0d9', color: '#fff', border: 'none', fontWeight: 700, cursor: inputValue.trim() && !loading ? 'pointer' : 'not-allowed', transition: 'all 0.2s ease' }}
+                      onMouseOver={(e) => { if (inputValue.trim() && !loading) { e.target.style.backgroundColor = '#1f4d38'; e.target.style.transform = 'scale(1.02)'; } }}
+                      onMouseOut={(e) => { if (inputValue.trim() && !loading) { e.target.style.backgroundColor = '#2d6a4f'; e.target.style.transform = 'scale(1)'; } }}
                     >
                       {loading ? 'Recording...' : 'Record'}
                     </button>
@@ -397,7 +402,7 @@ export default function Home() {
                 {/* Micro-feedback */}
                 <div style={{ marginTop: 12, minHeight: 22 }}>
                   {loading && analysisStage && (
-                    <div style={{ fontSize: 13, color: '#175a9f' }}>{analysisStage}</div>
+                    <div style={{ fontSize: 13, color: '#175a9f', animation: 'pulseLoading 1.2s ease-in-out infinite' }}>{analysisStage}</div>
                   )}
                 </div>
               </div>
@@ -424,12 +429,13 @@ export default function Home() {
               <div style={{
                 padding: '16px 18px',
                 borderRadius: 12,
-                backgroundColor: message.includes('✓') ? '#ecf7ef' : '#fef3e0',
-                color: message.includes('✓') ? '#1f4d2b' : '#b8860b',
+                backgroundColor: message.includes('\u2705') || message.includes('\u2713') ? '#ecf7ef' : '#fef3e0',
+                color: message.includes('\u2705') || message.includes('\u2713') ? '#1f4d2b' : '#b8860b',
                 marginBottom: 24,
                 fontSize: 14,
                 fontWeight: 500,
-                border: `1px solid ${message.includes('✓') ? '#d8f0d3' : '#fce8d4'}`
+                border: `1px solid ${message.includes('\u2705') || message.includes('\u2713') ? '#d8f0d3' : '#fce8d4'}`,
+                animation: 'fadeIn 0.3s ease-in'
               }}>
                 {message}
               </div>
@@ -513,6 +519,22 @@ export default function Home() {
               marginBottom: 24
             }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#2d6a4f', marginBottom: 12 }}>Based on current activity</div>
+
+              {/* Signal Confidence Indicator */}
+              {(() => {
+                const count = summary?.signal_count || 0;
+                let level, color, bg, border;
+                if (count >= 6) { level = 'HIGH'; color = '#1a6b3c'; bg = '#e7f6ef'; border = '#b8e6d0'; }
+                else if (count >= 3) { level = 'MEDIUM'; color = '#7a6b14'; bg = '#fff9e6'; border = '#fce8b4'; }
+                else { level = 'LOW'; color = '#8b4513'; bg = '#fef3e8'; border = '#fce0c4'; }
+                return (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 8, backgroundColor: bg, border: `1px solid ${border}`, marginBottom: 14, fontSize: 12, fontWeight: 600 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, display: 'inline-block' }} />
+                    <span style={{ color }}>Signal Strength: {level}</span>
+                    <span style={{ color: '#5a7a66', fontWeight: 400 }}>({count} signal{count !== 1 ? 's' : ''})</span>
+                  </div>
+                );
+              })()}
               <div style={{ fontSize: 16, color: '#172d20', marginBottom: 18, lineHeight: 1.6 }}>
                 {summary?.key_finding || 'There is emerging demand for productive activity that can guide infrastructure decisions.'}
               </div>
@@ -528,8 +550,11 @@ export default function Home() {
                     color: '#fff',
                     border: 'none',
                     fontWeight: 700,
-                    cursor: reportLoading ? 'not-allowed' : 'pointer'
+                    cursor: reportLoading ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease'
                   }}
+                  onMouseOver={(e) => { if (!reportLoading) { e.target.style.backgroundColor = '#1f4d38'; e.target.style.transform = 'scale(1.02)'; } }}
+                  onMouseOut={(e) => { if (!reportLoading) { e.target.style.backgroundColor = '#2d6a4f'; e.target.style.transform = 'scale(1)'; } }}
                 >
                   {reportLoading ? 'Creating report…' : 'Create Investment Report'}
                 </button>
@@ -544,8 +569,11 @@ export default function Home() {
                     backgroundColor: '#ffffff',
                     color: '#2d6a4f',
                     fontWeight: 700,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
                   }}
+                  onMouseOver={(e) => { e.target.style.backgroundColor = '#e7f6f1'; e.target.style.transform = 'scale(1.02)'; }}
+                  onMouseOut={(e) => { e.target.style.backgroundColor = '#ffffff'; e.target.style.transform = 'scale(1)'; }}
                 >
                   View Full Insights
                 </button>
@@ -560,8 +588,11 @@ export default function Home() {
                     color: '#2d6a4f',
                     border: '1px solid #cde6d3',
                     fontWeight: 700,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
                   }}
+                  onMouseOver={(e) => { e.target.style.backgroundColor = '#e7f6f1'; e.target.style.transform = 'scale(1.02)'; }}
+                  onMouseOut={(e) => { e.target.style.backgroundColor = '#f4f7f5'; e.target.style.transform = 'scale(1)'; }}
                 >
                   Share with Partner
                 </button>
@@ -697,6 +728,38 @@ export default function Home() {
                 </div>
               </div>
             )}
+
+            {/* Infrastructure Opportunity Card */}
+            {(() => {
+              const activities = summary?.productive_activities_detected || [];
+              const gaps = summary?.infrastructure_gaps || [];
+              const hasHighActivity = (summary?.signal_count || 0) >= 3;
+              const hasGaps = gaps.length > 0;
+              const dominantActivity = activities[0] || 'productive';
+              if (!hasHighActivity && !hasGaps) return null;
+              return (
+                <div style={{
+                  backgroundColor: '#f0f7ff',
+                  borderRadius: 12,
+                  padding: '20px',
+                  border: '1px solid #c4daf6',
+                  marginBottom: 24
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#1a5276', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    \u26A0\uFE0F INFRASTRUCTURE OPPORTUNITY
+                  </div>
+                  <div style={{ fontSize: 14, color: '#1a3a5c', lineHeight: 1.6, marginBottom: 10 }}>
+                    {hasGaps
+                      ? `High ${dominantActivity} activity detected in ${zone} with limited infrastructure presence.`
+                      : `Repeated ${dominantActivity} activity in ${zone} suggests emerging coordination.`
+                    }
+                  </div>
+                  <div style={{ fontSize: 13, color: '#2d6a4f', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    \u2192 {hasGaps ? 'Opportunity emerging for investment' : 'Continue recording to strengthen the signal'}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Report Generation CTA */}
             <button
@@ -906,45 +969,65 @@ export default function Home() {
         <div style={{ background: '#fff', borderRadius: 12, padding: 12, boxShadow: '0 8px 24px rgba(12,36,22,0.06)' }}>
           <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>Live Activity</h3>
           <div style={{ maxHeight: 520, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }} ref={liveScrollRef}>
-            {recentSignals.length === 0 && <div style={{ color: '#666' }}>No recent activity</div>}
-            {recentSignals.map(sig => (
+            {recentSignals.length === 0 && (
+              <div style={{ color: '#5a7a66', padding: '18px 14px', textAlign: 'center', backgroundColor: '#f8faf8', borderRadius: 10, border: '1px dashed #d4e0d9', lineHeight: 1.6, fontSize: 13 }}>
+                Waiting for first signal...<br />Be the first to record activity \uD83D\uDD25
+              </div>
+            )}
+            {recentSignals.map(sig => {
+              const isFlashing = flashIds.includes(sig.id);
+              return (
               <div key={sig.id} style={{
                 padding: 10,
                 borderRadius: 8,
-                background: flashIds.includes(sig.id) ? 'linear-gradient(90deg, rgba(45,106,79,0.06), rgba(45,106,79,0.02))' : '#fbfffd',
-                boxShadow: flashIds.includes(sig.id) ? '0 8px 20px rgba(45,106,79,0.08)' : 'none',
-                border: '1px solid rgba(18, 60, 38, 0.04)'
+                background: isFlashing ? 'linear-gradient(90deg, rgba(45,106,79,0.12), rgba(45,106,79,0.03))' : '#fbfffd',
+                boxShadow: isFlashing ? '0 8px 20px rgba(45,106,79,0.12)' : 'none',
+                border: isFlashing ? '1px solid rgba(45,106,79,0.25)' : '1px solid rgba(18, 60, 38, 0.04)',
+                transition: 'all 0.6s ease',
+                animation: isFlashing ? 'signalGlow 2.5s ease-out' : 'none'
               }}>
                 <div style={{ fontSize: 13, fontWeight: 700 }}>{sig.activity_type || sig.activity || sig.type || 'Activity'}</div>
                 <div style={{ fontSize: 12, color: '#666' }}>{sig.zone || sig.zone_name || sig.location || '—'}</div>
                 <div style={{ marginTop: 6, fontSize: 12, color: '#444' }}>{sig.original_text?.slice(0, 80) || sig.summary || sig.note || sig.raw_text?.slice(0, 80)}</div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-          <div style={{ marginTop: 20, background: '#f7fbf7', borderRadius: 16, padding: 18, border: '1px solid #d8e8d6' }}>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: 16, color: '#14532d' }}>Connect via WhatsApp</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: 14, alignItems: 'center' }}>
-              <img src={WHATSAPP_QR_IMAGE} alt="WhatsApp onboarding QR code" style={{ width: 100, height: 100, borderRadius: 18, border: '1px solid #cfe8d4' }} />
-              <div>
-                <div style={{ fontSize: 13, color: '#0f5132', marginBottom: 10 }}>
-                  Scan to start sending activities and join the Kulima OS pilot.
-                </div>
-                <div style={{ fontSize: 13, color: '#2d6a4f', lineHeight: 1.6 }}>
-                  <strong>1.</strong> Scan the QR code.
-                  <br />
-                  <strong>2.</strong> Send the join code: <strong>join week-saved</strong>.
-                  <br />
-                  <strong>3.</strong> Start sending activity updates.
-                </div>
-                <div style={{ marginTop: 12, fontSize: 13, color: '#0f5132' }}>
-                  Twilio number: <strong>{WHATSAPP_NUMBER}</strong>
+          <div style={{ marginTop: 20, background: '#f7fbf7', borderRadius: 16, padding: 20, border: '1px solid #d8e8d6' }}>
+            <h3 style={{ margin: '0 0 14px 0', fontSize: 16, color: '#14532d' }}>Connect via WhatsApp</h3>
+            <p style={{ fontSize: 13, color: '#0f5132', marginTop: 0, marginBottom: 16, lineHeight: 1.5 }}>
+              Scan to connect via WhatsApp and start sending activities instantly.
+            </p>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+              <img src={WHATSAPP_QR_IMAGE} alt="WhatsApp onboarding QR code" style={{ width: 110, height: 110, borderRadius: 14, border: '2px solid #cfe8d4', flexShrink: 0 }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ fontSize: 13, color: '#2d6a4f', lineHeight: 1.8 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: '50%', backgroundColor: '#2d6a4f', color: '#fff', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>1</span>
+                    <span>Scan QR code</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: '50%', backgroundColor: '#2d6a4f', color: '#fff', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>2</span>
+                    <span>Send: <strong>join week-saved</strong></span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: '50%', backgroundColor: '#2d6a4f', color: '#fff', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>3</span>
+                    <span>Start sending activity <em>(e.g. "trading mzuzu morning")</em></span>
+                  </div>
                 </div>
               </div>
             </div>
-            <a href={WHATSAPP_ONBOARDING_LINK} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 16, padding: '10px 14px', borderRadius: 12, backgroundColor: '#2d6a4f', color: '#fff', textDecoration: 'none', fontWeight: 700 }}>
-              Open WhatsApp onboarding
+            <a
+              href={WHATSAPP_ONBOARDING_LINK}
+              target="_blank"
+              rel="noreferrer"
+              style={{ display: 'inline-block', marginTop: 16, padding: '10px 16px', borderRadius: 12, backgroundColor: '#25D366', color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 13, transition: 'all 0.2s ease' }}
+              onMouseOver={(e) => { e.target.style.backgroundColor = '#1fba59'; e.target.style.transform = 'scale(1.02)'; }}
+              onMouseOut={(e) => { e.target.style.backgroundColor = '#25D366'; e.target.style.transform = 'scale(1)'; }}
+            >
+              Open WhatsApp
             </a>
           </div>
         </div>
@@ -1009,7 +1092,36 @@ export default function Home() {
           from { opacity: 0; transform: translateY(-6px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes signalGlow {
+          0% { box-shadow: 0 0 0 0 rgba(45,106,79,0.3); }
+          40% { box-shadow: 0 0 12px 4px rgba(45,106,79,0.15); }
+          100% { box-shadow: 0 0 0 0 rgba(45,106,79,0); }
+        }
+        @keyframes pulseLoading {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
+        }
       `}</style>
+
+      {/* Toast notification */}
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          padding: '12px 20px',
+          borderRadius: 12,
+          backgroundColor: '#2d6a4f',
+          color: '#fff',
+          fontSize: 13,
+          fontWeight: 600,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          zIndex: 100,
+          animation: 'fadeIn 0.3s ease-in'
+        }}>
+          {toastMessage}
+        </div>
+      )}
     </div>
   );
 }
