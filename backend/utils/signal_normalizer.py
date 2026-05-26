@@ -13,6 +13,22 @@ _ZONES = {
     'zomba': 'ZOMBA'
 }
 
+# Expanded Malawi districts to reduce UNKNOWN fallbacks
+# Keywords are substrings matched against the lowercased message
+_ZONES.update({
+    'karonga': 'KARONGA',
+    'mzimba': 'MZIMBA',
+    'nkhata': 'NKHATA_BAY',
+    'nkhatabay': 'NKHATA_BAY',
+    'rumphi': 'RUMPHI',
+    'kasungu': 'KASUNGU',
+    'dedza': 'DEDZA',
+    'salima': 'SALIMA',
+    'mangochi': 'MANGOCHI',
+    'nsanje': 'NSANJE',
+    'chikwawa': 'CHIKWAWA',
+    'mulanje': 'MULANJE'
+})
 _TIME_KEYWORDS = {
     'morning': ['morning', 'am', 'early'],
     'afternoon': ['afternoon', 'pm', 'midday'],
