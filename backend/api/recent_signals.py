@@ -21,6 +21,7 @@ async def get_recent_signals(response: Response, limit: int = 15, db: Session = 
         # Fetch recent signals, ordered by newest first
         signals = db.query(Signal).order_by(Signal.timestamp.desc()).limit(limit).all()
         
+        print(f"✅ RECENT SIGNAL COUNT: {len(signals)}")
         logger.info(f"Fetched {len(signals)} recent signals from database")
         
         result = []
@@ -35,7 +36,8 @@ async def get_recent_signals(response: Response, limit: int = 15, db: Session = 
                 'timestamp': s.timestamp.isoformat() if s.timestamp else None,
                 'source': s.source or 'web',
                 'user_id': s.user_id,
-                'original_text': s.original_text or ''
+                'original_text': s.original_text or '',
+                'created_at': s.created_at.isoformat() if s.created_at else None
             }
             result.append(signal_dict)
         

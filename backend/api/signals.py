@@ -45,9 +45,9 @@ async def create_signal(request: Request, db: Session = Depends(get_db)):
             from backend.utils.signal_normalizer import normalize_signal_text
             normalized = normalize_signal_text(payload.get('raw_text'))
             zone = (payload.get('zone') or normalized.get('zone') or 'UNKNOWN').upper()
-            activity = normalized.get('activity_type', 'unknown')
-            time_window = normalized.get('time_window', 'unknown')
-            original_text = normalized.get('original_text', payload.get('raw_text'))
+            activity = normalized.get('activity_type') or 'unknown'
+            time_window = normalized.get('time_window') or 'unknown'
+            original_text = normalized.get('original_text', payload.get('raw_text')) or ''
         else:
             # Expect structured fields
             zone = (payload.get('zone') or 'UNKNOWN').upper()
@@ -88,8 +88,10 @@ async def create_signal(request: Request, db: Session = Depends(get_db)):
         )
         db.add(signal)
         db.commit()
+        db.refresh(signal)
 
-        logger.info(f"Signal stored: {signal_id} - {activity} in {zone}")
+        print(f"✅ SIGNAL STORED: {signal.id} {signal.activity_type} {signal.zone}")
+        logger.info(f"✅ SIGNAL STORED: {signal.id} {signal.activity_type} {signal.zone}")
 
         return {
             "status": "success",

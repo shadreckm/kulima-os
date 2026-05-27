@@ -84,8 +84,8 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(new_signal)
         
-        print(f"[TWILIO] Signal stored in database with ID: {new_signal.id}")
-        logger.info(f"[TWILIO] Signal stored in database with ID: {new_signal.id}")
+        print(f"✅ SIGNAL STORED: {new_signal.id} {new_signal.activity_type} {new_signal.zone}")
+        logger.info(f"✅ SIGNAL STORED: {new_signal.id} {new_signal.activity_type} {new_signal.zone}")
 
         # Build response message
         if first_time_sender:
@@ -97,9 +97,8 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
             )
         else:
             twiml_message = (
-                "✅ Activity recorded.\n"
-                "Kulima OS is analyzing patterns in your area.\n"
-                "Keep sending activities to improve insights."
+                "✅ Activity recorded. "
+                "Keep sending updates to strengthen insights."
             )
 
         # Return proper TwiML response (must be XML, not JSON)

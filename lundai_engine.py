@@ -128,17 +128,21 @@ def evaluate_signal_integrity(signals: List[Dict], integrity_threshold: float = 
         sender_ids = set()
         telemetry_count = 0
         human_count = 0
+        telemetry_index = 0
 
         for signal in group:
             source = signal.get('signal_source')
             if source == 'telemetry':
                 telemetry_count += 1
-            if source == 'human':
-                human_count += 1
-
-            sender = signal.get('user_phone') or signal.get('sender') or signal.get('source_id')
-            if sender:
-                sender_ids.add(sender)
+                telemetry_index += 1
+                # Telemetry is an independent verification source; treat as unique sender
+                sender_ids.add(f"telemetry_source_{telemetry_index}")
+            else:
+                if source == 'human':
+                    human_count += 1
+                sender = signal.get('user_phone') or signal.get('sender') or signal.get('source_id')
+                if sender:
+                    sender_ids.add(sender)
 
             ts = _parse_iso_timestamp(signal.get('timestamp', ''))
             if ts is None and signal.get('cycle_index') is not None:
@@ -222,8 +226,11 @@ def evaluate_signal_integrity(signals: List[Dict], integrity_threshold: float = 
         elif burst_ratio >= 2.0:
             burst_penalty = min(0.25, (burst_ratio - 1.5) / (burst_ratio + 1.0))
 
-        # User repetition penalty: repeated posts by same user reduce score modestly
-        user_repeat_penalty = min(user_repeat_ratio * 0.35, 0.35)
+        # User repetition penalty: repeated posts by same user reduce score modestly.
+        # Only apply if we have a larger volume of signals (4 or more) mostly from the same user.
+        user_repeat_penalty = 0.0
+        if signal_count >= 4:
+            user_repeat_penalty = min(user_repeat_ratio * 0.25, 0.25)
 
         # Anomaly severity penalty up to 0.2
         anomaly_penalty = anomaly_severity * 0.2

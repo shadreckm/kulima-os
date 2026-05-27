@@ -20,6 +20,17 @@ if _raw_url.startswith("postgres://"):
 is_postgresql = "postgresql" in _raw_url
 is_sqlite = "sqlite" in _raw_url
 
+# Production guard: warn loudly if using SQLite in production
+_environment = settings.ENVIRONMENT.lower()
+_is_production = _environment == "production" or os.environ.get("RENDER") or os.environ.get("HEROKU")
+
+if is_sqlite and _is_production:
+    logger.warning(
+        "⚠️  WARNING: SQLite is being used in a production environment! "
+        "Set DATABASE_URL to a PostgreSQL connection string for production use."
+    )
+    print("⚠️  WARNING: SQLite detected in production. Set DATABASE_URL to PostgreSQL!")
+
 # SQLite-specific setup
 if is_sqlite:
     db_path = Path(_raw_url.replace("sqlite:///", ""))
@@ -48,6 +59,17 @@ elif is_postgresql:
     )
 else:
     raise ValueError(f"Unsupported database URL scheme: {_raw_url}")
+
+# Log the database engine being used (mask password for security)
+_display_url = str(engine.url)
+if "@" in _display_url:
+    # Mask password: postgresql://user:****@host:5432/db
+    parts = _display_url.split("@")
+    prefix = parts[0].split(":")
+    if len(prefix) >= 3:
+        _display_url = f"{prefix[0]}:{prefix[1]}:****@{parts[1]}"
+print(f"✅ DATABASE ENGINE: {_display_url}")
+logger.info(f"✅ DATABASE ENGINE: {_display_url}")
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -105,6 +127,12 @@ def init_db(reset: bool = False):
                 logger.error(f"Failed to ensure schema: {e}")
 
         _ensure_schema()
+
+        # Verify database connectivity
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        print("✅ DATABASE CONNECTION: verified")
+        logger.info("✅ DATABASE CONNECTION: verified")
 
         logger.info("Database initialization complete")
     except Exception as e:

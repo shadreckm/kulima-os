@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 
@@ -92,8 +92,10 @@ export default function Home() {
     return null;
   };
 
-  const fetchRecentSignals = async () => {
-    setLiveLoading(true);
+  const fetchRecentSignals = async (isFirstLoad = false) => {
+    if (isFirstLoad) {
+      setLiveLoading(true);
+    }
     try {
       const response = await fetch(`${BASE_URL}/signals/recent`, { cache: 'no-store' });
       const data = await response.json();
@@ -117,15 +119,40 @@ export default function Home() {
     } catch (error) {
       // keep existing live feed if polling fails
     } finally {
-      setLiveLoading(false);
+      if (isFirstLoad) {
+        setLiveLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchRecentSignals();
-    signalPollRef.current = setInterval(fetchRecentSignals, 5000);
+    fetchRecentSignals(true);
+    signalPollRef.current = setInterval(() => fetchRecentSignals(false), 5000);
     return () => clearInterval(signalPollRef.current);
   }, []);
+
+  // Loading safety guards to prevent infinite cooking states
+  useEffect(() => {
+    let timeoutId;
+    if (loading) {
+      timeoutId = setTimeout(() => {
+        setLoading(false);
+        setMessage('Request timed out. Please try again.');
+      }, 15000);
+    }
+    return () => clearTimeout(timeoutId);
+  }, [loading]);
+
+  useEffect(() => {
+    let timeoutId;
+    if (reportLoading) {
+      timeoutId = setTimeout(() => {
+        setReportLoading(false);
+        setMessage('Report generation timed out. Please try again.');
+      }, 15000);
+    }
+    return () => clearTimeout(timeoutId);
+  }, [reportLoading]);
 
   useEffect(() => {
     if (liveScrollRef.current) {
