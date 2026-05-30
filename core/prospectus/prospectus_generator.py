@@ -16,12 +16,13 @@ decisions based on collective demand patterns, not individual profiling.
 import json
 import os
 from pathlib import Path
+from collections import defaultdict
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 from energy_demand_estimator import EnergyDemandEstimator
 from policy import RESERVE_RATIO, require_planning_reserve
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
@@ -344,8 +345,8 @@ class ProspectusGenerator:
     def _section_break(self, height: float = 20) -> Spacer:
         return Spacer(1, height)
 
-    def _page_break(self) -> Spacer:
-        return Spacer(1, 0)
+    def _page_break(self) -> PageBreak:
+        return PageBreak()
 
     def _add_header(self, canvas, doc) -> None:
         """Add small logo to header on pages after cover."""

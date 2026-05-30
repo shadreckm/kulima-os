@@ -236,9 +236,12 @@ export default function Home() {
         // encourage continuous interaction
         setTimeout(() => inputRef.current?.focus(), 300);
       } else {
-        setMessage('More data is needed to generate a full report. Continue recording activities.');
+        setReportData(null);
+        const errorMessage = data?.data?.error || data?.error || 'More data is needed to generate a full report. Continue recording activities.';
+        setMessage(errorMessage);
       }
     } catch (err) {
+      setReportData(null);
       setMessage('More data is needed to generate a full report. Continue recording activities.');
     } finally {
       setReportLoading(false);

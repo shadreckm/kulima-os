@@ -80,9 +80,10 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
         if not signals:
             logger.warning(f"No signals found for zone {zone}")
             return {
-            "success": False,
+                "success": False,
+                "status": "error",
                 "data": {
-                    "error": f"No signals found for zone {zone}. Cannot generate prospectus without data."
+                    "error": f"No signals found for zone {zone}. Cannot generate a prospectus without coordination data. Please record activity in this area first."
                 }
             }
         
@@ -110,23 +111,36 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
         
         if not coordination_patterns:
             logger.warning(f"No coordination patterns detected for zone {zone}")
-            raise HTTPException(status_code=404, detail="No coordination patterns detected")
+            return {
+                "success": False,
+                "status": "error",
+                "data": {
+                    "error": "Insufficient coordination signals to generate a prospectus. Continue recording repeated activity in this zone so that stable demand patterns can be detected."
+                }
+            }
         
         # Run LUNDAI engine for integrity evaluation
         logger.info("Running LUNDAI engine for integrity evaluation...")
         integrity_results = evaluate_signal_integrity(signal_data, integrity_threshold=0.4)
         logger.info(f"LUNDAI evaluated {len(integrity_results)} activity-zone groups")
         
-        # Merge integrity scores into coordination patterns
-        pattern_map = {(p['activity_type'], p['zone'], p['time_window']): p for p in coordination_patterns}
+        # Merge integrity scores into coordination patterns using activity-zone matching
+        patterns_by_group = {}
+        for pattern in coordination_patterns:
+            group_key = (pattern['activity_type'], pattern['zone'])
+            patterns_by_group.setdefault(group_key, []).append(pattern)
+
         for integrity_result in integrity_results:
-            key = (integrity_result['activity'], integrity_result['zone'], 'morning')  # Simplified key matching
-            if key in pattern_map:
-                pattern_map[key]['integrity_score'] = integrity_result['integrity_score']
-                pattern_map[key]['alignment_level'] = integrity_result['classification']
-                pattern_map[key]['signal_count'] = integrity_result['signal_count']
-                pattern_map[key]['unique_days'] = integrity_result['unique_days']
-                pattern_map[key]['unique_senders'] = integrity_result['unique_senders']
+            group_key = (integrity_result.get('activity'), integrity_result.get('zone'))
+            for pattern in patterns_by_group.get(group_key, []):
+                pattern['integrity_score'] = integrity_result['integrity_score']
+                pattern['alignment_level'] = integrity_result['classification']
+                pattern['signal_count'] = integrity_result['signal_count']
+                pattern['validated_signals'] = integrity_result['signal_count']
+                pattern['unique_days'] = integrity_result['unique_days']
+                pattern['unique_senders'] = integrity_result['unique_senders']
+                pattern['burst_ratio'] = integrity_result.get('burst_ratio')
+                pattern['anomaly_flag'] = integrity_result.get('anomaly_flag')
         
         # Run LUNDAI engine for settlement context analysis
         logger.info("Running LUNDAI engine for settlement context...")
@@ -144,7 +158,34 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
         zentari = ZentariEngine()
         confidence_results = zentari.evaluate_coordination_confidence(coordination_patterns, planning_reserve, flow_graph=flow_graph)
         logger.info(f"ZENTARI evaluated {len(confidence_results)} patterns for coordination confidence")
-        
+
+        if not confidence_results:
+            logger.warning(f"ZENTARI produced no confidence results for zone {zone}")
+            return {
+                "success": False,
+                "status": "error",
+                "data": {
+                    "error": "Insufficient stable coordination patterns to generate a prospectus. Continue recording repeated activity in this zone until investment-grade demand rhythms form."
+                }
+            }
+
+        # Only generate a prospectus when bankable coordination patterns exist
+        bankable_patterns = [
+            pattern for pattern in confidence_results
+            if pattern.get("confidence_class") in ("high", "moderate")
+            and pattern.get("trust", {}).get("action_allowed") is True
+        ]
+
+        if not bankable_patterns:
+            logger.warning(f"No bankable coordination patterns found for zone {zone}")
+            return {
+                "success": False,
+                "status": "error",
+                "data": {
+                    "error": "No stable bankable coordination patterns were detected. Continue collecting repeated signals in this zone so the system can identify investment-ready demand patterns."
+                }
+            }
+
         # Generate prospectus using full pipeline output
         logger.info("Generating prospectus from full pipeline output...")
         gen = ProspectusGenerator()
