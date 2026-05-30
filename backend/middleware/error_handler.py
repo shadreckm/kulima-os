@@ -32,6 +32,7 @@ class ErrorHandler:
         return JSONResponse(
             status_code=exc.status_code,
             content={
+                "success": False,
                 "status": "error",
                 "error": "http_error",
                 "message": exc.detail,
@@ -58,6 +59,7 @@ class ErrorHandler:
         return JSONResponse(
             status_code=422,
             content={
+                "success": False,
                 "status": "error",
                 "error": "validation_error",
                 "message": f"Invalid input: {first_error.get('msg', 'Unknown validation error')}",
@@ -82,6 +84,7 @@ class ErrorHandler:
         return JSONResponse(
             status_code=500,
             content={
+                "success": False,
                 "status": "error",
                 "error": "database_error",
                 "message": "A database error occurred. Please try again later.",
@@ -110,6 +113,7 @@ class ErrorHandler:
         return JSONResponse(
             status_code=500,
             content={
+                "success": False,
                 "status": "error",
                 "error": "internal_error",
                 "message": message,

@@ -144,7 +144,7 @@ Input: "Cold room evening cycle"
 
 ### Endpoints Used
 ```javascript
-BASE_URL = http://127.0.0.1:8000/api/v1
+BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1'
 
 // 1. Get zone summary
 GET /summary/{zone}
@@ -336,8 +336,8 @@ sed -i 's/#2d6a4f/#YOUR-COLOR/g' frontend/app/page.jsx
 ### Issue: API errors silently fail
 **Solution:** Check console logs, verify BASE_URL environment variable
 ```javascript
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
-// Set in .env.local: NEXT_PUBLIC_API_URL=your-url
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+// Set in .env.local: NEXT_PUBLIC_API_URL=your-backend-url/api/v1
 ```
 
 ### Issue: Demo mode not showing

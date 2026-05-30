@@ -9,7 +9,7 @@ import logging
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Signal
-from backend.schemas.requests import SignalCreate, SignalsQuery
+from backend.schemas.requests import SignalRequest, SignalCreate, SignalsQuery
 from core.coordination.multi_sector_coordinator import MultiSectorCoordinator
 
 # Configure logging
@@ -23,42 +23,35 @@ sector_coordinator = MultiSectorCoordinator()
 
 
 @router.post("/signal")
-async def create_signal(request: Request, db: Session = Depends(get_db)):
+async def create_signal(request: SignalRequest, db: Session = Depends(get_db)):
     """
     Receive activity input from WhatsApp or manual entry.
 
     Accepts either structured JSON or a `raw_text` field which will be normalized server-side.
     """
     try:
-        payload = {}
-        try:
-            payload = await request.json()
-        except Exception:
-            # If the client doesn't send JSON, return an error
-            return {"status": "error", "message": "Invalid JSON payload"}
-
         # Generate signal ID
         signal_id = f"sig_{uuid.uuid4().hex[:12]}"
 
         # If raw_text is provided, normalize it
-        if 'raw_text' in payload and payload.get('raw_text'):
+        if request.raw_text:
             from backend.utils.signal_normalizer import normalize_signal_text
-            normalized = normalize_signal_text(payload.get('raw_text'))
-            zone = (payload.get('zone') or normalized.get('zone') or 'UNKNOWN').upper()
-            activity = normalized.get('activity_type') or 'unknown'
-            time_window = normalized.get('time_window') or 'unknown'
-            original_text = normalized.get('original_text', payload.get('raw_text')) or ''
+            normalized = normalize_signal_text(request.raw_text)
+            zone = (request.zone or normalized.get('zone') or 'UNKNOWN').upper()
+            activity = normalized.get('activity_type') or request.activity_type or 'unknown'
+            time_window = normalized.get('time_window') or request.time_window or 'unknown'
+            original_text = normalized.get('original_text', request.raw_text) or ''
         else:
             # Expect structured fields
-            zone = (payload.get('zone') or 'UNKNOWN').upper()
-            activity = payload.get('activity_type') or 'unknown'
-            time_window = payload.get('time_window') or 'unknown'
-            original_text = payload.get('original_text') or ''
+            zone = (request.zone or 'UNKNOWN').upper()
+            activity = request.activity_type or 'unknown'
+            time_window = request.time_window or 'unknown'
+            original_text = request.raw_text or ''
 
         # Parse timestamp with validation
         try:
-            if payload.get('timestamp'):
-                timestamp = datetime.fromisoformat(payload.get('timestamp').replace('Z', '+00:00'))
+            if request.timestamp:
+                timestamp = datetime.fromisoformat(request.timestamp.replace('Z', '+00:00'))
             else:
                 timestamp = datetime.utcnow()
         except ValueError:
@@ -82,18 +75,18 @@ async def create_signal(request: Request, db: Session = Depends(get_db)):
             sector=sector,
             time_window=time_window,
             timestamp=timestamp,
-            source=payload.get('source') or "web",
-            user_id=payload.get('user_id') if payload.get('user_id') else "anonymous",
+            source=request.source or "web",
+            user_id=request.user_id if request.user_id else "anonymous",
             original_text=original_text or ''
         )
         db.add(signal)
         db.commit()
         db.refresh(signal)
 
-        print(f"✅ SIGNAL STORED: {signal.id} {signal.activity_type} {signal.zone}")
-        logger.info(f"✅ SIGNAL STORED: {signal.id} {signal.activity_type} {signal.zone}")
+        logger.info(f"Signal saved: {signal.id} {signal.activity_type} {signal.zone}")
 
         return {
+            "success": True,
             "status": "success",
             "data": {
                 "signal_id": signal_id,
@@ -104,6 +97,7 @@ async def create_signal(request: Request, db: Session = Depends(get_db)):
         db.rollback()
         logger.error(f"Error storing signal: {str(e)}")
         return {
+            "success": False,
             "status": "error",
             "message": str(e),
             "details": {

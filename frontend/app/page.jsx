@@ -1,11 +1,11 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 
 // Production mode: remove demo/sample fallbacks
 const PUBLIC_LOGO = '/logo.png';
 
-const ACTIVITY_PILLS = ['Irrigation', 'Milling', 'Trading', 'Welding'];
+const ACTIVITY_EXAMPLES = ['Irrigation', 'Trading', 'Regenerative Farming', 'Transport', 'Storage', 'Food Processing'];
 const ZONES = ['MZUZU', 'LILONGWE', 'BLANTYRE', 'ZOMBA'];
 const WHATSAPP_NUMBER = '+1 415 523 8886';
 const WHATSAPP_JOIN_CODE = 'join%20week-saved';
@@ -55,7 +55,7 @@ export default function Home() {
   const [analysisStage, setAnalysisStage] = useState('');
   const [insightExpanded, setInsightExpanded] = useState(false);
 
-  const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
+  const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '/api/v1').replace(/\/$/, '');
   const BACKEND_BASE = BASE_URL.replace(/\/api\/v1$/, '');
   // Production behavior: rely on backend summary only
   const reportUrl = reportData?.pdf_url ? `${BACKEND_BASE}${reportData.pdf_url}` : '';
@@ -97,7 +97,7 @@ export default function Home() {
       setLiveLoading(true);
     }
     try {
-      const response = await fetch(`${BASE_URL}/signals/recent`, { cache: 'no-store' });
+      const response = await fetch(`${BASE_URL}/recent-signals`, { cache: 'no-store' });
       const data = await response.json();
       if (data.status === 'success' && Array.isArray(data.data)) {
         const fetched = data.data.slice(0, 15);
@@ -216,7 +216,7 @@ export default function Home() {
 
   const handleGenerateReport = async () => {
     if (!summary || (typeof summary.signal_count !== 'undefined' && summary.signal_count === 0)) {
-      setMessage('Record at least one activity before generating a report.');
+      setMessage('More data is needed to generate a full report. Continue recording activities.');
       return;
     }
     setReportLoading(true);
@@ -236,10 +236,10 @@ export default function Home() {
         // encourage continuous interaction
         setTimeout(() => inputRef.current?.focus(), 300);
       } else {
-        setMessage('Report generation failed. Please try again.');
+        setMessage('More data is needed to generate a full report. Continue recording activities.');
       }
     } catch (err) {
-      setMessage("Unable to process activity. Try: 'irrigation mzuzu morning'");
+      setMessage('More data is needed to generate a full report. Continue recording activities.');
     } finally {
       setReportLoading(false);
     }
@@ -275,7 +275,7 @@ export default function Home() {
   };
 
   // Prepare structured insight pieces for display (simple, human language)
-  const observation = summary?.key_finding || 'Patterns are forming. Continue recording activity to unlock insights.';
+  const observation = summary?.key_finding || 'Patterns are forming — record more activity to unlock insights.';
 
   const interpretation = summary?.productive_activities_detected?.length
     ? `Detected activities: ${summary.productive_activities_detected.join(', ')}.`
@@ -371,29 +371,35 @@ export default function Home() {
                 <div style={{ fontSize: 14, color: '#4a6b57', marginTop: 6 }}>Tap an action or type briefly to record activity.</div>
               </div>
 
-              {/* Quick action pills */}
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-                {ACTIVITY_PILLS.map((pill) => (
-                  <button
-                    key={pill}
-                    type="button"
-                    onClick={() => { setInputValue(pill); inputRef.current?.focus(); }}
-                    style={{
-                      padding: '10px 16px',
-                      borderRadius: 999,
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #d4e0d9',
-                      color: '#2d6a4f',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseOver={(e) => { e.target.style.transform = 'scale(1.05)'; e.target.style.backgroundColor = '#e7f6f1'; }}
-                    onMouseOut={(e) => { e.target.style.transform = 'scale(1)'; e.target.style.backgroundColor = '#ffffff'; }}
-                  >
-                    {pill}
-                  </button>
-                ))}
+              {/* Activity examples */}
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 13, color: '#5a7a66', marginBottom: 8 }}>
+                  You can type any activity happening in your area
+                </div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {ACTIVITY_EXAMPLES.map((example) => (
+                    <button
+                      key={example}
+                      type="button"
+                      onClick={() => { setInputValue(example); inputRef.current?.focus(); }}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: 999,
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #d4e0d9',
+                        color: '#2d6a4f',
+                        fontWeight: 600,
+                        fontSize: 13,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseOver={(e) => { e.target.style.transform = 'scale(1.05)'; e.target.style.backgroundColor = '#e7f6f1'; }}
+                      onMouseOut={(e) => { e.target.style.transform = 'scale(1)'; e.target.style.backgroundColor = '#ffffff'; }}
+                    >
+                      {example}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Input card */}
@@ -478,6 +484,43 @@ export default function Home() {
             marginBottom: 48,
             animation: 'slideUp 0.3s ease-out'
           }}>
+            {/* How it works block */}
+            <div style={{
+              backgroundColor: '#f0f7ff',
+              borderRadius: 16,
+              padding: '20px',
+              border: '1px solid #c4daf6',
+              marginBottom: 24
+            }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1a5276', marginBottom: 12 }}>
+                How Kulima OS works:
+              </div>
+              <div style={{ fontSize: 13, color: '#2d3748', lineHeight: 1.8 }}>
+                <div style={{ marginBottom: 8 }}>1. You record activity</div>
+                <div style={{ marginBottom: 8 }}>2. The system groups similar signals</div>
+                <div style={{ marginBottom: 8 }}>3. Repeated signals create demand patterns</div>
+                <div>4. Patterns reveal infrastructure needs</div>
+              </div>
+            </div>
+
+            {/* Coordination patterns explanation */}
+            <div style={{
+              backgroundColor: '#fffaf0',
+              borderRadius: 12,
+              padding: '16px',
+              border: '1px solid #fce8d4',
+              marginBottom: 24
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#b8860b', marginBottom: 8 }}>
+                About Coordination Patterns
+              </div>
+              <div style={{ fontSize: 13, color: '#4a4a4a', lineHeight: 1.6 }}>
+                Patterns form when similar activities are recorded multiple times in the same area.
+              </div>
+              <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+                {summary?.signal_count || 0} signals recorded → {Math.max(0, 3 - (summary?.signal_count || 0))}–{Math.max(0, 5 - (summary?.signal_count || 0))} more needed to detect a pattern
+              </div>
+            </div>
             {/* Assistant Response - Structured Reasoning Card */}
             {insightExpanded && (
               <div style={{
@@ -645,7 +688,7 @@ export default function Home() {
                 border: '1px solid #e0e8e4'
               }}>
                 <div style={{ fontSize: 28, fontWeight: 700, color: '#2d6a4f', marginBottom: 6 }}>
-                  {summary?.signal_count || 0}
+                  {summary?.signal_count ?? 0}
                 </div>
                 <div style={{ fontSize: 13, color: '#5a7a66' }}>
                   Activities recorded
@@ -658,7 +701,7 @@ export default function Home() {
                 border: '1px solid #e0e8e4'
               }}>
                 <div style={{ fontSize: 28, fontWeight: 700, color: '#2d6a4f', marginBottom: 6 }}>
-                  {summary?.total_patterns || 0}
+                  {summary?.total_patterns ?? 0}
                 </div>
                 <div style={{ fontSize: 13, color: '#5a7a66' }}>
                   Patterns detected
@@ -1001,12 +1044,12 @@ export default function Home() {
         <div style={{ background: '#fff', borderRadius: 12, padding: 12, boxShadow: '0 8px 24px rgba(12,36,22,0.06)' }}>
           <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>Live Activity</h3>
           <div style={{ maxHeight: 520, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }} ref={liveScrollRef}>
-            {recentSignals.length === 0 && (
+            {recentSignals.length === 0 && !liveLoading && (
               <div style={{ color: '#5a7a66', padding: '18px 14px', textAlign: 'center', backgroundColor: '#f8faf8', borderRadius: 10, border: '1px dashed #d4e0d9', lineHeight: 1.6, fontSize: 13 }}>
                 Waiting for first signal...<br />Be the first to record activity \uD83D\uDD25
               </div>
             )}
-            {recentSignals.map(sig => {
+            {recentSignals.length > 0 && recentSignals.map(sig => {
               const isFlashing = flashIds.includes(sig.id);
               return (
               <div key={sig.id} style={{

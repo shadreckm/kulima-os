@@ -38,8 +38,9 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     
     # Database Configuration
-    # Set DATABASE_URL env var for production PostgreSQL, falls back to SQLite for local dev
-    DATABASE_URL: str = "sqlite:///./kulima_os.db"
+    # PRODUCTION: DATABASE_URL must be set to PostgreSQL connection string
+    # DEVELOPMENT: Falls back to SQLite if DATABASE_URL not set
+    DATABASE_URL: Optional[str] = None
     DATABASE_ECHO: bool = False
     DATABASE_POOL_SIZE: int = 5
     DATABASE_MAX_OVERFLOW: int = 10

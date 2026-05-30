@@ -52,6 +52,7 @@ async def get_system_info() -> Dict:
     }
     """
     return {
+        "success": True,
         "status": "success",
         "data": SYSTEM_IDENTITY
     }
@@ -69,6 +70,7 @@ async def get_system_invariants() -> Dict:
     }
     """
     return {
+        "success": True,
         "status": "success",
         "data": {
             "invariants": SYSTEM_IDENTITY["invariants"],

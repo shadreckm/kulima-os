@@ -10,7 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.get("/signals/recent")
+@router.get("/recent-signals")
 async def get_recent_signals(response: Response, limit: int = 15, db: Session = Depends(get_db)):
     try:
         # Ensure no caching
@@ -21,7 +21,6 @@ async def get_recent_signals(response: Response, limit: int = 15, db: Session = 
         # Fetch recent signals, ordered by newest first
         signals = db.query(Signal).order_by(Signal.timestamp.desc()).limit(limit).all()
         
-        print(f"✅ RECENT SIGNAL COUNT: {len(signals)}")
         logger.info(f"Fetched {len(signals)} recent signals from database")
         
         result = []
@@ -43,9 +42,9 @@ async def get_recent_signals(response: Response, limit: int = 15, db: Session = 
         
         logger.info(f"RECENT SIGNALS: {[{'id': r['id'], 'activity_type': r['activity_type'], 'zone': r['zone']} for r in result]}")
         
-        return {"status": "success", "data": result}
+        return {"success": True, "status": "success", "data": result}
     except Exception as e:
         logger.error(f"Error fetching recent signals: {e}")
         import traceback
         logger.error(traceback.format_exc())
-        return {"status": "error", "message": str(e)}
+        return {"success": False, "status": "error", "message": str(e)}

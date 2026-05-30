@@ -43,8 +43,6 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
         message_body = form_data.get('Body', '')
         message_sid = form_data.get('MessageSid', '')
         
-        print(f"[TWILIO] Received WhatsApp message from {from_number}")
-        print(f"[TWILIO] Raw message body: '{message_body}'")
         logger.info(f"[TWILIO] Received WhatsApp message from {from_number}: {message_body}")
         
         # Validate message
@@ -56,7 +54,6 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
         # Normalize the message text to structured signal
         normalized_signal = normalize_signal_text(message_body)
         
-        print(f"[TWILIO] Normalized signal: {normalized_signal}")
         logger.info(f"[TWILIO] Normalized signal: {normalized_signal}")
         
         # Extract phone number (remove 'whatsapp:' prefix)
@@ -84,8 +81,7 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(new_signal)
         
-        print(f"✅ SIGNAL STORED: {new_signal.id} {new_signal.activity_type} {new_signal.zone}")
-        logger.info(f"✅ SIGNAL STORED: {new_signal.id} {new_signal.activity_type} {new_signal.zone}")
+        logger.info(f"OK SIGNAL STORED: {new_signal.id} {new_signal.activity_type} {new_signal.zone}")
 
         # Build response message
         if first_time_sender:
@@ -103,15 +99,13 @@ async def twilio_webhook(request: Request, db: Session = Depends(get_db)):
 
         # Return proper TwiML response (must be XML, not JSON)
         response_content = f"<Response><Message>{twiml_message}</Message></Response>"
-        print(f"[TWILIO] Returning TwiML response")
+        logger.info("[TWILIO] Returning TwiML response")
         return Response(content=response_content, media_type='application/xml')
         
     except Exception as e:
         logger.error(f"[TWILIO] Error processing webhook: {str(e)}")
-        print(f"[TWILIO] Error: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
-        print(traceback.format_exc())
         # Return error TwiML response
         error_twiml = "<Response><Message>Error processing message. Please try again.</Message></Response>"
         return Response(content=error_twiml, media_type='application/xml')
@@ -133,7 +127,7 @@ async def test_webhook(request: Request, db: Session = Depends(get_db)):
             body_data = await request.json()
         except Exception:
             logger.warning("Invalid JSON received at test webhook")
-            return {"status": "error", "message": "Invalid JSON payload"}
+            return {"success": False, "status": "error", "message": "Invalid JSON payload"}
         
         from_number = body_data.get('from', '')
         message_body = body_data.get('body', '')
@@ -169,6 +163,7 @@ async def test_webhook(request: Request, db: Session = Depends(get_db)):
         logger.info(f"Test signal stored in database with ID: {new_signal.id}")
         
         return {
+            "success": True,
             "status": "success",
             "message": "Test signal received and stored",
             "signal_id": new_signal.id,
@@ -178,4 +173,4 @@ async def test_webhook(request: Request, db: Session = Depends(get_db)):
         logger.error(f"Error in test webhook: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
-        return {"status": "error", "message": str(e)}
+        return {"success": False, "status": "error", "message": str(e)}

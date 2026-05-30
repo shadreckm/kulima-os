@@ -30,11 +30,13 @@ async def health_check(db: Session = Depends(get_db)):
             _display_url = f"{prefix[0]}:{prefix[1]}:****@{parts[1]}"
 
     status = "healthy" if db_status == "connected" else "unhealthy"
+    success = status == "healthy"
 
     return {
+        "success": success,
         "status": status,
         "database": db_status,
         "database_engine": _display_url,
-        "engines": "operational",
+        "engines": "operational" if success else "degraded",
         "timestamp": datetime.utcnow().isoformat()
     }

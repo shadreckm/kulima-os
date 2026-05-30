@@ -70,6 +70,27 @@ class TimeWindowValidator(str):
         return window_lower
 
 
+class SignalRequest(BaseModel):
+    """Schema for signal request - flexible input with optional structured fields"""
+    activity_type: Optional[str] = Field(None, description="Activity type (optional if raw_text provided)")
+    zone: Optional[str] = Field(None, description="Zone identifier (optional if raw_text provided)")
+    time_window: Optional[str] = Field(None, description="Time window (optional if raw_text provided)")
+    raw_text: Optional[str] = Field(None, description="Raw text input for normalization")
+    timestamp: Optional[str] = Field(None, description="ISO format timestamp")
+    source: str = Field(default="web", description="Signal source (whatsapp, web, manual)")
+    user_id: Optional[str] = Field(default="anonymous", description="User identifier")
+    
+    @validator('timestamp')
+    def validate_timestamp(cls, v):
+        if v is None:
+            return v
+        try:
+            datetime.fromisoformat(v.replace('Z', '+00:00'))
+            return v
+        except ValueError:
+            raise ValueError("Invalid timestamp format. Use ISO format (e.g., 2026-05-20T10:00:00Z)")
+
+
 class SignalCreate(BaseModel):
     """Schema for signal creation"""
     zone: str = Field(..., min_length=1, description="Zone identifier (MZUZU, LILONGWE, BLANTYRE, ZOMBA)")

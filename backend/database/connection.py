@@ -13,23 +13,28 @@ logger = logging.getLogger(__name__)
 
 # Resolve DATABASE_URL — Render provides it without the dialect prefix sometimes
 _raw_url = settings.DATABASE_URL
+
+# Production guard: require DATABASE_URL in production
+_environment = settings.ENVIRONMENT.lower()
+_is_production = _environment == "production" or os.environ.get("RENDER") or os.environ.get("HEROKU")
+
+if _is_production and not _raw_url:
+    raise ValueError(
+        "DATABASE_URL must be set in production. "
+        "Provide a PostgreSQL connection string via environment variable."
+    )
+
+# Development fallback: use SQLite if DATABASE_URL not set
+if not _raw_url:
+    _raw_url = "sqlite:///./kulima_os.db"
+    logger.info("DATABASE_URL not set, using SQLite for development")
+
 if _raw_url.startswith("postgres://"):
     _raw_url = _raw_url.replace("postgres://", "postgresql://", 1)
 
 # Determine database type
 is_postgresql = "postgresql" in _raw_url
 is_sqlite = "sqlite" in _raw_url
-
-# Production guard: warn loudly if using SQLite in production
-_environment = settings.ENVIRONMENT.lower()
-_is_production = _environment == "production" or os.environ.get("RENDER") or os.environ.get("HEROKU")
-
-if is_sqlite and _is_production:
-    logger.warning(
-        "⚠️  WARNING: SQLite is being used in a production environment! "
-        "Set DATABASE_URL to a PostgreSQL connection string for production use."
-    )
-    print("⚠️  WARNING: SQLite detected in production. Set DATABASE_URL to PostgreSQL!")
 
 # SQLite-specific setup
 if is_sqlite:
@@ -68,8 +73,7 @@ if "@" in _display_url:
     prefix = parts[0].split(":")
     if len(prefix) >= 3:
         _display_url = f"{prefix[0]}:{prefix[1]}:****@{parts[1]}"
-print(f"✅ DATABASE ENGINE: {_display_url}")
-logger.info(f"✅ DATABASE ENGINE: {_display_url}")
+logger.info(f"OK DATABASE ENGINE: {_display_url}")
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -131,8 +135,7 @@ def init_db(reset: bool = False):
         # Verify database connectivity
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        print("✅ DATABASE CONNECTION: verified")
-        logger.info("✅ DATABASE CONNECTION: verified")
+        logger.info("OK DATABASE CONNECTION: verified")
 
         logger.info("Database initialization complete")
     except Exception as e:

@@ -80,7 +80,7 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
         if not signals:
             logger.warning(f"No signals found for zone {zone}")
             return {
-                "status": "error",
+            "success": False,
                 "data": {
                     "error": f"No signals found for zone {zone}. Cannot generate prospectus without data."
                 }
@@ -186,6 +186,7 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
         logger.info(f"Prospectus stored in database: {prospectus_id}")
         
         return {
+            "success": True,
             "status": "success",
             "data": {
                 "prospectus_id": prospectus_id,
@@ -198,6 +199,7 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
         db.rollback()
         logger.error(f"Error generating prospectus: {str(e)}")
         return {
+            "success": False,
             "status": "error",
             "data": {
                 "error": str(e)
@@ -215,6 +217,7 @@ async def get_prospectus(prospectus_id: str, db: Session = Depends(get_db)):
         if not prospectus:
             logger.warning(f"Prospectus not found: {prospectus_id}")
             return {
+                "success": False,
                 "status": "error",
                 "data": {
                     "error": "Prospectus not found"
@@ -222,6 +225,7 @@ async def get_prospectus(prospectus_id: str, db: Session = Depends(get_db)):
             }
         
         return {
+            "success": True,
             "status": "success",
             "data": {
                 "prospectus_id": prospectus_id,
@@ -235,6 +239,7 @@ async def get_prospectus(prospectus_id: str, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error fetching prospectus: {str(e)}")
         return {
+            "success": False,
             "status": "error",
             "data": {
                 "error": str(e)
