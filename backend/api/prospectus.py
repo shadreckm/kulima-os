@@ -81,10 +81,7 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             logger.warning(f"No signals found for zone {zone}")
             return {
                 "success": False,
-                "status": "error",
-                "data": {
-                    "error": f"No signals found for zone {zone}. Cannot generate a prospectus without coordination data. Please record activity in this area first."
-                }
+                "message": "Insufficient coordination activity to generate a report."
             }
         
         signal_data = []
@@ -113,10 +110,7 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             logger.warning(f"No coordination patterns detected for zone {zone}")
             return {
                 "success": False,
-                "status": "error",
-                "data": {
-                    "error": "Insufficient coordination signals to generate a prospectus. Continue recording repeated activity in this zone so that stable demand patterns can be detected."
-                }
+                "message": "Insufficient coordination activity to generate a report."
             }
         
         # Run LUNDAI engine for integrity evaluation
@@ -133,14 +127,39 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
         for integrity_result in integrity_results:
             group_key = (integrity_result.get('activity'), integrity_result.get('zone'))
             for pattern in patterns_by_group.get(group_key, []):
-                pattern['integrity_score'] = integrity_result['integrity_score']
-                pattern['alignment_level'] = integrity_result['classification']
-                pattern['signal_count'] = integrity_result['signal_count']
-                pattern['validated_signals'] = integrity_result['signal_count']
-                pattern['unique_days'] = integrity_result['unique_days']
-                pattern['unique_senders'] = integrity_result['unique_senders']
-                pattern['burst_ratio'] = integrity_result.get('burst_ratio')
-                pattern['anomaly_flag'] = integrity_result.get('anomaly_flag')
+                # Coerce numeric fields to safe types
+                try:
+                    integrity_score = float(integrity_result.get('integrity_score') or 0.0)
+                except Exception:
+                    integrity_score = 0.0
+
+                try:
+                    signal_count = int(integrity_result.get('signal_count') or 0)
+                except Exception:
+                    signal_count = 0
+
+                try:
+                    unique_days = int(integrity_result.get('unique_days') or 0)
+                except Exception:
+                    unique_days = 0
+
+                try:
+                    unique_senders = int(integrity_result.get('unique_senders') or 0)
+                except Exception:
+                    unique_senders = 0
+
+                pattern['integrity_score'] = integrity_score
+                pattern['alignment_level'] = integrity_result.get('classification')
+                pattern['signal_count'] = signal_count
+                pattern['validated_signals'] = signal_count
+                pattern['unique_days'] = unique_days
+                pattern['unique_senders'] = unique_senders
+                # burst_ratio may be fractional
+                try:
+                    pattern['burst_ratio'] = float(integrity_result.get('burst_ratio')) if integrity_result.get('burst_ratio') is not None else None
+                except Exception:
+                    pattern['burst_ratio'] = None
+                pattern['anomaly_flag'] = bool(integrity_result.get('anomaly_flag'))
         
         # Run LUNDAI engine for settlement context analysis
         logger.info("Running LUNDAI engine for settlement context...")
@@ -163,10 +182,7 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             logger.warning(f"ZENTARI produced no confidence results for zone {zone}")
             return {
                 "success": False,
-                "status": "error",
-                "data": {
-                    "error": "Insufficient stable coordination patterns to generate a prospectus. Continue recording repeated activity in this zone until investment-grade demand rhythms form."
-                }
+                "message": "Insufficient coordination activity to generate a report."
             }
 
         # Only generate a prospectus when bankable coordination patterns exist
@@ -180,10 +196,7 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             logger.warning(f"No bankable coordination patterns found for zone {zone}")
             return {
                 "success": False,
-                "status": "error",
-                "data": {
-                    "error": "No stable bankable coordination patterns were detected. Continue collecting repeated signals in this zone so the system can identify investment-ready demand patterns."
-                }
+                "message": "Insufficient coordination activity to generate a report."
             }
 
         # Generate prospectus using full pipeline output
@@ -228,23 +241,20 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
         
         return {
             "success": True,
-            "status": "success",
-            "data": {
+            "report": {
                 "prospectus_id": prospectus_id,
                 "pdf_url": f"/api/v1/download/{pdf_filename}",
                 "json_url": f"/api/v1/download/{json_filename}",
                 "generated_at": datetime.utcnow().isoformat()
-            }
+            },
+            "pdf_url": f"/api/v1/download/{pdf_filename}"
         }
     except Exception as e:
         db.rollback()
         logger.error(f"Error generating prospectus: {str(e)}")
         return {
             "success": False,
-            "status": "error",
-            "data": {
-                "error": str(e)
-            }
+            "message": str(e)
         }
 
 

@@ -229,15 +229,16 @@ export default function Home() {
       });
 
       const data = await response.json();
-      if (data.status === 'success') {
-        setReportData(data.data);
+      if (data && data.success) {
+        const report = data.report || { pdf_url: data.pdf_url };
+        setReportData(report);
         setMessage('Investment report created successfully.');
         setNextSuggestion('Share this report with a partner');
         // encourage continuous interaction
         setTimeout(() => inputRef.current?.focus(), 300);
       } else {
         setReportData(null);
-        const errorMessage = data?.data?.error || data?.error || 'More data is needed to generate a full report. Continue recording activities.';
+        const errorMessage = data?.message || data?.data?.error || data?.error || 'More data is needed to generate a full report. Continue recording activities.';
         setMessage(errorMessage);
       }
     } catch (err) {

@@ -220,12 +220,14 @@ export function ReportSection({ zone, summary, onReportGenerated }) {
         'web_user_' + Date.now()
       );
 
-      if (response.status === 'success') {
-        setReportUrl(response.data.pdf_url);
+      if (response && response.success) {
+        // prefer top-level pdf_url, fall back to nested report
+        const pdf = response.pdf_url || (response.report && response.report.pdf_url) || '';
+        setReportUrl(pdf);
         setMessage('✓ Report generated successfully');
-        onReportGenerated?.(response.data);
+        onReportGenerated?.(response.report || { pdf_url: pdf });
       } else {
-        setMessage(response.message || 'Failed to generate report');
+        setMessage(response?.message || 'Failed to generate report');
       }
     } catch (error) {
       setMessage(`Error: ${getErrorMessage(error)}`);

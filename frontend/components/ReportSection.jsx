@@ -29,8 +29,10 @@ export function ReportSection({ reportData, zone, backendBase }) {
           </p>
         </div>
         <a
-          href={reportData?.pdf_url ? `${backendBase}${reportData.pdf_url}` : '#'}
+          href={(reportData && (reportData.pdf_url || reportData.pdfUrl || (reportData.report && reportData.report.pdf_url))) || '#'}
           download
+          target="_blank"
+          rel="noopener noreferrer"
           style={{
             padding: '12px 24px',
             borderRadius: 10,
