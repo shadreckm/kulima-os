@@ -263,7 +263,8 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
         logger.error(f"Error generating prospectus: {str(e)}")
         return {
             "success": False,
-            "message": str(e)
+            "message": str(e),
+            "fallback": "Report could not be generated yet."
         }
 
 

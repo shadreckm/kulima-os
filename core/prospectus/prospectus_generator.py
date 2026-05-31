@@ -26,6 +26,12 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
+def safe_num(value):
+    try:
+        return float(value)
+    except Exception:
+        return 0.0
+
 _PDF_MARGIN = 72
 _PDF_FOOTER_Y = 40
 _PDF_CONTENT_WIDTH = letter[0] - 2 * _PDF_MARGIN
@@ -405,7 +411,14 @@ class ProspectusGenerator:
 
         meta = prospectus["prospectus_metadata"]
         is_sample = meta.get("is_sample", False)
-        summary = prospectus["executive_summary"]
+        summary = prospectus.get("executive_summary", {}) or {}
+
+        # Defensive defaults to avoid NoneType comparisons in report generation
+        total_coordination_patterns = summary.get('total_coordination_patterns') or 0
+        high_confidence_patterns = summary.get('high_confidence_patterns') or 0
+        moderate_confidence_patterns = summary.get('moderate_confidence_patterns') or 0
+        productive_activities_detected = summary.get('productive_activities_detected') or []
+        zones_with_coordinated_demand = summary.get('zones_with_coordinated_demand') or []
 
         # ========== PAGE 1: COVER PAGE ==========
         logo = self._resolve_logo()
@@ -481,9 +494,9 @@ class ProspectusGenerator:
         story.append(Paragraph("<b>What is Happening?</b>", body_bold))
         story.append(self._section_break(12))
         story.append(Paragraph(
-            f"This prospectus analyzes coordination patterns from {summary['total_coordination_patterns']} detected activities "
+            f"This prospectus analyzes coordination patterns from {total_coordination_patterns} detected activities "
             f"in the {meta['pilot_region']} zone over a {meta['evaluation_period']}. "
-            f"Of these, {summary['high_confidence_patterns']} patterns demonstrate high coordination confidence, "
+            f"Of these, {high_confidence_patterns} patterns demonstrate high coordination confidence, "
             f"indicating stable, collective economic activity suitable for infrastructure planning.",
             body
         ))
@@ -491,25 +504,25 @@ class ProspectusGenerator:
         
         story.append(Paragraph("<b>Where is it Happening?</b>", body_bold))
         story.append(self._section_break(12))
-        zones_text = ", ".join(summary["zones_with_coordinated_demand"]) if summary["zones_with_coordinated_demand"] else "the analyzed zone"
+        zones_text = ", ".join(zones_with_coordinated_demand) if zones_with_coordinated_demand else "the analyzed zone"
         story.append(Paragraph(
             f"Coordination patterns are detected in {zones_text}. "
-            f"Activities include: {', '.join(summary['productive_activities_detected'])}.",
+            f"Activities include: {', '.join(productive_activities_detected)}.",
             body
         ))
         story.append(self._section_break(24))
         
         story.append(Paragraph("<b>Is it Real?</b>", body_bold))
         story.append(self._section_break(12))
-        story.append(Paragraph(summary["key_finding"], body))
+        story.append(Paragraph(summary.get("key_finding", ""), body))
         story.append(self._section_break(24))
         
         story.append(Paragraph("<b>Coordination Strength</b>", body_bold))
         story.append(self._section_break(12))
         story.append(Paragraph(
-            f"Detected activities include: {', '.join(summary['productive_activities_detected'])}. "
-            f"Coordination patterns indicate {'strong' if summary['high_confidence_patterns'] > 0 else 'emerging'} "
-            f"collective demand with {'high' if summary['high_confidence_patterns'] >= 3 else 'moderate'} "
+            f"Detected activities include: {', '.join(productive_activities_detected)}. "
+            f"Coordination patterns indicate {'strong' if high_confidence_patterns > 0 else 'emerging'} "
+            f"collective demand with {'high' if high_confidence_patterns >= 3 else 'moderate'} "
             f"confidence for infrastructure investment decisions.",
             body
         ))
@@ -517,16 +530,16 @@ class ProspectusGenerator:
         
         story.append(Paragraph("Coordination Metrics", st["section"]))
         story.append(self._section_break(16))
-        story.append(Paragraph(f"<b>Total Coordination Patterns:</b> {summary['total_coordination_patterns']}", body))
+        story.append(Paragraph(f"<b>Total Coordination Patterns:</b> {total_coordination_patterns}", body))
         story.append(self._section_break(12))
-        story.append(Paragraph(f"<b>High Confidence Patterns:</b> {summary['high_confidence_patterns']}", body))
+        story.append(Paragraph(f"<b>High Confidence Patterns:</b> {high_confidence_patterns}", body))
         story.append(self._section_break(12))
-        story.append(Paragraph(f"<b>Moderate Confidence Patterns:</b> {summary['moderate_confidence_patterns']}", body))
+        story.append(Paragraph(f"<b>Moderate Confidence Patterns:</b> {moderate_confidence_patterns}", body))
         story.append(self._section_break(12))
-        zones_text = ", ".join(summary["zones_with_coordinated_demand"]) if summary["zones_with_coordinated_demand"] else "None"
+        zones_text = ", ".join(zones_with_coordinated_demand) if zones_with_coordinated_demand else "None"
         story.append(Paragraph(f"<b>Zones with Coordinated Demand:</b> {zones_text}", body))
         story.append(self._section_break(12))
-        activities_text = ", ".join(summary["productive_activities_detected"]) if summary["productive_activities_detected"] else "None"
+        activities_text = ", ".join(productive_activities_detected) if productive_activities_detected else "None"
         story.append(Paragraph(f"<b>Productive Activities:</b> {activities_text}", body))
         story.append(self._section_break(36))
 
@@ -963,9 +976,9 @@ class ProspectusGenerator:
         # Weighted score
         score = (avg_stability * 0.6) + (frequency * 0.2) + (cluster_density * 0.2)
         
-        if score > 0.7:
+        if safe_num(score) > 0.7:
             return 'HIGH'
-        elif score > 0.4:
+        elif safe_num(score) > 0.4:
             return 'MEDIUM'
         else:
             return 'LOW'

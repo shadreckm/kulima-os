@@ -21,6 +21,12 @@ from typing import List, Dict
 
 from policy import require_planning_reserve, RESERVE_RATIO
 
+def safe_num(value):
+    try:
+        return float(value)
+    except Exception:
+        return 0.0
+
 
 class ZentariEngine:
     """
@@ -164,7 +170,7 @@ class ZentariEngine:
                 zone = edge.get('zone')
                 strength = edge.get('strength_score', 0)
                 key = (from_activity, zone)
-                if key not in flow_strength_map or flow_strength_map[key] < strength:
+                if key not in flow_strength_map or safe_num(flow_strength_map[key]) < safe_num(strength):
                     flow_strength_map[key] = strength
 
         for pattern in coordination_patterns:
@@ -195,11 +201,11 @@ class ZentariEngine:
             upper = round(min(1.0, confidence_score + delta), 2)
 
             # Demand classification: latent / emerging / active / deployable
-            if confidence_score >= 0.8 and stability_score >= 0.7:
+            if safe_num(confidence_score) >= 0.8 and safe_num(stability_score) >= 0.7:
                 demand_class = 'deployable'
-            elif confidence_score >= 0.65:
+            elif safe_num(confidence_score) >= 0.65:
                 demand_class = 'active'
-            elif confidence_score >= 0.5:
+            elif safe_num(confidence_score) >= 0.5:
                 demand_class = 'emerging'
             else:
                 demand_class = 'latent'
@@ -292,7 +298,7 @@ class ZentariEngine:
             trust_level = _classify_trust_level(trust_score)
 
             # Refusal logic: disallow actionable recommendations when trust below threshold
-            action_allowed = trust_score >= TRUST_THRESHOLD
+            action_allowed = safe_num(trust_score) >= safe_num(TRUST_THRESHOLD)
             reason_for_refusal = None
             if not action_allowed:
                 reason_for_refusal = (

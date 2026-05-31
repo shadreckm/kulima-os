@@ -5,6 +5,12 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from typing import List, Dict
 import logging
+
+def safe_num(value):
+    try:
+        return float(value)
+    except Exception:
+        return 0.0
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Signal
@@ -181,9 +187,9 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
         productive_activities = list(set(p.get('activity_type') for p in confidence_results if p.get('activity_type')))
         
         # Generate key finding from pipeline output
-        if high_confidence_patterns > 0:
+        if safe_num(high_confidence_patterns) > 0:
             key_finding = f"Strong coordination patterns detected with {high_confidence_patterns} high-confidence activities"
-        elif moderate_confidence_patterns > 0:
+        elif safe_num(moderate_confidence_patterns) > 0:
             key_finding = f"Emerging coordination patterns detected with {moderate_confidence_patterns} moderate-confidence activities"
         else:
             key_finding = "Patterns are forming — record more activity to unlock insights"
@@ -213,7 +219,7 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                 "total_patterns": total_patterns,
                 "high_confidence_patterns": high_confidence_patterns,
                 "moderate_confidence_patterns": moderate_confidence_patterns,
-                "zones_with_coordinated_demand": [zone] if total_patterns > 0 else [],
+                "zones_with_coordinated_demand": [zone] if safe_num(total_patterns) > 0 else [],
                 "productive_activities_detected": productive_activities,
                 "infrastructure_gaps": infrastructure_gaps,
                 "cluster_summaries": cluster_summaries,
@@ -709,13 +715,13 @@ def _calculate_risk_model(confidence_results: List[Dict], lundai_analysis: Dict)
     persistence_values = [r.get('persistence', 0) for r in confidence_results]
     avg_persistence = sum(persistence_values) / len(persistence_values) if persistence_values else 0
     
-    if avg_persistence < 0.4:
+    if safe_num(avg_persistence) < 0.4:
         risk_factors.append({
             "type": "Demand uncertainty risk",
-            "severity": "high" if avg_persistence < 0.2 else "moderate",
+            "severity": "high" if safe_num(avg_persistence) < 0.2 else "moderate",
             "description": f"Low persistence ({avg_persistence:.2f}) indicates patterns may not repeat consistently"
         })
-    elif avg_persistence < 0.6:
+    elif safe_num(avg_persistence) < 0.6:
         risk_factors.append({
             "type": "Demand uncertainty risk",
             "severity": "low",
@@ -726,13 +732,13 @@ def _calculate_risk_model(confidence_results: List[Dict], lundai_analysis: Dict)
     stability_values = [r.get('stability_score', 0) for r in confidence_results]
     avg_stability = sum(stability_values) / len(stability_values) if stability_values else 0
     
-    if avg_stability < 0.4:
+    if safe_num(avg_stability) < 0.4:
         risk_factors.append({
             "type": "Volatility risk",
-            "severity": "high" if avg_stability < 0.2 else "moderate",
+            "severity": "high" if safe_num(avg_stability) < 0.2 else "moderate",
             "description": f"Low stability ({avg_stability:.2f}) indicates high variance in pattern occurrence"
         })
-    elif avg_stability < 0.6:
+    elif safe_num(avg_stability) < 0.6:
         risk_factors.append({
             "type": "Volatility risk",
             "severity": "low",
@@ -743,13 +749,13 @@ def _calculate_risk_model(confidence_results: List[Dict], lundai_analysis: Dict)
     flow_strength_values = [r.get('flow_strength', 0) for r in confidence_results]
     avg_flow_strength = sum(flow_strength_values) / len(flow_strength_values) if flow_strength_values else 0
     
-    if avg_flow_strength < 0.3:
+    if safe_num(avg_flow_strength) < 0.3:
         risk_factors.append({
             "type": "Fragmentation risk",
             "severity": "high",
             "description": f"Weak flow connections ({avg_flow_strength:.2f}) indicate fragmented economic activity"
         })
-    elif avg_flow_strength < 0.5:
+    elif safe_num(avg_flow_strength) < 0.5:
         risk_factors.append({
             "type": "Fragmentation risk",
             "severity": "moderate",
@@ -758,13 +764,13 @@ def _calculate_risk_model(confidence_results: List[Dict], lundai_analysis: Dict)
     
     # Analyze signal density
     total_patterns = len(confidence_results)
-    if total_patterns < 3:
+    if safe_num(total_patterns) < 3:
         risk_factors.append({
             "type": "Data insufficiency risk",
             "severity": "high",
             "description": f"Low pattern count ({total_patterns}) indicates insufficient data for reliable planning"
         })
-    elif total_patterns < 5:
+    elif safe_num(total_patterns) < 5:
         risk_factors.append({
             "type": "Data insufficiency risk",
             "severity": "moderate",

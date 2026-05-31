@@ -21,6 +21,12 @@ from collections import defaultdict
 import statistics
 import logging
 
+def safe_num(value):
+    try:
+        return float(value)
+    except Exception:
+        return 0.0
+
 logger = logging.getLogger(__name__)
 
 
@@ -104,12 +110,12 @@ class LumozaEngine:
                     persistence_data = self._calculate_persistence(pattern_key)
                     
                     # Apply coordination thresholds
-                    if pattern_analysis['cycle_count'] < self.NOISE_THRESHOLD:
+                    if safe_num(pattern_analysis.get('cycle_count')) < safe_num(self.NOISE_THRESHOLD):
                         # Noise: discard pattern
                         continue
                     
                     # Determine stability classification
-                    if pattern_analysis['cycle_count'] >= self.STABLE_THRESHOLD:
+                    if safe_num(pattern_analysis.get('cycle_count')) >= safe_num(self.STABLE_THRESHOLD):
                         stability_class = "stable"
                     else:
                         stability_class = "intermediate"
@@ -244,9 +250,9 @@ class LumozaEngine:
         aligned_cycles = human_cycles & telemetry_cycles
         alignment_ratio = len(aligned_cycles) / len(human_cycles)
         
-        if alignment_ratio >= 0.8:
+        if safe_num(alignment_ratio) >= 0.8:
             strength = 'strong'
-        elif alignment_ratio >= 0.5:
+        elif safe_num(alignment_ratio) >= 0.5:
             strength = 'moderate'
         else:
             strength = 'weak'
