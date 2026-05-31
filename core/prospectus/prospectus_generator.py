@@ -59,6 +59,7 @@ class ProspectusGenerator:
         lundai_analysis: Dict = None,
         metadata: Dict = None,
         planning_reserve: Dict = None,
+        clusters: List[Dict] = None,
     ) -> Dict:
         """
         Generate a Demand-Signal Prospectus.
@@ -87,6 +88,7 @@ class ProspectusGenerator:
         
         # Build prospectus structure
         is_sample = metadata.get("is_sample", False)
+        clusters = clusters or []
         prospectus = {
             "prospectus_metadata": {
                 "title": "KULIMA OS Demand-Signal Prospectus",
@@ -117,8 +119,9 @@ class ProspectusGenerator:
                 "estimate_nature": "Estimates are conservative lower-bound signals intended for planning, not exact operational forecasts."
             },
             "planning_reserve": planning_reserve,
+            "cluster_overview": clusters,
             
-            "executive_summary": self._generate_executive_summary(confidence_results, lundai_analysis),
+            "executive_summary": self._generate_executive_summary(confidence_results, lundai_analysis, clusters),
             
             "coordination_patterns": self._format_patterns_for_institutions(confidence_results),
             
@@ -527,7 +530,33 @@ class ProspectusGenerator:
         story.append(Paragraph(f"<b>Productive Activities:</b> {activities_text}", body))
         story.append(self._section_break(36))
 
-        # ========== PAGE 3: COORDINATION PATTERNS ==========
+        # ========== PAGE 3: CLUSTER OVERVIEW ==========
+        story.append(self._page_break())
+        story.append(Paragraph("Cluster Overview", st["section"]))
+        story.append(self._section_break(24))
+        clusters = prospectus.get("cluster_overview", [])
+        if clusters:
+            cluster_rows = [["Cluster", "Zone", "Signals", "Top Activities", "Infrastructure Needs"]]
+            for cluster in clusters:
+                cluster_rows.append([
+                    cluster.get("cluster_name", "Unknown"),
+                    cluster.get("zone", "Unknown"),
+                    str(cluster.get("signal_count", 0)),
+                    Paragraph(", ".join(cluster.get("top_activities", [])) or "—", body),
+                    Paragraph(", ".join(cluster.get("infrastructure_gaps", [])) or "—", body)
+                ])
+            cw = _PDF_CONTENT_WIDTH / 5
+            story.append(self._make_table(cluster_rows, [cw, cw, cw * 0.7, cw * 1.3, cw * 1.5]))
+            story.append(self._section_break(20))
+            story.append(Paragraph(
+                "This overview identifies geographic clusters of activity, localized infrastructure gaps, and quick project recommendations.",
+                note
+            ))
+        else:
+            story.append(Paragraph("No cluster overview was available for this prospectus.", note))
+        story.append(self._section_break(36))
+
+        # ========== PAGE 4: COORDINATION PATTERNS ==========
         story.append(self._page_break())
         story.append(Paragraph("Verified Coordination Patterns", st["section"]))
         story.append(self._section_break(24))
@@ -941,9 +970,9 @@ class ProspectusGenerator:
         else:
             return 'LOW'
     
-    def _generate_executive_summary(self, confidence_results: List[Dict], lundai_analysis: Dict = None) -> Dict:
+    def _generate_executive_summary(self, confidence_results: List[Dict], lundai_analysis: Dict = None, clusters: List[Dict] = None) -> Dict:
         """Generate executive summary of coordination patterns."""
-        
+        clusters = clusters or []
         total_patterns = len(confidence_results)
         high_confidence = sum(1 for r in confidence_results if r['confidence_class'] == 'high')
         moderate_confidence = sum(1 for r in confidence_results if r['confidence_class'] == 'moderate')
@@ -951,6 +980,7 @@ class ProspectusGenerator:
         # Extract unique zones and activities
         zones = set(r['zone'] for r in confidence_results)
         activities = set(r['activity_type'] for r in confidence_results)
+        top_cluster_names = [c['cluster_name'] for c in clusters[:2]]
         
         summary = {
             "total_coordination_patterns": total_patterns,
@@ -958,8 +988,14 @@ class ProspectusGenerator:
             "moderate_confidence_patterns": moderate_confidence,
             "zones_with_coordinated_demand": list(zones),
             "productive_activities_detected": list(activities),
+            "cluster_count": len(clusters),
             "key_finding": f"Detected {total_patterns} stable coordination patterns across {len(zones)} zones, "
-                          f"with {high_confidence} patterns showing high confidence for infrastructure investment."
+                          f"with {high_confidence} patterns showing high confidence for infrastructure investment.",
+            "cluster_overview": {
+                "cluster_count": len(clusters),
+                "top_clusters": top_cluster_names,
+                "cluster_summary": "; ".join([c['summary'] for c in clusters[:2]]) if clusters else "No cluster summaries available."
+            }
         }
         
         # Add LUNDAI insights if available

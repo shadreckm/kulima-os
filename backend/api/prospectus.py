@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Signal, Prospectus
 from backend.schemas.requests import ProspectusRequest
+from backend.utils.signal_normalizer import normalize_signal_text
+from backend.utils.cluster_utils import build_cluster_summary
 from core.prospectus.prospectus_generator import ProspectusGenerator
 from core.lumoza.lumoza_engine import LumozaEngine
 from core.lundai.lundai_engine import LundaiEngine, evaluate_signal_integrity
@@ -86,14 +88,19 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
         
         signal_data = []
         for signal in signals:
+            normalized = normalize_signal_text(signal.original_text)
             signal_data.append({
-                "zone": signal.zone,
-                "activity_type": signal.activity_type,
-                "time_window": signal.time_window,
+                "zone": normalized.get('zone', signal.zone),
+                "activity_type": normalized.get('activity_type') or signal.activity_type,
+                "time_window": normalized.get('time_window') or signal.time_window,
+                "location": normalized.get('location', 'Local area'),
+                "crop": normalized.get('crop', ''),
+                "cluster_id": normalized.get('cluster_id'),
                 "timestamp": signal.timestamp.isoformat(),
                 "signal_source": signal.source,
                 "user_phone": signal.user_id,
-                "service_priority": "productive"
+                "service_priority": "productive",
+                "original_text": signal.original_text or ''
             })
         
         # Add cycle_index to each signal
@@ -208,11 +215,13 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             "is_sample": False
         }
         
+        cluster_summary = build_cluster_summary(signal_data)
         prospectus = gen.generate_prospectus(
             confidence_results,
             lundai_analysis=lundai_analysis,
             metadata=metadata,
             planning_reserve=planning_reserve,
+            clusters=cluster_summary,
         )
         
         # Save PDF

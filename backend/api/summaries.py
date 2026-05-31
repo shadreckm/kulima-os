@@ -8,6 +8,8 @@ import logging
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Signal
+from backend.utils.signal_normalizer import normalize_signal_text
+from backend.utils.cluster_utils import build_cluster_summary
 from core.lumoza.lumoza_engine import LumozaEngine
 from core.lundai.lundai_engine import LundaiEngine, evaluate_signal_integrity
 from core.zentari.zentari_engine import ZentariEngine
@@ -62,17 +64,22 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                 }
             }
         
-        # 2. Convert database signals to engine format
+        # 2. Convert database signals to engine format with enriched metadata
         signal_data = []
         for signal in signals:
+            normalized = normalize_signal_text(signal.original_text)
             signal_data.append({
-                "zone": signal.zone,
-                "activity_type": signal.activity_type,
-                "time_window": signal.time_window,
+                "zone": normalized.get('zone', signal.zone),
+                "activity_type": normalized.get('activity_type') or signal.activity_type,
+                "time_window": normalized.get('time_window') or signal.time_window,
+                "location": normalized.get('location', 'Local area'),
+                "crop": normalized.get('crop', ''),
+                "cluster_id": normalized.get('cluster_id'),
                 "timestamp": signal.timestamp.isoformat(),
                 "signal_source": signal.source,
                 "user_phone": signal.user_id,
-                "service_priority": "productive"
+                "service_priority": "productive",
+                "original_text": signal.original_text or ''
             })
         
         # Add cycle_index to each signal
@@ -181,6 +188,9 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
         else:
             key_finding = "Patterns are forming — record more activity to unlock insights"
         
+        clusters = build_cluster_summary(signal_data)
+        recommended_projects = sorted({ project for cluster in clusters for project in cluster.get('recommended_projects', []) })
+
         logger.info(f"Summary computed: {total_patterns} total, {high_confidence_patterns} high confidence, {moderate_confidence_patterns} moderate confidence")
         
         # Calculate risk model from confidence results
@@ -190,6 +200,11 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
             logger.warning(f"Risk model calculation failed: {e}, using empty risk model")
             risk_model = {"risk_level": "unknown", "risk_factors": [], "recommendation": "Continue recording activities"}
         
+        infrastructure_gaps = sorted({ gap for cluster in clusters for gap in cluster.get('infrastructure_gaps', []) })
+        cluster_summaries = [
+            {"cluster_name": c.get('cluster_name'), "summary": c.get('summary')} for c in clusters
+        ]
+
         return {
             "status": "success",
             "data": {
@@ -200,6 +215,10 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                 "moderate_confidence_patterns": moderate_confidence_patterns,
                 "zones_with_coordinated_demand": [zone] if total_patterns > 0 else [],
                 "productive_activities_detected": productive_activities,
+                "infrastructure_gaps": infrastructure_gaps,
+                "cluster_summaries": cluster_summaries,
+                "clusters": clusters,
+                "recommended_projects": recommended_projects,
                 "key_finding": key_finding,
                 "updated_at": datetime.utcnow().isoformat(),
                 "pipeline_output": {
@@ -207,7 +226,9 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                     "lundai_analysis": lundai_analysis,
                     "flow_graph": flow_graph,
                     "confidence_results": confidence_results,
-                    "risk_model": risk_model
+                    "risk_model": risk_model,
+                    "clusters": clusters,
+                    "recommended_projects": recommended_projects
                 }
             }
         }

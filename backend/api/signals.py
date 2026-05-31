@@ -40,12 +40,16 @@ async def create_signal(request: SignalRequest, db: Session = Depends(get_db)):
             zone = (request.zone or normalized.get('zone') or 'UNKNOWN').upper()
             activity = normalized.get('activity_type') or request.activity_type or 'unknown'
             time_window = normalized.get('time_window') or request.time_window or 'unknown'
+            location = normalized.get('location') or 'Local area'
+            crop = normalized.get('crop', '') or ''
             original_text = normalized.get('original_text', request.raw_text) or ''
         else:
             # Expect structured fields
             zone = (request.zone or 'UNKNOWN').upper()
             activity = request.activity_type or 'unknown'
             time_window = request.time_window or 'unknown'
+            location = request.location or 'Local area' if hasattr(request, 'location') else 'Local area'
+            crop = ''
             original_text = request.raw_text or ''
 
         # Parse timestamp with validation
