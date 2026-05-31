@@ -83,6 +83,7 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             logger.warning(f"No signals found for zone {zone}")
             return {
                 "success": False,
+                "status": "error",
                 "message": "Insufficient coordination activity to generate a report."
             }
         
@@ -117,6 +118,7 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             logger.warning(f"No coordination patterns detected for zone {zone}")
             return {
                 "success": False,
+                "status": "error",
                 "message": "Insufficient coordination activity to generate a report."
             }
         
@@ -189,6 +191,7 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             logger.warning(f"ZENTARI produced no confidence results for zone {zone}")
             return {
                 "success": False,
+                "status": "error",
                 "message": "Insufficient coordination activity to generate a report."
             }
 
@@ -203,6 +206,7 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             logger.warning(f"No bankable coordination patterns found for zone {zone}")
             return {
                 "success": False,
+                "status": "error",
                 "message": "Insufficient coordination activity to generate a report."
             }
 
@@ -250,6 +254,7 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
         
         return {
             "success": True,
+            "status": "success",
             "report": {
                 "prospectus_id": prospectus_id,
                 "pdf_url": f"/api/v1/download/{pdf_filename}",
@@ -259,12 +264,16 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             "pdf_url": f"/api/v1/download/{pdf_filename}"
         }
     except Exception as e:
-        db.rollback()
+        try:
+            db.rollback()
+        except Exception:
+            pass
         logger.error(f"Error generating prospectus: {str(e)}")
         return {
             "success": False,
-            "message": str(e),
-            "fallback": "Report could not be generated yet."
+            "status": "error",
+            "report": None,
+            "message": "Unable to create the report at this time. Please try again later."
         }
 
 

@@ -6,18 +6,18 @@ const ZONES = ['MZUZU', 'LILONGWE', 'BLANTYRE', 'ZOMBA'];
 const PUBLIC_LOGO = '/logo.png';
 const CARD_CONTENT = [
   {
-    title: 'Daily coordination patterns',
-    description: 'Track when and where activity clusters repeat to reveal reliable demand windows.',
+    title: 'Local activity patterns',
+    description: 'See when local farming and service activity repeats so you can spot reliable demand windows.',
     color: '#2d6a4f'
   },
   {
-    title: 'Infrastructure gaps',
-    description: 'See missing energy and transport links created by repeated local activity patterns.',
+    title: 'Service gaps nearby',
+    description: 'Discover repeated activity that points to missing power, water, or transport support.',
     color: '#146c43'
   },
   {
-    title: 'Community project triggers',
-    description: 'Turn repeated local signals into recommended projects for investment and support.',
+    title: 'Action-ready projects',
+    description: 'Turn repeated local activity into practical recommendations for community infrastructure.',
     color: '#0f5132'
   }
 ];
@@ -152,7 +152,7 @@ export default function Home() {
       if (data?.success) {
         setReportData(data.report || { pdf_url: data.pdf_url });
         setShowFullReport(true);
-        setMessage('Report created. You can view, download, or share it now.');
+        setMessage('Report ready. Preview, download, or share it with local partners.');
       } else {
         setMessage(data?.message || 'Unable to generate report. Record more activity and try again.');
       }
@@ -203,7 +203,7 @@ export default function Home() {
             <img src={PUBLIC_LOGO} alt="Kulima OS" style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#2d6a4f' }} />
             <div>
               <div style={{ fontSize: 16, fontWeight: 800 }}>Kulima OS</div>
-              <div style={{ fontSize: 12, color: '#4a6859' }}>Live coordination intelligence</div>
+              <div style={{ fontSize: 12, color: '#4a6859' }}>Live community demand insights</div>
             </div>
           </div>
           <select value={zone} onChange={(e) => setZone(e.target.value)} style={{ padding: '10px 14px', borderRadius: 12, border: '1px solid #d1e2d8', backgroundColor: '#f5faf7', cursor: 'pointer' }}>
@@ -217,8 +217,8 @@ export default function Home() {
           <section style={{ display: 'grid', gap: 20 }}>
             <div style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 28, border: '1px solid #e3ece5' }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d', marginBottom: 12 }}>Describe your activity</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#0f3b2d', marginBottom: 14 }}>Share a local coordination signal.</div>
-              <p style={{ fontSize: 15, color: '#41534c', lineHeight: 1.8 }}>Write one sentence describing what is happening in your area. The system transforms it into community intelligence.</p>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#0f3b2d', marginBottom: 14 }}>Share a local activity.</div>
+              <p style={{ fontSize: 15, color: '#41534c', lineHeight: 1.8 }}>Write one sentence describing what is happening in your area. The platform turns it into community insights.</p>
               <form onSubmit={handleSubmitActivity} style={{ display: 'grid', gap: 14 }}>
                 <textarea
                   value={inputValue}
@@ -269,7 +269,7 @@ export default function Home() {
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d' }}>Action center</div>
-                  <div style={{ fontSize: 13, color: '#4f6258' }}>Create and share your zone prospectus.</div>
+                  <div style={{ fontSize: 13, color: '#4f6258' }}>Create and share your community report.</div>
                 </div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   <button onClick={handleGenerateReport} type="button" disabled={reportLoading} style={{ padding: '12px 16px', borderRadius: 14, border: 'none', backgroundColor: '#2d6a4f', color: '#fff', fontWeight: 700, cursor: reportLoading ? 'not-allowed' : 'pointer' }}>{reportLoading ? 'Generating...' : 'Create report'}</button>
@@ -279,13 +279,13 @@ export default function Home() {
               <div style={{ marginTop: 20, display: 'grid', gap: 12 }}>
                 <button onClick={handleViewFullReport} type="button" style={{ width: '100%', padding: '14px 16px', borderRadius: 16, border: '1px solid #c7dfcc', backgroundColor: '#f8fbf8', color: '#1f4b34', fontWeight: 700 }}>Preview report</button>
                 {reportUrl && <a href={reportUrl} download style={{ width: '100%', textAlign: 'center', padding: '14px 16px', borderRadius: 16, border: '1px solid #2d6a4f', backgroundColor: '#fff', color: '#2d6a4f', fontWeight: 700, textDecoration: 'none' }}>Download PDF</a>}
-                <div style={{ fontSize: 13, color: '#4f6258' }}>{shareMessage || 'Share the report or preview the full insights panel.'}</div>
+                <div style={{ fontSize: 13, color: '#4f6258' }}>{shareMessage || 'Share the report or preview the full insights summary.'}</div>
               </div>
             </div>
 
             <div style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 24, border: '1px solid #e3ece5' }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d', marginBottom: 14 }}>Live activity feed</div>
-              <div style={{ fontSize: 13, color: '#4f6258', marginBottom: 16 }}>Recent signals captured by the community.</div>
+              <div style={{ fontSize: 13, color: '#4f6258', marginBottom: 16 }}>Recent activity captured from the community.</div>
               <div style={{ display: 'grid', gap: 12 }}>
                 {recentActivities.length ? recentActivities.slice(0, 4).map((activity, idx) => (
                   <div key={idx} style={{ padding: 14, borderRadius: 16, border: '1px solid #dbe6df', backgroundColor: '#f7faf7' }}>
@@ -298,7 +298,7 @@ export default function Home() {
 
             <div style={{ backgroundColor: '#f7fffb', borderRadius: 24, padding: 24, border: '1px solid #d9ede1' }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d', marginBottom: 12 }}>Report snapshot</div>
-              <div style={{ fontSize: 13, color: '#41534c', marginBottom: 18 }}>Review top signals, gaps, and confidence levels before sharing.</div>
+              <div style={{ fontSize: 13, color: '#41534c', marginBottom: 18 }}>Review top observations, service gaps, and local readiness before sharing.</div>
               <div style={{ display: 'grid', gap: 12 }}>
                 <div style={{ fontSize: 13, color: '#334a3f' }}>High-confidence patterns: {summary?.high_confidence_patterns ?? 0}</div>
                 <div style={{ fontSize: 13, color: '#334a3f' }}>Moderate-confidence patterns: {summary?.moderate_confidence_patterns ?? 0}</div>
@@ -320,7 +320,7 @@ export default function Home() {
               </div>
 
               <div style={{ marginTop: 22, display: 'grid', gap: 18 }}>
-                <div style={{ fontSize: 15, color: '#41534c', lineHeight: 1.8 }}>{summary?.key_finding || 'This preview explains local demand trends, infrastructure gaps, and community recommendations for your selected zone.'}</div>
+                <div style={{ fontSize: 13, color: '#41534c', lineHeight: 1.8 }}>{summary?.key_finding || 'This preview explains local activity trends, missing services, and practical recommendations for your zone.'}</div>
 
                 <div style={{ display: 'grid', gap: 16 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -335,7 +335,7 @@ export default function Home() {
                   </div>
 
                   <div style={{ display: 'grid', gap: 12 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d' }}>Confidence and patterns</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d' }}>Local confidence and trends</div>
                     <div style={{ fontSize: 13, color: '#41534c', lineHeight: 1.7 }}>
                       {summary?.high_confidence_patterns > 0 ? `${summary.high_confidence_patterns} high-confidence pattern${summary.high_confidence_patterns > 1 ? 's' : ''}` : 'No high-confidence patterns yet.'}
                       <br />
@@ -344,7 +344,7 @@ export default function Home() {
                   </div>
 
                   <div style={{ display: 'grid', gap: 12 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d' }}>Local signal highlights</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d' }}>Top local observations</div>
                     {clusterData.length > 0 ? clusterData.slice(0, 3).map((cluster, idx) => (
                       <div key={idx} style={{ backgroundColor: '#f7fbf8', borderRadius: 20, padding: 18, border: '1px solid #d9ebe1' }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: '#134e4a' }}>{cluster.cluster_name || `Cluster ${idx + 1}`}</div>

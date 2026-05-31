@@ -439,11 +439,11 @@ class ZentariEngine:
     
     def _classify_confidence(self, confidence_score: float) -> str:
         """Classify confidence level for institutional decision-makers."""
-        if confidence_score >= 0.8:
+        if safe_num(confidence_score) >= 0.8:
             return "high"
-        elif confidence_score >= 0.6:
+        elif safe_num(confidence_score) >= 0.6:
             return "moderate"
-        elif confidence_score >= 0.4:
+        elif safe_num(confidence_score) >= 0.4:
             return "low"
         else:
             return "insufficient"
@@ -456,11 +456,11 @@ class ZentariEngine:
         - Guidance is for infrastructure investment, not credit decisions
         - No individual eligibility or access control
         """
-        if confidence_score >= 0.8:
+        if safe_num(confidence_score) >= 0.8:
             return "High confidence for infrastructure investment. Pattern is stable and corroborated."
-        elif confidence_score >= 0.6:
+        elif safe_num(confidence_score) >= 0.6:
             return "Moderate confidence. Pattern shows coordination but may need monitoring."
-        elif confidence_score >= 0.4:
+        elif safe_num(confidence_score) >= 0.4:
             return "Low confidence. Pattern exists but lacks strong validation or stability."
         else:
             return "Insufficient confidence for infrastructure planning at this time."

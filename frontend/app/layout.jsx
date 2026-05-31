@@ -1,8 +1,8 @@
 import '../styles/globals.css';
 
 export const metadata = {
-  title: 'Kulima OS - Coordination Intelligence Platform',
-  description: 'Transform real-world activity into decision-grade intelligence for infrastructure planning',
+  title: 'Kulima OS - Community Demand Insights',
+  description: 'Turn local activity into community-ready planning intelligence for energy and infrastructure decisions.',
 };
 
 export default function RootLayout({ children }) {

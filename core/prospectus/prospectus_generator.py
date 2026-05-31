@@ -521,8 +521,8 @@ class ProspectusGenerator:
         story.append(self._section_break(12))
         story.append(Paragraph(
             f"Detected activities include: {', '.join(productive_activities_detected)}. "
-            f"Coordination patterns indicate {'strong' if high_confidence_patterns > 0 else 'emerging'} "
-            f"collective demand with {'high' if high_confidence_patterns >= 3 else 'moderate'} "
+            f"Coordination patterns indicate {'strong' if safe_num(high_confidence_patterns) > 0 else 'emerging'} "
+            f"collective demand with {'high' if safe_num(high_confidence_patterns) >= 3 else 'moderate'} "
             f"confidence for infrastructure investment decisions.",
             body
         ))
@@ -767,9 +767,9 @@ class ProspectusGenerator:
             
             story.append(Paragraph("<b>Demand Validity Confidence:</b>", body_bold))
             story.append(self._section_break(12))
-            confidence_level = "High" if summary['high_confidence_patterns'] >= 2 else "Moderate"
+            confidence_level = "High" if safe_num(summary.get('high_confidence_patterns')) >= 2 else "Moderate"
             story.append(Paragraph(
-                f"{confidence_level} confidence based on {summary['high_confidence_patterns']} high-confidence patterns "
+                f"{confidence_level} confidence based on {safe_num(summary.get('high_confidence_patterns'))} high-confidence patterns "
                 f"validated across {meta['evaluation_period']}.",
                 body
             ))
