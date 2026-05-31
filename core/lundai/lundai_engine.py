@@ -101,7 +101,8 @@ def _classify_integrity(score: float) -> str:
     if score < 0.4:
         return 'low'
     if score < 0.7:
-        return 'medium'
+        # Legacy code expects 'moderate' in many places; keep that tag for compatibility
+        return 'moderate'
     return 'high'
 
 
@@ -233,7 +234,14 @@ def evaluate_signal_integrity(signals: List[Dict], integrity_threshold: float = 
         score = round(min(max(adjusted_score, 0.0), 1.0), 3)
 
         classification = _classify_integrity(score)
-        valid = score >= integrity_threshold
+        # Require at least 2 unique senders for medium/high validity to resist fake input
+        min_unique_senders = 2
+        valid = False
+        if score >= integrity_threshold and unique_senders >= min_unique_senders:
+            valid = True
+        # If score is very high (>0.85) allow single-sender telemetry-heavy signals
+        if score >= 0.85 and telemetry_count >= max(1, int(signal_count * 0.5)):
+            valid = True
 
         integrity_results.append({
             "activity": activity,
@@ -241,6 +249,14 @@ def evaluate_signal_integrity(signals: List[Dict], integrity_threshold: float = 
             "integrity_score": round(score, 3),
             "valid": valid,
             "classification": classification,
+            # Map to a simplified confidence label for UI/monetization: low/medium/high
+            "confidence_class": (
+                "HIGH" if score >= 0.7 else ("MEDIUM" if score >= 0.4 else "LOW")
+            ),
+            "trust": {
+                "action_allowed": bool(valid),
+                "reason": "multi-user corroboration" if unique_senders >= 2 else "insufficient unique users"
+            },
             "signal_count": signal_count,
             "unique_days": unique_days,
             "unique_senders": unique_senders,

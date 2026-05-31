@@ -206,7 +206,7 @@ export default function CoordinationMap() {
   if (loading) {
     return (
       <div className="p-6">
-        <div className="text-center">Loading coordination map...</div>
+        <div className="text-center">Loading map of what people are doing...</div>
       </div>
     );
   }

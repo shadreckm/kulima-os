@@ -127,6 +127,7 @@ class ProspectusRequest(BaseModel):
     """Schema for prospectus generation"""
     zone: str = Field(..., min_length=1, description="Zone identifier")
     user_id: Optional[str] = Field(None, description="User identifier")
+    preview: Optional[bool] = Field(False, description="If true, generate a preview (partial) and lock full report")
     
     @validator('zone')
     def validate_zone(cls, v):

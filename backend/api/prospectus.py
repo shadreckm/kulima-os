@@ -196,11 +196,12 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             }
 
         # Only generate a prospectus when bankable coordination patterns exist
-        bankable_patterns = [
-            pattern for pattern in confidence_results
-            if pattern.get("confidence_class") in ("high", "moderate")
-            and pattern.get("trust", {}).get("action_allowed") is True
-        ]
+        bankable_patterns = []
+        for pattern in confidence_results:
+            conf = pattern.get('confidence') or pattern.get('confidence_class')
+            # Normalize: accept 'high' or 'medium'/'moderate' as bankable
+            if conf in ('high', 'medium', 'moderate') and pattern.get('trust', {}).get('action_allowed') is True:
+                bankable_patterns.append(pattern)
 
         if not bankable_patterns:
             logger.warning(f"No bankable coordination patterns found for zone {zone}")
@@ -228,41 +229,73 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             clusters=cluster_summary,
         )
         
-        # Save PDF
-        gen.generate_pdf(prospectus, str(pdf_path))
-        logger.info(f"PDF saved to: {pdf_path}")
+        # Save PDF (full or preview)
+        # If request.preview is True, generate a partial (preview) pdf and mark as locked
+        try:
+            is_preview = bool(getattr(request, 'preview', False))
+        except Exception:
+            is_preview = False
+
+        # For preview, generate a short locked preview file instead of the full prospectus
+        if is_preview:
+            preview_prospectus = {
+                "prospectus_metadata": prospectus["prospectus_metadata"],
+                "executive_summary": prospectus.get("executive_summary"),
+                "coordination_patterns": prospectus.get("coordination_patterns")[:2] if prospectus.get("coordination_patterns") else [],
+                "preview_locked": True,
+                "preview_note": "This is a partial preview. Unlock the full prospectus to access the complete report.",
+            }
+            gen.generate_preview_pdf(preview_prospectus, str(pdf_path))
+            logger.info(f"Preview PDF saved to: {pdf_path}")
+        else:
+            gen.generate_pdf(prospectus, str(pdf_path))
+            logger.info(f"PDF saved to: {pdf_path}")
         
         # Save JSON
         import json
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(prospectus, f, indent=2)
         logger.info(f"JSON saved to: {json_path}")
-        
-        # Store prospectus in database
-        db_prospectus = Prospectus(
-            id=prospectus_id,
-            zone=zone_key,
-            user_id=user_id,
-            pdf_url=f"/api/v1/download/{pdf_filename}",
-            json_url=f"/api/v1/download/{json_filename}",
-            meta_data=json.dumps(metadata),
-        )
-        db.add(db_prospectus)
-        db.commit()
-        
-        logger.info(f"Prospectus stored in database: {prospectus_id}")
-        
-        return {
-            "success": True,
-            "status": "success",
-            "report": {
-                "prospectus_id": prospectus_id,
-                "pdf_url": f"/api/v1/download/{pdf_filename}",
-                "json_url": f"/api/v1/download/{json_filename}",
-                "generated_at": datetime.utcnow().isoformat()
-            },
-            "pdf_url": f"/api/v1/download/{pdf_filename}"
-        }
+
+        if not is_preview:
+            # Store prospectus in database
+            db_prospectus = Prospectus(
+                id=prospectus_id,
+                zone=zone_key,
+                user_id=user_id,
+                pdf_url=f"/api/v1/download/{pdf_filename}",
+                json_url=f"/api/v1/download/{json_filename}",
+                meta_data=json.dumps(metadata),
+            )
+            db.add(db_prospectus)
+            db.commit()
+            logger.info(f"Prospectus stored in database: {prospectus_id}")
+
+            return {
+                "success": True,
+                "status": "success",
+                "report": {
+                    "prospectus_id": prospectus_id,
+                    "pdf_url": f"/api/v1/download/{pdf_filename}",
+                    "json_url": f"/api/v1/download/{json_filename}",
+                    "generated_at": datetime.utcnow().isoformat()
+                },
+                "pdf_url": f"/api/v1/download/{pdf_filename}"
+            }
+        else:
+            # Return preview metadata and patterns without persisting DB record
+            return {
+                "success": True,
+                "status": "success",
+                "report": {
+                    "prospectus_id": prospectus_id,
+                    "pdf_url": f"/api/v1/download/{pdf_filename}",
+                    "json_url": f"/api/v1/download/{json_filename}",
+                    "preview_locked": True,
+                    "coordination_patterns": prospectus.get("coordination_patterns", []),
+                    "generated_at": datetime.utcnow().isoformat()
+                }
+            }
     except Exception as e:
         try:
             db.rollback()

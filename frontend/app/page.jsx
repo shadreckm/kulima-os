@@ -6,18 +6,18 @@ const ZONES = ['MZUZU', 'LILONGWE', 'BLANTYRE', 'ZOMBA'];
 const PUBLIC_LOGO = '/logo.png';
 const CARD_CONTENT = [
   {
-    title: 'Local activity patterns',
-    description: 'See when local farming and service activity repeats so you can spot reliable demand windows.',
+    title: 'What people are doing',
+    description: 'See repeated local activities so you can spot reliable demand windows.',
     color: '#2d6a4f'
   },
   {
-    title: 'Service gaps nearby',
-    description: 'Discover repeated activity that points to missing power, water, or transport support.',
+    title: 'What is missing',
+    description: 'Discover repeated activities that point to missing services like power, water, or transport.',
     color: '#146c43'
   },
   {
-    title: 'Action-ready projects',
-    description: 'Turn repeated local activity into practical recommendations for community infrastructure.',
+    title: 'What can be built',
+    description: 'Turn repeated activities into simple, practical local projects the community can build.',
     color: '#0f5132'
   }
 ];
@@ -75,7 +75,7 @@ export default function Home() {
         setMessage('Insights refreshed for your zone.');
       } else {
         setSummary(null);
-        setMessage('No coordination data available yet. Record an activity to unlock insights.');
+        setMessage('No activity data available yet. Record an activity to unlock insights.');
       }
     } catch (error) {
       setSummary(null);
@@ -146,13 +146,13 @@ export default function Home() {
       const response = await fetch(`${BASE_URL}/generate-prospectus`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zone, user_id: `web_user_${Date.now()}` })
+        body: JSON.stringify({ zone, user_id: `web_user_${Date.now()}`, preview: true })
       });
       const data = await response.json();
       if (data?.success) {
-        setReportData(data.report || { pdf_url: data.pdf_url });
+        setReportData(data.report || { pdf_url: data.pdf_url, preview_locked: true, coordination_patterns: data.report?.coordination_patterns || [] });
         setShowFullReport(true);
-        setMessage('Report ready. Preview, download, or share it with local partners.');
+        setMessage('Preview ready. Unlock the full report to download.')
       } else {
         setMessage(data?.message || 'Unable to generate report. Record more activity and try again.');
       }
@@ -239,14 +239,14 @@ export default function Home() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 20 }}>
               <div style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 24, border: '1px solid #e3ece5' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#14532d', marginBottom: 10 }}>Signals recorded</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#14532d', marginBottom: 10 }}>Activities recorded</div>
                 <div style={{ fontSize: 32, fontWeight: 800, color: '#0f3b2d' }}>{summary?.signal_count ?? 0}</div>
-                <div style={{ marginTop: 8, fontSize: 13, color: '#4f6258' }}>Activity points collected in this zone.</div>
+                <div style={{ marginTop: 8, fontSize: 13, color: '#4f6258' }}>Activities collected in this zone.</div>
               </div>
               <div style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 24, border: '1px solid #e3ece5' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#14532d', marginBottom: 10 }}>Patterns detected</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#14532d', marginBottom: 10 }}>What people are doing</div>
                 <div style={{ fontSize: 32, fontWeight: 800, color: '#0f3b2d' }}>{summary?.total_patterns ?? 0}</div>
-                <div style={{ marginTop: 8, fontSize: 13, color: '#4f6258' }}>Stable coordination patterns extracted.</div>
+                <div style={{ marginTop: 8, fontSize: 13, color: '#4f6258' }}>Clear, repeatable local activities we detected.</div>
               </div>
             </div>
 
@@ -278,7 +278,7 @@ export default function Home() {
               </div>
               <div style={{ marginTop: 20, display: 'grid', gap: 12 }}>
                 <button onClick={handleViewFullReport} type="button" style={{ width: '100%', padding: '14px 16px', borderRadius: 16, border: '1px solid #c7dfcc', backgroundColor: '#f8fbf8', color: '#1f4b34', fontWeight: 700 }}>Preview report</button>
-                {reportUrl && <a href={reportUrl} download style={{ width: '100%', textAlign: 'center', padding: '14px 16px', borderRadius: 16, border: '1px solid #2d6a4f', backgroundColor: '#fff', color: '#2d6a4f', fontWeight: 700, textDecoration: 'none' }}>Download PDF</a>}
+                {reportUrl && <button onClick={() => window.open(reportUrl, '_blank')} style={{ width: '100%', textAlign: 'center', padding: '14px 16px', borderRadius: 16, border: '1px solid #2d6a4f', backgroundColor: '#fff', color: '#2d6a4f', fontWeight: 700, cursor: 'pointer' }}>{reportData?.preview_locked ? 'Download preview PDF' : 'Download full PDF'}</button>}
                 <div style={{ fontSize: 13, color: '#4f6258' }}>{shareMessage || 'Share the report or preview the full insights summary.'}</div>
               </div>
             </div>
@@ -289,8 +289,7 @@ export default function Home() {
               <div style={{ display: 'grid', gap: 12 }}>
                 {recentActivities.length ? recentActivities.slice(0, 4).map((activity, idx) => (
                   <div key={idx} style={{ padding: 14, borderRadius: 16, border: '1px solid #dbe6df', backgroundColor: '#f7faf7' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#1f4b34' }}>{activity.zone || 'Unknown zone'}</div>
-                    <div style={{ marginTop: 6, fontSize: 13, color: '#41534c' }}>{activity.raw_text}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#1f4b34' }}>{(activity.zone || 'Unknown zone') + ' – ' + (activity.original_text || activity.raw_text || 'activity recorded')}</div>
                   </div>
                 )) : <div style={{ fontSize: 13, color: '#4f6258' }}>No recent activities yet. Record something to populate this feed.</div>}
               </div>
@@ -298,7 +297,7 @@ export default function Home() {
 
             <div style={{ backgroundColor: '#f7fffb', borderRadius: 24, padding: 24, border: '1px solid #d9ede1' }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d', marginBottom: 12 }}>Report snapshot</div>
-              <div style={{ fontSize: 13, color: '#41534c', marginBottom: 18 }}>Review top observations, service gaps, and local readiness before sharing.</div>
+              <div style={{ fontSize: 13, color: '#41534c', marginBottom: 18 }}>Review top observations, what is missing, and local readiness before sharing.</div>
               <div style={{ display: 'grid', gap: 12 }}>
                 <div style={{ fontSize: 13, color: '#334a3f' }}>High-confidence patterns: {summary?.high_confidence_patterns ?? 0}</div>
                 <div style={{ fontSize: 13, color: '#334a3f' }}>Moderate-confidence patterns: {summary?.moderate_confidence_patterns ?? 0}</div>
@@ -320,17 +319,43 @@ export default function Home() {
               </div>
 
               <div style={{ marginTop: 22, display: 'grid', gap: 18 }}>
-                <div style={{ fontSize: 13, color: '#41534c', lineHeight: 1.8 }}>{summary?.key_finding || 'This preview explains local activity trends, missing services, and practical recommendations for your zone.'}</div>
-
                 <div style={{ display: 'grid', gap: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: 13, color: '#41534c' }}>{summary?.key_finding || 'Swipe through top insights below.'}</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {reportData?.preview_locked && <div style={{ fontSize: 13, color: '#8b8f8a', padding: '6px 10px', borderRadius: 10, backgroundColor: '#fffbe6', border: '1px solid #f0e6b6' }}>Locked preview</div>}
+                      <button onClick={() => window.open('https://paychangu.com/YOUR_LINK', '_blank')} style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #2d6a4f', backgroundColor: '#2d6a4f', color: '#fff' }}>🔒 Unlock full report → Pay</button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button onClick={() => setCardIndex(Math.max(0, cardIndex - 1))} style={{ padding: 10, borderRadius: 10, border: '1px solid #dbe6df', backgroundColor: '#fff' }}>‹</button>
+                    <div style={{ flex: 1 }}>
+                      { (reportData?.coordination_patterns || summary?.coordination_patterns || []).length ? (
+                        (() => {
+                          const cards = reportData?.coordination_patterns || summary?.coordination_patterns || [];
+                          const card = cards[cardIndex % cards.length];
+                          const confidenceText = ((card?.confidence || (card?.confidence_class === 'moderate' ? 'medium' : card?.confidence_class) || 'low') || 'low').toUpperCase();
+                          return (
+                            <div style={{ backgroundColor: '#f7fbf8', borderRadius: 16, padding: 18, border: '1px solid #d9ebe1' }}>
+                              <div style={{ fontSize: 14, fontWeight: 800, color: '#134e4a' }}>{card?.title || `${card?.activity} activity`}</div>
+                              <div style={{ marginTop: 8, fontSize: 13, color: '#41534c' }}>{card?.what || card?.summary || card?.description || 'No description available.'}</div>
+                              <div style={{ marginTop: 10, fontSize: 13, color: '#2d6a4f', fontWeight: 700 }}>{`Confidence: ${confidenceText}`}</div>
+                            </div>
+                          );
+                        })()
+                      ) : <div style={{ padding: 18, borderRadius: 12, backgroundColor: '#fff' }}>No preview cards available yet.</div> }
+                    </div>
+                    <button onClick={() => setCardIndex((cardIndex + 1))} style={{ padding: 10, borderRadius: 10, border: '1px solid #dbe6df', backgroundColor: '#fff' }}>›</button>
+                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                     <div style={{ backgroundColor: '#f7fbf8', borderRadius: 20, padding: 20, border: '1px solid #d9ebe1' }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d', marginBottom: 8 }}>Top infrastructure gap</div>
-                      <div style={{ fontSize: 13, color: '#41534c', lineHeight: 1.7 }}>{summary?.infrastructure_gaps?.[0] || 'No major infrastructure gaps identified yet.'}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d', marginBottom: 8 }}>What is missing</div>
+                      <div style={{ fontSize: 13, color: '#41534c', lineHeight: 1.7 }}>{summary?.infrastructure_gaps?.[0] || 'No major missing services identified yet.'}</div>
                     </div>
                     <div style={{ backgroundColor: '#f7fbf8', borderRadius: 20, padding: 20, border: '1px solid #d9ebe1' }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d', marginBottom: 8 }}>Recommended project</div>
-                      <div style={{ fontSize: 13, color: '#41534c', lineHeight: 1.7 }}>{summary?.recommended_projects?.[0] || 'Add more activity signals to generate a project recommendation.'}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d', marginBottom: 8 }}>What can be built</div>
+                      <div style={{ fontSize: 13, color: '#41534c', lineHeight: 1.7 }}>{summary?.recommended_projects?.[0] || 'Add more activities to generate a simple project idea.'}</div>
                     </div>
                   </div>
 

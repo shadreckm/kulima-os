@@ -56,8 +56,12 @@ class ProspectusGenerator:
     def __init__(self, logo_path: Optional[str] = None):
         """Initialize prospectus generator with energy demand estimator."""
         self.energy_estimator = EnergyDemandEstimator()
-        default_logo = Path(__file__).resolve().parent / "assets" / "kulima_africa_logo.png"
-        self.logo_path = str(Path(logo_path) if logo_path else default_logo)
+        # Prefer branding file assets/kulima_logo.png, fall back to kulima_africa_logo.png
+        base_assets = Path(__file__).resolve().parent / "assets"
+        preferred = base_assets / "kulima_logo.png"
+        fallback = base_assets / "kulima_africa_logo.png"
+        chosen = preferred if preferred.is_file() else (fallback if fallback.is_file() else None)
+        self.logo_path = str(Path(logo_path) if logo_path else (chosen if chosen else ""))
     
     def generate_prospectus(
         self,
@@ -886,6 +890,71 @@ class ProspectusGenerator:
 
         doc.build(story, onFirstPage=self._add_footer, onLaterPages=lambda c, d: (self._add_header(c, d), self._add_footer(c, d)))
 
+    def generate_preview_pdf(self, prospectus: Dict, output_path: str):
+        """Generate a shorter preview PDF with locked sections."""
+        st = self._pdf_styles()
+        body = st["body"]
+        body_bold = st["body_bold"]
+        note = st["note"]
+        story = []
+
+        meta = prospectus.get("prospectus_metadata", {})
+        summary = prospectus.get("executive_summary", {}) or {}
+        patterns = prospectus.get("coordination_patterns", [])
+        locked_note = prospectus.get("preview_note", "Unlock the full report to see all details.")
+
+        logo = self._resolve_logo()
+        if logo:
+            story.append(logo)
+            story.append(self._section_break(48))
+
+        story.append(Paragraph("KULIMA OS", st["title"]))
+        story.append(self._section_break(20))
+        story.append(Paragraph("Report Preview", st["subtitle"]))
+        story.append(self._section_break(16))
+        story.append(Paragraph(f"{meta.get('pilot_region', 'Pilot Region')}", body))
+        story.append(self._section_break(10))
+        story.append(Paragraph(f"{meta.get('evaluation_period', '7-cycle window')}", body))
+        story.append(self._section_break(20))
+        story.append(Paragraph("This preview shows top insights and a locked summary.", note))
+        story.append(self._section_break(36))
+
+        story.append(Paragraph("Top insight", st["section"]))
+        story.append(self._section_break(16))
+        story.append(Paragraph(summary.get("key_finding", "Preview ready. Unlock the full report to see the rest."), body))
+        story.append(self._section_break(24))
+
+        if patterns:
+            story.append(Paragraph("Sample patterns", st["section"]))
+            story.append(self._section_break(16))
+            for pattern in patterns:
+                text = pattern.get("summary") or pattern.get("description") or pattern.get("activity_type") or "Detected activity"
+                story.append(Paragraph(f"• {pattern.get('activity_type', 'Activity').capitalize()} in {pattern.get('zone', 'zone')} — {text}", body))
+                story.append(self._section_break(10))
+            story.append(self._section_break(24))
+
+        story.append(Paragraph("Locked sections", st["section"]))
+        story.append(self._section_break(16))
+        story.append(Paragraph("The full report includes:", body_bold))
+        story.append(self._section_break(12))
+        story.append(Paragraph("• Complete coordination patterns", body))
+        story.append(self._section_break(8))
+        story.append(Paragraph("• Energy and infrastructure recommendations", body))
+        story.append(self._section_break(8))
+        story.append(Paragraph("• Settlement validation and risk guidance", body))
+        story.append(self._section_break(8))
+        story.append(Paragraph(locked_note, note))
+
+        doc = SimpleDocTemplate(
+            output_path,
+            pagesize=letter,
+            leftMargin=_PDF_MARGIN,
+            rightMargin=_PDF_MARGIN,
+            topMargin=_PDF_MARGIN,
+            bottomMargin=_PDF_MARGIN + 12,
+        )
+        doc.build(story, onFirstPage=self._add_footer, onLaterPages=lambda c, d: (self._add_header(c, d), self._add_footer(c, d)))
+
     def compute_energy_signal(self, coordination_patterns: List[Dict]) -> List[Dict]:
         """
         Compute energy demand signals from coordination patterns.
@@ -1507,66 +1576,66 @@ class ProspectusGenerator:
         persistence_values = [r.get('persistence', 0) for r in confidence_results]
         avg_persistence = sum(persistence_values) / len(persistence_values) if persistence_values else 0
         
-        if avg_persistence < 0.4:
+        if safe_num(avg_persistence) < 0.4:
             risk_factors.append({
                 "type": "Demand uncertainty risk",
-                "severity": "high" if avg_persistence < 0.2 else "moderate",
-                "description": f"Low persistence ({avg_persistence:.2f}) indicates patterns may not repeat consistently"
+                "severity": "high" if safe_num(avg_persistence) < 0.2 else "moderate",
+                "description": f"Low persistence ({safe_num(avg_persistence):.2f}) indicates patterns may not repeat consistently"
             })
-        elif avg_persistence < 0.6:
+        elif safe_num(avg_persistence) < 0.6:
             risk_factors.append({
                 "type": "Demand uncertainty risk",
                 "severity": "low",
-                "description": f"Moderate persistence ({avg_persistence:.2f}) requires monitoring"
+                "description": f"Moderate persistence ({safe_num(avg_persistence):.2f}) requires monitoring"
             })
         
         # Analyze stability
         stability_values = [r.get('stability_score', 0) for r in confidence_results]
         avg_stability = sum(stability_values) / len(stability_values) if stability_values else 0
         
-        if avg_stability < 0.4:
+        if safe_num(avg_stability) < 0.4:
             risk_factors.append({
                 "type": "Volatility risk",
-                "severity": "high" if avg_stability < 0.2 else "moderate",
-                "description": f"Low stability ({avg_stability:.2f}) indicates high variance in pattern occurrence"
+                "severity": "high" if safe_num(avg_stability) < 0.2 else "moderate",
+                "description": f"Low stability ({safe_num(avg_stability):.2f}) indicates high variance in pattern occurrence"
             })
-        elif avg_stability < 0.6:
+        elif safe_num(avg_stability) < 0.6:
             risk_factors.append({
                 "type": "Volatility risk",
                 "severity": "low",
-                "description": f"Moderate stability ({avg_stability:.2f}) indicates some pattern variance"
+                "description": f"Moderate stability ({safe_num(avg_stability):.2f}) indicates some pattern variance"
             })
         
         # Analyze flow strength
         flow_strength_values = [r.get('flow_strength', 0) for r in confidence_results]
         avg_flow_strength = sum(flow_strength_values) / len(flow_strength_values) if flow_strength_values else 0
         
-        if avg_flow_strength < 0.3:
+        if safe_num(avg_flow_strength) < 0.3:
             risk_factors.append({
                 "type": "Fragmentation risk",
                 "severity": "high",
-                "description": f"Weak flow connections ({avg_flow_strength:.2f}) indicate fragmented economic activity"
+                "description": f"Weak flow connections ({safe_num(avg_flow_strength):.2f}) indicate fragmented economic activity"
             })
-        elif avg_flow_strength < 0.5:
+        elif safe_num(avg_flow_strength) < 0.5:
             risk_factors.append({
                 "type": "Fragmentation risk",
                 "severity": "moderate",
-                "description": f"Moderate flow strength ({avg_flow_strength:.2f}) indicates partial value chain integration"
+                "description": f"Moderate flow strength ({safe_num(avg_flow_strength):.2f}) indicates partial value chain integration"
             })
         
         # Analyze signal density
         total_patterns = len(confidence_results)
-        if total_patterns < 3:
+        if safe_num(total_patterns) < 3:
             risk_factors.append({
                 "type": "Data insufficiency risk",
                 "severity": "high",
-                "description": f"Low pattern count ({total_patterns}) indicates insufficient data for reliable planning"
+                "description": f"Low pattern count ({int(safe_num(total_patterns))}) indicates insufficient data for reliable planning"
             })
-        elif total_patterns < 5:
+        elif safe_num(total_patterns) < 5:
             risk_factors.append({
                 "type": "Data insufficiency risk",
                 "severity": "moderate",
-                "description": f"Limited pattern count ({total_patterns}) requires additional data collection"
+                "description": f"Limited pattern count ({int(safe_num(total_patterns))}) requires additional data collection"
             })
         
         # Calculate overall risk level
@@ -1757,14 +1826,14 @@ class ProspectusGenerator:
         flow_network = flow_detector.build_regional_flow_network(patterns_by_zone)
         
         # Identify dominant chains (high-strength flows)
-        dominant_chains = [flow for flow in inter_zone_flows if flow.get('correlation_strength', 0) >= 0.6]
+        dominant_chains = [flow for flow in inter_zone_flows if safe_num(flow.get('correlation_strength', 0)) >= 0.6]
         
         # Identify bottlenecks (zones with high coordination but low infrastructure)
         bottlenecks = []
         if lundai_analysis:
             infrastructure_gaps = lundai_analysis.get('infrastructure_gaps', [])
             for gap in infrastructure_gaps:
-                if gap.get('signal_integrity', 0) >= 0.6:  # High coordination
+                if safe_num(gap.get('signal_integrity', 0)) >= 0.6:  # High coordination
                     bottlenecks.append({
                         'zone': gap.get('zone'),
                         'gap_type': gap.get('gap_type'),
@@ -1921,7 +1990,7 @@ class ProspectusGenerator:
         # Calculate equity impact (zones with high coordination but low infrastructure)
         equity_impact = []
         for gap in infrastructure_gaps:
-            if gap.get('signal_integrity', 0) >= 0.6:  # High coordination
+            if safe_num(gap.get('signal_integrity', 0)) >= 0.6:  # High coordination
                 equity_impact.append({
                     'zone': gap.get('zone'),
                     'gap_type': gap.get('gap_type'),
@@ -2056,6 +2125,7 @@ class ProspectusGenerator:
             })
         
         # Calculate total capacity requirements by load type
+        from collections import defaultdict
         capacity_by_load_type = defaultdict(float)
         for item in demand_profile:
             load_type = item['load_type']
@@ -2076,14 +2146,14 @@ class ProspectusGenerator:
         # Generate infrastructure recommendations
         infrastructure_recommendations = []
         for item in demand_profile:
-            if item['persistence'] >= 0.6:  # Only recommend for persistent patterns
+            if safe_num(item.get('persistence', 0)) >= 0.6:  # Only recommend for persistent patterns
                 infrastructure_recommendations.append({
                     'zone': item['zone'],
                     'activity_type': item['activity_type'],
                     'infrastructure_type': item['infrastructure_type'],
                     'load_type': item['load_type'],
                     'recommended_capacity_kw': item['base_capacity_kw'],
-                    'priority': 'high' if item['persistence'] >= 0.8 else 'medium'
+                    'priority': 'high' if safe_num(item.get('persistence', 0)) >= 0.8 else 'medium'
                 })
         
         return {
