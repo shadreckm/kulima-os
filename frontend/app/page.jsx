@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 const ZONES = ['MZUZU', 'LILONGWE', 'BLANTYRE', 'ZOMBA'];
-const PAYCHANGU_LINK = 'https://paychangu.com/YOUR_LINK';
+const PAYCHANGU_LINK = 'https://pay.paychangu.com/SC-GDDYA0';
 const ACTIVITY_TERMS = ['farming', 'irrigation', 'milling', 'trading', 'welding', 'storage', 'market', 'transport'];
 const RESOURCE_TERMS = ['water', 'energy', 'power', 'road', 'storage', 'market', 'transport'];
 
@@ -204,12 +204,15 @@ export default function Home() {
     }
   };
 
-  const handlePayWithPayChangu = () => {
-    window.open(PAYCHANGU_LINK, 'PayChangu', 'width=520,height=700,noopener');
+  const handlePayment = () => {
+    window.open(PAYCHANGU_LINK, '_blank');
+    setPaymentMessage('Complete payment in the opened window, then click confirm below.');
+  };
+
+  const confirmPayment = () => {
     setIsPaid(true);
-    setPaymentMessage('Payment received — full report unlocked.');
     setShowUnlock(false);
-    setShowPreview(true);
+    setMessage('Full report unlocked successfully.');
     setReportData((current) => current ? { ...current, preview_locked: false } : current);
   };
 
@@ -270,7 +273,9 @@ export default function Home() {
   ];
 
   const downloadReport = () => {
-    if (reportUrl) window.open(reportUrl, '_blank');
+    if (!reportUrl) return;
+    window.open(reportUrl, '_blank');
+    setMessage(isPaid ? 'Downloading full report...' : 'Downloading preview...');
   };
 
   return (
@@ -282,7 +287,7 @@ export default function Home() {
         </div>
         <div className="top-actions">
           <button className="ghost-button" onClick={() => setShowPreview(true)} disabled={reportLoading}>{reportLoading ? 'Loading…' : 'Preview report'}</button>
-          <button className="primary-button" onClick={() => setShowUnlock(true)}>Unlock</button>
+          <button className="primary-button" onClick={() => { setPaymentMessage(''); setShowUnlock(true); }}>Unlock</button>
         </div>
       </div>
 
@@ -345,8 +350,9 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="report-panel">
+          <section className={`report-panel ${!isPaid ? 'preview-locked' : ''}`}>
             <div className="panel-title">Report center</div>
+            {!isPaid && <div className="panel-hint">Preview only. Unlock the full report to access investor-grade sections and downloads.</div>}
             <div className="report-strip">
               {reportCards.map((card) => (
                 <div key={card.key} className="report-chip">
@@ -357,7 +363,7 @@ export default function Home() {
             </div>
             <div className="report-actions">
               <button className="primary-button" onClick={handleGenerateReport} disabled={reportLoading}>{reportLoading ? 'Generating…' : 'Preview report'}</button>
-              {reportUrl && <button className="ghost-button" onClick={downloadReport}>Download PDF</button>}
+              {reportUrl && <button className="ghost-button" onClick={downloadReport}>{isPaid ? 'Download full report' : 'Download preview'}</button>}
             </div>
           </section>
         </div>
@@ -453,7 +459,7 @@ export default function Home() {
               </div>
               <button className="close-button" onClick={() => setShowUnlock(false)}>×</button>
             </div>
-            <div className="unlock-copy">Choose a payment option to unlock all report sections inside the dashboard.</div>
+            <div className="unlock-copy">Complete payment in the new tab, then confirm here to unlock your report.</div>
             <div className="payment-options">
               {PAYMENT_OPTIONS.map((option) => (
                 <button
@@ -469,7 +475,8 @@ export default function Home() {
               ))}
             </div>
             <div className="modal-actions">
-              <button className="primary-button" onClick={handlePayWithPayChangu}>Pay with PayChangu</button>
+              <button className="primary-button" onClick={handlePayment}>Pay with PayChangu</button>
+              <button className="ghost-button" onClick={confirmPayment}>I have completed payment</button>
               <button className="ghost-button" onClick={() => setShowUnlock(false)}>Cancel</button>
             </div>
             {paymentMessage && <div className="payment-status">{paymentMessage}</div>}
@@ -584,6 +591,18 @@ export default function Home() {
         .locked-icon { font-size: 24px; }
         .locked-label { font-size: 14px; font-weight: 800; text-align: center; }
         .unlock-copy { font-size: 14px; color: #c8ffc2; margin-bottom: 16px; }
+        .panel-hint { font-size: 13px; color: rgba(184, 255, 199, 0.9); margin-bottom: 12px; }
+        .preview-locked { position: relative; }
+        .preview-locked::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 16px;
+          background: rgba(0, 0, 0, 0.12);
+          pointer-events: none;
+          backdrop-filter: blur(1px);
+          z-index: -1;
+        }
         .modal-actions { display: flex; gap: 12px; flex-wrap: wrap; }
         .payment-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
         .payment-option { width: 100%; text-align: left; border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 18px; background: rgba(255,255,255,0.04); color: #e9ffe8; cursor: pointer; transition: border-color 180ms ease, transform 180ms ease, background 180ms ease; }
