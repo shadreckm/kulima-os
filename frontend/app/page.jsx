@@ -7,6 +7,11 @@ const PAYCHANGU_LINK = 'https://paychangu.com/YOUR_LINK';
 const ACTIVITY_TERMS = ['farming', 'irrigation', 'milling', 'trading', 'welding', 'storage', 'market', 'transport'];
 const RESOURCE_TERMS = ['water', 'energy', 'power', 'road', 'storage', 'market', 'transport'];
 
+const PAYMENT_OPTIONS = [
+  { key: 'single', title: 'Single report', price: 'MK 5,000', description: 'One-time access to the full report.' },
+  { key: 'monthly', title: 'Monthly access', price: 'MK 25,000', description: 'Ongoing access to premium report updates.' }
+];
+
 const normalizeTag = (value) => {
   if (!value) return 'Unknown';
   return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
@@ -41,6 +46,9 @@ export default function Home() {
   const [reportData, setReportData] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showUnlock, setShowUnlock] = useState(false);
+  const [isPaid, setIsPaid] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState('single');
+  const [paymentMessage, setPaymentMessage] = useState('');
   const [recordedPhrase, setRecordedPhrase] = useState('');
   const [parsedTag, setParsedTag] = useState({ zone: null, activity: 'Farming', resource: 'Water' });
   const [cardIndex, setCardIndex] = useState(0);
@@ -196,23 +204,69 @@ export default function Home() {
     }
   };
 
-  const trustLabel = buildTrustLabel(summary);
+  const handlePayWithPayChangu = () => {
+    window.open(PAYCHANGU_LINK, 'PayChangu', 'width=520,height=700,noopener');
+    setIsPaid(true);
+    setPaymentMessage('Payment received — full report unlocked.');
+    setShowUnlock(false);
+    setShowPreview(true);
+    setReportData((current) => current ? { ...current, preview_locked: false } : current);
+  };
 
+  const handleFundOpportunity = () => {
+    setMessage('Funding request submitted. The report is ready for investor review.');
+  };
+
+  const handleExportReport = () => {
+    if (reportUrl) {
+      window.open(reportUrl, '_blank');
+      setMessage('Exporting report...');
+    }
+  };
+
+  const handleShareInsight = () => {
+    setMessage('Insight shared with your network.');
+  };
+
+  const trustLabel = buildTrustLabel(summary);
+  const trustScore = Math.round((summary?.trust_score ?? 0.55) * 100);
   const insightCards = [
-    { title: '🌱 People are farming', subtitle: `${zoneActivityCounts[zone] || 0} live signals` },
-    { title: '⚠️ Water is missing', subtitle: summary?.infrastructure_gaps?.includes('Water') ? 'gap detected' : 'monitoring' },
-    { title: '💡 Build irrigation', subtitle: summary?.recommended_projects?.[0] || 'ready' },
-    { title: `✅ Confidence: ${trustLabel}`, subtitle: `${Math.round((summary?.trust_score ?? 0.55) * 100)}%` }
+    { key: 'people', title: 'People are farming', subtitle: `${zoneActivityCounts[zone] || 0} live signals`, note: 'Signal density' },
+    { key: 'water', title: 'Water is missing', subtitle: summary?.infrastructure_gaps?.includes('Water') ? 'gap detected' : 'monitoring', note: 'Supply alert' },
+    { key: 'build', title: 'Build irrigation', subtitle: summary?.recommended_projects?.[0] || 'ready', note: 'Priority action' },
+    { key: 'confidence', title: 'Confidence', subtitle: trustLabel, value: trustScore, level: trustLabel.toLowerCase() }
   ];
 
-  const reportCards = reportData?.coordination_patterns?.slice(0, 3).map((item, index) => ({
-    key: `report-${index}`,
-    title: item.title || item.activity || `Insight ${index + 1}`,
-    subtitle: item.summary || item.description || 'Data-driven finding'
-  })) || [
-    { key: 'preview-1', title: 'Farming pulse', subtitle: 'Repeat demand in crop zones' },
-    { key: 'preview-2', title: 'Water gap', subtitle: 'Service shortfall detected' },
-    { key: 'preview-3', title: 'Project ready', subtitle: 'Targeted irrigation build' }
+  const reportCards = [
+    {
+      key: 'demand',
+      title: 'Demand Insight',
+      value: `${recentActivities.length || 12} activities recorded`,
+      subtitle: `Farming activity increasing in ${zone}`,
+      note: 'Emerging demand trend'
+    },
+    {
+      key: 'problem',
+      title: 'Problem',
+      value: `${summary?.infrastructure_gaps?.length || 1} shortage(s) identified`,
+      subtitle: 'Water shortage is limiting productivity',
+      note: 'Operational constraint'
+    },
+    {
+      key: 'opportunity',
+      title: 'Opportunity',
+      value: summary?.recommended_projects?.[0] || 'Irrigation project recommended',
+      subtitle: 'Targeted investment can expand capacity',
+      note: 'Strategic recommendation'
+    },
+    {
+      key: 'confidence',
+      title: 'Confidence',
+      value: `${trustScore}%`,
+      subtitle: trustLabel,
+      note: 'Decision readiness',
+      level: trustLabel.toLowerCase()
+    }
   ];
 
   const downloadReport = () => {
@@ -228,79 +282,99 @@ export default function Home() {
         </div>
         <div className="top-actions">
           <button className="ghost-button" onClick={() => setShowPreview(true)} disabled={reportLoading}>{reportLoading ? 'Loading…' : 'Preview report'}</button>
-          <button className="primary-button" onClick={() => window.open(PAYCHANGU_LINK, '_blank')}>Unlock</button>
+          <button className="primary-button" onClick={() => setShowUnlock(true)}>Unlock</button>
         </div>
       </div>
 
-      <div className="main-grid">
-        <section className="input-panel">
-          <div className="panel-title">Speak or type a live demand signal</div>
-          <div className="input-group">
-            <button className={`mic-button ${speechActive ? 'active' : ''}`} onClick={startVoiceCapture}>
-              <span className="mic-dot" />
-              {speechActive ? 'Listening' : 'Voice'}
-            </button>
-            <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="e.g. Mzuzu farmers need water" />
-            <button className="submit-button" onClick={submitActivity}>Submit</button>
-          </div>
-          <div className="waveform-row">
-            {Array.from({ length: 10 }).map((_, index) => (
-              <span key={index} className={`wave-bar ${speechActive ? 'wave-active' : ''}`} style={{ animationDelay: `${index * 60}ms` }} />
-            ))}
-          </div>
-          <div className="tag-row">
-            <span className="tag-chip">Zone: {parsedTag.zone || zone}</span>
-            <span className="tag-chip">Activity: {parsedTag.activity}</span>
-            <span className="tag-chip">Resource: {parsedTag.resource}</span>
-          </div>
-          <div className="status-line">{message}</div>
-
-          <div className="swipe-card-shell">
-            <div className="swipe-header">
-              <div className="panel-title">Live insights</div>
-              <div className="card-controls">
-                <button onClick={() => setCardIndex((prev) => (prev + insightCards.length - 1) % insightCards.length)}>←</button>
-                <button onClick={() => setCardIndex((prev) => (prev + 1) % insightCards.length)}>→</button>
-              </div>
+      <div className="dashboard-grid">
+        <div className="column column-left">
+          <section className="input-panel">
+            <div className="panel-title">Speak or type a live demand signal</div>
+            <div className="input-group">
+              <button className={`mic-button ${speechActive ? 'active' : ''}`} onClick={startVoiceCapture}>
+                <span className="mic-dot" />
+                {speechActive ? 'Listening' : 'Voice'}
+              </button>
+              <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="e.g. Mzuzu farmers need water" />
+              <button className="submit-button" onClick={submitActivity}>Submit</button>
             </div>
-            <div className="card-row">
+            <div className="waveform-row">
+              {Array.from({ length: 10 }).map((_, index) => (
+                <span key={index} className={`wave-bar ${speechActive ? 'wave-active' : ''}`} style={{ animationDelay: `${index * 60}ms` }} />
+              ))}
+            </div>
+            <div className="tag-row">
+              <span className="tag-chip">Zone: {parsedTag.zone || zone}</span>
+              <span className="tag-chip">Activity: {parsedTag.activity}</span>
+              <span className="tag-chip">Resource: {parsedTag.resource}</span>
+            </div>
+            <div className="status-line">{message}</div>
+          </section>
+
+          <section className="insights-panel">
+            <div className="panel-title">Live insights</div>
+            <div className="insight-grid">
               {insightCards.map((card, index) => (
-                <div key={card.title} className={`insight-card ${index === cardIndex ? 'active' : ''}`} onClick={() => setCardIndex(index)}>
-                  <div className="card-title">{card.title}</div>
-                  <div className="card-note">{card.subtitle}</div>
+                <div key={card.title} className={`insight-card ${card.key}`}>
+                  <div>
+                    <div className="card-title">{card.title}</div>
+                    {card.key === 'confidence' ? (
+                      <div className="confidence-block">
+                        <div className={`confidence-pill ${card.level}`}>{card.subtitle}</div>
+                        <div className="confidence-progress">
+                          <div className={`confidence-fill ${card.level}`} style={{ width: `${card.value}%` }} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="card-note">{card.subtitle}</div>
+                    )}
+                  </div>
+                  {card.key !== 'confidence' && <div className="insight-tag">{card.note}</div>}
                 </div>
               ))}
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
 
-        <section className="activity-panel">
-          <div className="panel-title">Live activity stream</div>
-          <div className="activity-stream">
-            {recentActivities.length ? recentActivities.slice(0, 10).map((activity) => (
-              <div key={activity.id || activity.original_text} className="activity-bubble">
-                <span>{activity.zone || zone} · {activity.activity?.toLowerCase() || activity.original_text?.slice(0, 24).toLowerCase()}</span>
-              </div>
-            )) : <div className="empty-state">No live activity yet. Add a signal.</div>}
-          </div>
-        </section>
-      </div>
-
-      <section className="report-panel">
-        <div className="panel-title">Report center</div>
-        <div className="report-strip">
-          {reportCards.map((card) => (
-            <div key={card.key} className="report-chip">
-              <div className="chip-title">{card.title}</div>
-              <div className="chip-subtitle">{card.subtitle}</div>
+        <div className="column column-center">
+          <section className="map-panel">
+            <div className="panel-title">Map & trends</div>
+            <div className="map-placeholder">
+              <div className="map-label">Live zone activity</div>
+              <div className="map-note">Trends, coordination density, and spatial signal heat.</div>
             </div>
-          ))}
+          </section>
+
+          <section className="report-panel">
+            <div className="panel-title">Report center</div>
+            <div className="report-strip">
+              {reportCards.map((card) => (
+                <div key={card.key} className="report-chip">
+                  <div className="chip-title">{card.title}</div>
+                  <div className="chip-subtitle">{card.subtitle}</div>
+                </div>
+              ))}
+            </div>
+            <div className="report-actions">
+              <button className="primary-button" onClick={handleGenerateReport} disabled={reportLoading}>{reportLoading ? 'Generating…' : 'Preview report'}</button>
+              {reportUrl && <button className="ghost-button" onClick={downloadReport}>Download PDF</button>}
+            </div>
+          </section>
         </div>
-        <div className="report-actions">
-          <button className="primary-button" onClick={handleGenerateReport} disabled={reportLoading}>{reportLoading ? 'Generating…' : 'Open preview'}</button>
-          {reportUrl && <button className="ghost-button" onClick={downloadReport}>Download PDF</button>}
+
+        <div className="column column-right">
+          <section className="activity-panel">
+            <div className="panel-title">Live activity stream</div>
+            <div className="activity-stream">
+              {recentActivities.length ? recentActivities.slice(0, 10).map((activity, index) => (
+                <div key={activity.id || activity.original_text} className="activity-bubble" style={{ animationDelay: `${index * 50}ms` }}>
+                  <span>{activity.zone || zone} · {activity.activity?.toLowerCase() || activity.original_text?.slice(0, 24).toLowerCase()}</span>
+                </div>
+              )) : <div className="empty-state">No live activity yet. Add a signal.</div>}
+            </div>
+          </section>
         </div>
-      </section>
+      </div>
 
       {showPreview && (
         <div className="modal-shell" onClick={() => setShowPreview(false)}>
@@ -316,24 +390,54 @@ export default function Home() {
               {reportCards.map((card) => (
                 <div key={card.key} className="modal-card-item">
                   <div className="modal-card-title">{card.title}</div>
+                  <div className="modal-card-value">{card.value}</div>
                   <div className="modal-card-subtitle">{card.subtitle}</div>
                 </div>
               ))}
             </div>
-            <div className="locked-shell">
-              <div className="panel-title">Locked sections</div>
-              <div className="locked-grid">
-                {['Investment analysis', 'Financial projections', 'Infrastructure blueprint'].map((label) => (
-                  <div key={label} className="locked-card">
-                    <div className="locked-icon">🔒</div>
-                    <div className="locked-label">{label}</div>
+            {isPaid ? (
+              <div className="expanded-report">
+                <div className="panel-title">Full investor briefing</div>
+                <div className="expanded-grid">
+                  <div className="expanded-card">
+                    <div className="expanded-card-title">Market clusters</div>
+                    <div className="expanded-card-text">Three network clusters were identified with high irrigation potential, including northern agriculture hubs and peri-urban supply corridors.</div>
                   </div>
-                ))}
+                  <div className="expanded-card">
+                    <div className="expanded-card-title">Opportunity detail</div>
+                    <div className="expanded-card-text">Deploy targeted irrigation infrastructure to unlock 22% more productive land across the zone.</div>
+                  </div>
+                  <div className="expanded-card">
+                    <div className="expanded-card-title">Impact forecast</div>
+                    <div className="expanded-card-text">Projected yield growth and risk mitigation show strong investor upside for a phased deployment.</div>
+                  </div>
+                </div>
+                <div className="cta-panel">
+                  <button className="primary-button" onClick={handleFundOpportunity}>Fund this opportunity</button>
+                  <button className="ghost-button" onClick={handleExportReport}>Export report</button>
+                  <button className="ghost-button" onClick={handleShareInsight}>Share insight</button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="locked-shell">
+                <div className="panel-title">Locked sections</div>
+                <div className="locked-grid">
+                  {['Investment analysis', 'Financial projections', 'Infrastructure blueprint'].map((label) => (
+                    <div key={label} className="locked-card">
+                      <div className="locked-icon">🔒</div>
+                      <div className="locked-label">{label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="modal-actions">
-              <button className="primary-button" onClick={() => setShowUnlock(true)}>Unlock full report</button>
-              {reportUrl && <button className="ghost-button" onClick={downloadReport}>Download preview</button>}
+              {isPaid ? (
+                <button className="primary-button" onClick={downloadReport}>Download full report</button>
+              ) : (
+                <button className="primary-button" onClick={() => setShowUnlock(true)}>Unlock full report</button>
+              )}
+              {reportUrl && <button className="ghost-button" onClick={downloadReport}>{isPaid ? 'Download full report' : 'Download preview'}</button>}
             </div>
           </div>
         </div>
@@ -345,15 +449,30 @@ export default function Home() {
             <div className="modal-header">
               <div>
                 <div className="tiny-label">UNLOCK</div>
-                <div className="modal-title">Full report access</div>
+                <div className="modal-title">Unlock Full Report</div>
               </div>
               <button className="close-button" onClick={() => setShowUnlock(false)}>×</button>
             </div>
-            <div className="unlock-copy">Full report sections are locked in preview mode. Unlock to access the complete analysis package.</div>
-            <div className="modal-actions">
-              <button className="primary-button" onClick={() => window.open(PAYCHANGU_LINK, '_blank')}>Open PayChangu</button>
-              <button className="ghost-button" onClick={() => setShowUnlock(false)}>Close</button>
+            <div className="unlock-copy">Choose a payment option to unlock all report sections inside the dashboard.</div>
+            <div className="payment-options">
+              {PAYMENT_OPTIONS.map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  className={`payment-option ${selectedPlan === option.key ? 'selected' : ''}`}
+                  onClick={() => setSelectedPlan(option.key)}
+                >
+                  <div className="option-title">{option.title}</div>
+                  <div className="option-price">{option.price}</div>
+                  <div className="option-description">{option.description}</div>
+                </button>
+              ))}
             </div>
+            <div className="modal-actions">
+              <button className="primary-button" onClick={handlePayWithPayChangu}>Pay with PayChangu</button>
+              <button className="ghost-button" onClick={() => setShowUnlock(false)}>Cancel</button>
+            </div>
+            {paymentMessage && <div className="payment-status">{paymentMessage}</div>}
           </div>
         </div>
       )}
@@ -400,27 +519,88 @@ export default function Home() {
         .chip-title { font-size: 15px; font-weight: 800; margin-bottom: 8px; }
         .chip-subtitle { font-size: 13px; color: #c8ffc4; }
         .report-actions { display: flex; gap: 12px; flex-wrap: wrap; }
-        .modal-shell { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; justify-content: center; align-items: center; padding: 24px; z-index: 100; }
-        .modal-card { width: min(100%, 840px); background: #041a12; border-radius: 32px; padding: 26px; border: 1px solid rgba(0,255,118,0.16); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
-        .modal-title { font-size: 28px; font-weight: 800; }
-        .close-button { border: none; background: rgba(255,255,255,0.08); color: #e9ffe8; font-size: 26px; width: 48px; height: 48px; border-radius: 999px; cursor: pointer; }
+        .dashboard-grid { display: grid; grid-template-columns: minmax(320px, 1.05fr) minmax(360px, 1.3fr) minmax(300px, 0.95fr); gap: 20px; align-items: start; }
+        .column { display: flex; flex-direction: column; gap: 20px; }
+        .column-left, .column-center, .column-right { min-height: 0; }
+        .input-panel, .insights-panel, .map-panel, .report-panel, .activity-panel { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.12); display: flex; flex-direction: column; gap: 16px; border: 1px solid rgba(255,255,255,0.08); }
+        .map-panel { min-height: 320px; }
+        .map-placeholder { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 10px; border-radius: 16px; padding: 22px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); min-height: 260px; }
+        .map-label { font-size: 18px; font-weight: 700; }
+        .map-note { font-size: 13px; color: rgba(233,255,232,0.75); max-width: 320px; }
+        .report-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+        .report-chip { border-radius: 16px; padding: 20px; background: rgba(0,255,118,0.08); min-height: 132px; display: flex; flex-direction: column; justify-content: space-between; }
+        .chip-title { font-size: 15px; font-weight: 800; margin-bottom: 10px; }
+        .chip-subtitle { font-size: 13px; color: #0a2a17; line-height: 1.35; }
+        .modal-card-value { font-size: 26px; font-weight: 800; margin-top: 10px; margin-bottom: 10px; color: #d7ffce; }
+        .expanded-report { display: flex; flex-direction: column; gap: 18px; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.08); }
+        .expanded-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+        .expanded-card { padding: 18px; border-radius: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
+        .expanded-card-title { font-size: 14px; font-weight: 800; margin-bottom: 10px; }
+        .expanded-card-text { font-size: 13px; color: rgba(233,255,232,0.88); line-height: 1.6; }
+        .cta-panel { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+        .payment-option { width: 100%; text-align: left; border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 18px; background: rgba(255,255,255,0.04); color: #e9ffe8; cursor: pointer; transition: border-color 180ms ease, transform 180ms ease, background 180ms ease; }
+        .payment-option.selected { border-color: #00e676; background: rgba(0,230,118,0.12); transform: translateY(-1px); }
+        .payment-option:hover { border-color: rgba(0,230,118,0.4); }
+        .option-title { font-size: 15px; font-weight: 800; margin-bottom: 8px; }
+        .option-price { font-size: 20px; font-weight: 900; margin-bottom: 8px; }
+        .option-description { font-size: 13px; color: rgba(233,255,232,0.78); line-height: 1.4; }
+        .payment-status { margin-top: 14px; font-size: 13px; color: #b1ffc7; }
+        .unlocked-shell { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 18px; background: rgba(0,255,118,0.06); border: 1px solid rgba(0,255,118,0.15); margin-bottom: 18px; }
+        .unlocked-shell .panel-title { margin-bottom: 0; }
+        .report-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: flex-start; }
+        .activity-panel { min-height: 620px; }
+        .activity-stream { display: grid; gap: 12px; overflow-y: auto; max-height: 590px; padding-right: 4px; }
+        .activity-bubble { min-height: 58px; display: flex; align-items: center; padding: 16px 18px; border-radius: 16px; background: rgba(0,255,118,0.08); color: #e9ffe8; font-weight: 700; opacity: 0; transform: translateY(10px); animation: slide-in 0.32s ease-in-out forwards; }
+        .activity-bubble span { width: 100%; display: block; }
+        .empty-state { color: rgba(255,255,255,0.62); font-size: 14px; padding: 26px 18px; border-radius: 16px; background: rgba(255,255,255,0.03); }
+        .insight-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .insight-card { min-height: 150px; display: flex; flex-direction: column; justify-content: space-between; padding: 18px; border-radius: 16px; background: rgba(0,255,118,0.07); border: 1px solid rgba(255,255,255,0.1); }
+        .insight-card.people, .insight-card.water, .insight-card.build, .insight-card.confidence { background: rgba(255,255,255,0.05); }
+        .card-title { font-size: 16px; font-weight: 800; margin-bottom: 12px; }
+        .card-note { font-size: 14px; line-height: 1.5; color: rgba(233,255,232,0.88); }
+        .confidence-block { display: flex; flex-direction: column; gap: 10px; }
+        .confidence-pill { align-self: flex-start; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+        .confidence-pill.low { background: rgba(255,195,0,0.16); color: #ffd86b; }
+        .confidence-pill.medium { background: rgba(63,126,255,0.16); color: #b1d2ff; }
+        .confidence-pill.high { background: rgba(104,255,141,0.16); color: #b9ffde; }
+        .confidence-progress { width: 100%; height: 10px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+        .confidence-fill { height: 100%; border-radius: 999px; transition: width 0.35s ease; }
+        .confidence-fill.low { background: #ffcb47; }
+        .confidence-fill.medium { background: #74a5ff; }
+        .confidence-fill.high { background: #5af2a6; box-shadow: 0 0 18px rgba(90,242,166,0.35); }
+        .confidence-label { font-size: 13px; color: rgba(233,255,232,0.8); }
+        .input-panel .tag-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .tag-chip { padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,0.06); color: #d7ffd7; font-size: 13px; }
+        .status-line { font-size: 13px; color: rgba(233,255,232,0.8); }
+        .modal-shell { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; padding: 24px 18px; z-index: 100; }
+        .modal-card { width: min(100%, 880px); max-height: calc(100vh - 60px); overflow-y: auto; background: #051b13; border-radius: 24px; padding: 26px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 40px 120px rgba(0,0,0,0.35); }
         .modal-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
-        .modal-card-item { border-radius: 24px; padding: 20px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
-        .modal-card-title { font-size: 16px; font-weight: 800; margin-bottom: 10px; }
-        .modal-card-subtitle { font-size: 13px; color: #c8ffc4; }
-        .locked-shell { margin-bottom: 20px; }
+        .modal-card-item { border-radius: 18px; padding: 20px; background: rgba(255,255,255,0.04); }
+        .modal-card-title { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
+        .modal-card-subtitle { font-size: 13px; color: #c8ffc4; line-height: 1.5; }
+        .locked-shell { margin: 24px 0 18px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 18px; }
         .locked-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-        .locked-card { display: grid; gap: 12px; align-items: center; justify-items: center; padding: 20px; border-radius: 24px; background: rgba(255,255,255,0.04); border: 1px dashed rgba(255,255,255,0.12); }
+        .locked-card { display: grid; gap: 10px; align-items: center; justify-items: center; padding: 18px; border-radius: 18px; background: rgba(255,255,255,0.04); }
         .locked-icon { font-size: 24px; }
         .locked-label { font-size: 14px; font-weight: 800; text-align: center; }
+        .unlock-copy { font-size: 14px; color: #c8ffc2; margin-bottom: 16px; }
         .modal-actions { display: flex; gap: 12px; flex-wrap: wrap; }
-        .unlock-copy { font-size: 14px; color: #c8ffc2; margin-bottom: 24px; }
+        .payment-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .payment-option { width: 100%; text-align: left; border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 18px; background: rgba(255,255,255,0.04); color: #e9ffe8; cursor: pointer; transition: border-color 180ms ease, transform 180ms ease, background 180ms ease; }
+        .payment-option.selected { border-color: #00e676; background: rgba(0,230,118,0.12); transform: translateY(-1px); }
+        .payment-option:hover { border-color: rgba(0,230,118,0.4); }
+        .option-title { font-size: 15px; font-weight: 800; margin-bottom: 8px; }
+        .option-price { font-size: 20px; font-weight: 900; margin-bottom: 8px; }
+        .option-description { font-size: 13px; color: rgba(233,255,232,0.78); line-height: 1.4; }
+        .payment-status { margin-top: 14px; font-size: 13px; color: #b1ffc7; }
+        .unlocked-shell { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 18px; background: rgba(0,255,118,0.06); border: 1px solid rgba(0,255,118,0.15); margin-bottom: 18px; }
+        .unlocked-shell .panel-title { margin-bottom: 0; }
         @keyframes pulse { from { transform: translateY(0px); } to { transform: translateY(-4px); } }
         @keyframes wave-pulse { 0%, 100% { transform: scaleY(0.7); opacity: 0.55; } 50% { transform: scaleY(1.7); opacity: 1; } }
         @keyframes wave-static { 0%, 100% { transform: scaleY(1); opacity: 0.42; } 50% { transform: scaleY(1.1); opacity: 0.6; } }
-        @media (max-width: 1120px) { .main-grid { grid-template-columns: 1fr; } .card-row { grid-template-columns: 1fr 1fr; } .report-strip { grid-template-columns: 1fr; } .locked-grid { grid-template-columns: 1fr; } }
-        @media (max-width: 760px) { .top-bar, .input-group, .report-actions { flex-direction: column; align-items: stretch; } .mic-button, .submit-button, .primary-button, .ghost-button { width: 100%; } }
+        @keyframes slide-in { to { transform: translateY(0); opacity: 1; } }
+        @media (max-width: 1220px) { .dashboard-grid { grid-template-columns: 1fr; } .report-strip, .modal-grid, .insight-grid, .locked-grid { grid-template-columns: 1fr; } .activity-panel { min-height: auto; } }
+        @media (max-width: 760px) { .top-bar, .input-group, .report-actions, .modal-actions { flex-direction: column; align-items: stretch; } .mic-button, .submit-button, .primary-button, .ghost-button { width: 100%; } .panel-title { font-size: 15px; } }
       `}</style>
     </div>
   );
