@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Signal
 from backend.schemas.requests import SignalRequest, SignalCreate, SignalsQuery
+from backend.services.external_signals import normalize_signal_source
 from core.coordination.multi_sector_coordinator import MultiSectorCoordinator
 
 # Configure logging
@@ -118,7 +119,7 @@ async def create_signal(request: SignalRequest, db: Session = Depends(get_db)):
             sector=sector,
             time_window=time_window,
             timestamp=timestamp,
-            source=request.source or "web",
+            source=normalize_signal_source(request.source or "web"),
             user_id=request.user_id if request.user_id else "anonymous",
             original_text=original_text or ''
         )

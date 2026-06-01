@@ -20,6 +20,7 @@ from typing import List, Dict, Tuple
 from collections import defaultdict
 import statistics
 import logging
+from backend.services.external_signals import source_category
 
 def safe_num(value):
     try:
@@ -226,9 +227,9 @@ class LumozaEngine:
         
         for signal in pattern_signals:
             cycle = signal['cycle_index']
-            if signal['signal_source'] == 'human':
+            if source_category(signal.get('signal_source')) == 'human':
                 human_cycles.add(cycle)
-            elif signal['signal_source'] == 'telemetry':
+            elif source_category(signal.get('signal_source')) == 'telemetry':
                 telemetry_cycles.add(cycle)
         
         # Calculate alignment

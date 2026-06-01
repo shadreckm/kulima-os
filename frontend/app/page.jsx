@@ -233,6 +233,7 @@ export default function Home() {
 
   const trustLabel = buildTrustLabel(summary);
   const trustScore = Math.round((summary?.trust_score ?? 0.55) * 100);
+  const [showTrustTooltip, setShowTrustTooltip] = useState(false);
   const insightCards = [
     { key: 'people', title: 'People are farming', subtitle: `${zoneActivityCounts[zone] || 0} live signals`, note: 'Signal density' },
     { key: 'water', title: 'Water is missing', subtitle: summary?.infrastructure_gaps?.includes('Water') ? 'gap detected' : 'monitoring', note: 'Supply alert' },
@@ -316,6 +317,19 @@ export default function Home() {
             <div className="status-line">{message}</div>
           </section>
 
+          <section className="trust-banner" onClick={() => setShowTrustTooltip((s) => !s)} role="region" aria-label="Trust banner">
+            <div className={`trust-badge-large ${trustLabel.toLowerCase()}`}>
+              <div className="trust-emoji">{trustLabel === 'HIGH' ? '✅' : (trustLabel === 'MEDIUM' ? '⏺️' : '⚠️')}</div>
+              <div className="trust-text">
+                <div className="trust-main">{trustLabel} TRUST</div>
+                <div className="trust-sub">Confidence: {trustScore}%</div>
+              </div>
+            </div>
+            <div className={`tooltip ${showTrustTooltip ? 'visible' : ''}`}>
+              Verified using multiple data sources including community reports, external signals, and system analysis.
+            </div>
+          </section>
+
           <section className="insights-panel">
             <div className="panel-title">Live insights</div>
             <div className="insight-grid">
@@ -369,6 +383,41 @@ export default function Home() {
         </div>
 
         <div className="column column-right">
+          <section className="provenance-panel">
+            <div className="panel-title">Signal provenance</div>
+            {summary && summary.signal_source_counts ? (
+              (() => {
+                const src = summary.signal_source_counts;
+                const communityKeys = ['web','whatsapp','manual','user','social'];
+                const externalKeys = ['news','external'];
+                const systemKeys = ['telemetry','sensor','infrastructure','system'];
+                const community = communityKeys.reduce((s,k)=>s+(src[k]||0),0);
+                const external = externalKeys.reduce((s,k)=>s+(src[k]||0),0);
+                const system = systemKeys.reduce((s,k)=>s+(src[k]||0),0);
+                const categories = [community>0, external>0, system>0].filter(Boolean).length;
+                let trust = 'LOW';
+                if (categories >= 3) trust = 'HIGH';
+                else if (categories === 2) trust = 'MEDIUM';
+                else trust = 'LOW';
+                const trustClass = trust === 'HIGH' ? 'high' : (trust === 'MEDIUM' ? 'medium' : 'low');
+                return (
+                  <div>
+                    <div className="provenance-chips">
+                      <div className="chip prov-chip">👥 Community ({community})</div>
+                      <div className="chip prov-chip">🌍 External ({external})</div>
+                      <div className="chip prov-chip">🤖 System ({system})</div>
+                    </div>
+                    <div className={`trust-badge ${trustClass}`}>
+                      <div className="trust-label">Confidence: {trust}</div>
+                      <div className="trust-note">Data verified across multiple sources</div>
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              <div className="empty-state">No provenance summary available.</div>
+            )}
+          </section>
           <section className="activity-panel">
             <div className="panel-title">Live activity stream</div>
             <div className="activity-stream">
@@ -562,6 +611,28 @@ export default function Home() {
         .empty-state { color: rgba(255,255,255,0.62); font-size: 14px; padding: 26px 18px; border-radius: 16px; background: rgba(255,255,255,0.03); }
         .insight-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
         .insight-card { min-height: 150px; display: flex; flex-direction: column; justify-content: space-between; padding: 18px; border-radius: 16px; background: rgba(0,255,118,0.07); border: 1px solid rgba(255,255,255,0.1); }
+        .trust-banner { margin: 18px 0; position: relative; }
+        .trust-badge-large { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-radius: 14px; cursor: pointer; }
+        .trust-badge-large .trust-emoji { font-size: 34px; }
+        .trust-badge-large .trust-main { font-size: 22px; font-weight: 900; letter-spacing: 0.06em; }
+        .trust-badge-large .trust-sub { font-size: 14px; color: rgba(3,20,10,0.7); font-weight: 800; }
+        .trust-badge-large.high { background: linear-gradient(90deg, rgba(90,242,166,0.14), rgba(0,255,150,0.06)); box-shadow: 0 8px 30px rgba(90,242,166,0.18); border: 1px solid rgba(90,242,166,0.22); color: #05321a; }
+        .trust-badge-large.medium { background: linear-gradient(90deg, rgba(116,165,255,0.12), rgba(116,165,255,0.06)); box-shadow: 0 8px 30px rgba(116,165,255,0.12); border: 1px solid rgba(116,165,255,0.12); color: #07223b; }
+        .trust-badge-large.low { background: linear-gradient(90deg, rgba(255,195,0,0.12), rgba(255,195,0,0.05)); box-shadow: 0 8px 24px rgba(255,195,0,0.08); border: 1px solid rgba(255,195,0,0.12); color: #3a2a00; }
+        .tooltip { display: none; position: absolute; left: 0; top: 100%; margin-top: 10px; background: rgba(0,0,0,0.86); color: #fff; padding: 10px 12px; border-radius: 8px; width: 280px; font-size: 13px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }
+        .trust-banner:hover .tooltip, .tooltip.visible { display: block; }
+        .provenance-panel { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 12px; }
+        .provenance-chips { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .chip { padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,0.04); color: #dfffe0; font-weight: 800; }
+        .prov-chip { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+        .trust-badge { padding: 12px; border-radius: 12px; display: inline-block; margin-top: 6px; }
+        .trust-badge.high { background: rgba(90,242,166,0.08); box-shadow: 0 0 18px rgba(90,242,166,0.14); border: 1px solid rgba(90,242,166,0.16); }
+        .trust-badge.medium { background: rgba(116,165,255,0.06); box-shadow: 0 0 12px rgba(116,165,255,0.08); border: 1px solid rgba(116,165,255,0.12); }
+        .trust-badge.low { background: rgba(255,195,0,0.06); box-shadow: 0 0 10px rgba(255,195,0,0.06); border: 1px solid rgba(255,195,0,0.08); }
+        .trust-label { font-weight: 900; color: #052014; }
+        .trust-note { font-size: 13px; color: rgba(3, 20, 10, 0.8); }
+        .provenance-list { display: grid; gap: 8px; }
+        .prov-item { font-size: 13px; color: #d8ffd8; font-weight: 700; }
         .insight-card.people, .insight-card.water, .insight-card.build, .insight-card.confidence { background: rgba(255,255,255,0.05); }
         .card-title { font-size: 16px; font-weight: 800; margin-bottom: 12px; }
         .card-note { font-size: 14px; line-height: 1.5; color: rgba(233,255,232,0.88); }

@@ -19,6 +19,7 @@ from backend.utils.cluster_utils import build_cluster_summary
 from core.lumoza.lumoza_engine import LumozaEngine
 from core.lundai.lundai_engine import LundaiEngine, evaluate_signal_integrity
 from core.zentari.zentari_engine import ZentariEngine
+from backend.services.external_signals import augment_signals_with_external_sources, count_signal_sources, compute_provenance_confidence
 from policy import compute_planning_reserve
 
 # Configure logging
@@ -93,6 +94,12 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
             signal["cycle_index"] = i
         
         logger.info(f"Converted {len(signal_data)} signals to engine format with cycle_index")
+
+        # Augment raw signals with external provenance signals for stronger coordination validation
+        signal_data = augment_signals_with_external_sources(signal_data, zone)
+        signal_source_counts = count_signal_sources(signal_data)
+
+        logger.info(f"Augmented signals with external sources. total engine signals={len(signal_data)} source_counts={signal_source_counts}")
         
         # 3. Run LUMOZA engine for pattern detection
         logger.info("Running LUMOZA engine...")
@@ -178,6 +185,28 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
         except Exception as e:
             logger.warning(f"ZENTARI confidence evaluation failed: {e}, using coordination patterns as results")
             confidence_results = coordination_patterns
+
+        # Apply provenance-based confidence boost/penalty
+        try:
+            prov = compute_provenance_confidence(signal_source_counts)
+            boost = prov.get('boost', 0.0)
+            # Adjust each pattern's numeric confidence if present
+            for r in confidence_results:
+                base = float(r.get('coordination_confidence', r.get('confidence_score', 0.5)))
+                new_score = max(0.0, min(1.0, base + boost))
+                r['coordination_confidence'] = round(new_score, 3)
+                # Re-classify confidence class conservatively
+                if new_score >= 0.8:
+                    r['confidence_class'] = 'high'
+                elif new_score >= 0.6:
+                    r['confidence_class'] = 'moderate'
+                elif new_score >= 0.4:
+                    r['confidence_class'] = 'low'
+                else:
+                    r['confidence_class'] = 'insufficient'
+            logger.info(f"Applied provenance confidence adjustment: label={prov.get('label')} boost={boost}")
+        except Exception as e:
+            logger.warning(f"Provenance confidence adjustment failed: {e}")
         
         # 7. Compute summary metrics from full pipeline output
         total_patterns = len(confidence_results)
@@ -216,6 +245,7 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
             "data": {
                 "zone": zone,
                 "signal_count": len(signals),
+                "signal_source_counts": signal_source_counts,
                 "total_patterns": total_patterns,
                 "high_confidence_patterns": high_confidence_patterns,
                 "moderate_confidence_patterns": moderate_confidence_patterns,

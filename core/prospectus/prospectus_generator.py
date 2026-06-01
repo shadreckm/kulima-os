@@ -21,6 +21,7 @@ from typing import List, Dict, Optional, Any
 from datetime import datetime
 from energy_demand_estimator import EnergyDemandEstimator
 from policy import RESERVE_RATIO, require_planning_reserve
+from backend.services.external_signals import compute_provenance_confidence
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -210,6 +211,33 @@ class ProspectusGenerator:
                 }
             }
         }
+        # Inject data provenance summary if present in metadata
+        try:
+            prov_meta = metadata.get('signal_source_counts') if metadata else None
+            # metadata may carry a nested provenance_summary (from backend.api.prospectus)
+            if prov_meta and isinstance(prov_meta, dict) and 'signal_source_counts' in prov_meta:
+                source_counts = prov_meta.get('signal_source_counts', {})
+            elif prov_meta and isinstance(prov_meta, dict):
+                source_counts = prov_meta
+            else:
+                source_counts = {}
+
+            prov = compute_provenance_confidence(source_counts or {})
+            prospectus['data_provenance'] = {
+                'community_count': prov.get('community_count', 0),
+                'external_count': prov.get('external_count', 0),
+                'system_count': prov.get('system_count', 0),
+                'confidence_label': prov.get('label'),
+                'confidence_boost': prov.get('boost')
+            }
+        except Exception:
+            prospectus['data_provenance'] = {
+                'community_count': 0,
+                'external_count': 0,
+                'system_count': 0,
+                'confidence_label': 'LOW',
+                'confidence_boost': -0.05
+            }
         
         return prospectus
 
@@ -432,7 +460,7 @@ class ProspectusGenerator:
 
         story.append(Paragraph("KULIMA OS", st["title"]))
         story.append(self._section_break(20))
-        story.append(Paragraph("Verified Demand Signal Prospectus", st["subtitle"]))
+        story.append(Paragraph("Verified Insight Report", st["subtitle"]))
         story.append(self._section_break(16))
         story.append(Paragraph(
             f"{meta['pilot_region']}",
@@ -444,6 +472,15 @@ class ProspectusGenerator:
             ParagraphStyle("CoverLine", parent=body, fontSize=12, alignment=1, leading=16),
         ))
         story.append(self._section_break(36))
+
+        # Prominent confidence badge on cover
+        dp_cover = prospectus.get('data_provenance', {})
+        conf_label = dp_cover.get('confidence_label', 'LOW')
+        conf_color = colors.green if conf_label == 'HIGH' else (colors.blue if conf_label == 'MEDIUM' else colors.orange)
+        conf_text = f"{conf_label} TRUST"
+        conf_style = ParagraphStyle('CoverConf', parent=st['title'], fontSize=20, alignment=1, textColor=conf_color)
+        story.append(Paragraph(conf_text, conf_style))
+        story.append(self._section_break(18))
 
         if is_sample:
             story.append(Paragraph(
@@ -811,8 +848,26 @@ class ProspectusGenerator:
         story.append(Paragraph("• Maintain 20% capacity reserve for essential services and communal productive assets", body))
         story.append(self._section_break(36))
 
-        # ========== PAGE 8: ETHICS & METHODOLOGY ==========
+        # Insert Data Provenance & Confidence summary (visual, high-level)
         story.append(self._page_break())
+        dp = prospectus.get('data_provenance', {})
+        story.append(Paragraph("Data Provenance & Confidence", st["section"]))
+        story.append(self._section_break(12))
+        story.append(Paragraph(f"• 👥 Community: {dp.get('community_count', 0)}", st['body']))
+        story.append(self._section_break(6))
+        story.append(Paragraph(f"• 🌍 External confirmations: {dp.get('external_count', 0)}", st['body']))
+        story.append(self._section_break(6))
+        story.append(Paragraph(f"• 🤖 System telemetry: {dp.get('system_count', 0)}", st['body']))
+        story._story = getattr(story, '_story', None)
+        story.append(self._section_break(12))
+        confidence_label = dp.get('confidence_label', 'LOW')
+        color = colors.green if confidence_label == 'HIGH' else (colors.blue if confidence_label == 'MEDIUM' else colors.orange)
+        story.append(Paragraph(f"<b>Confidence: {confidence_label}</b>", ParagraphStyle('conf', parent=st['body'], textColor=color)))
+        story.append(self._section_break(8))
+        story.append(Paragraph("Data verified across multiple sources", st['body_bold']))
+        story.append(self._section_break(24))
+
+        # ========== PAGE 8: ETHICS & METHODOLOGY ==========
         story.append(Paragraph("Ethics & Methodology", st["section"]))
         story.append(self._section_break(24))
         

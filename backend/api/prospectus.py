@@ -19,6 +19,7 @@ from core.prospectus.prospectus_generator import ProspectusGenerator
 from core.lumoza.lumoza_engine import LumozaEngine
 from core.lundai.lundai_engine import LundaiEngine, evaluate_signal_integrity
 from core.zentari.zentari_engine import ZentariEngine
+from backend.services.external_signals import augment_signals_with_external_sources, count_signal_sources, compute_provenance_confidence
 from policy import compute_planning_reserve
 
 # Configure logging
@@ -107,6 +108,11 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
         # Add cycle_index to each signal
         for i, signal in enumerate(signal_data):
             signal["cycle_index"] = i
+
+        # Augment with external provenance signals that corroborate the zone
+        signal_data = augment_signals_with_external_sources(signal_data, zone)
+        signal_source_counts = count_signal_sources(signal_data)
+        logger.info(f"Prospectus signal count after augmentation: {len(signal_data)} source_counts={signal_source_counts}")
         
         # Run full coordination pipeline: LUMOZA → LUNDAI → ZENTARI
         logger.info("Running LUMOZA engine for pattern detection...")
@@ -195,6 +201,36 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
                 "message": "Insufficient coordination activity to generate a report."
             }
 
+        # Add provenance summary for report metadata
+        provenance_summary = {
+            "signal_source_counts": signal_source_counts,
+            "total_signals": len(signal_data),
+            "human_sources": sum(signal_source_counts.get(src, 0) for src in ['web', 'whatsapp', 'manual', 'social', 'news', 'external', 'user', 'system']),
+            "telemetry_sources": sum(signal_source_counts.get(src, 0) for src in ['telemetry', 'sensor', 'infrastructure']),
+        }
+
+        # Apply provenance-based confidence boost/penalty to ZENTARI outputs so prospectus reflects provenance
+        try:
+            prov = compute_provenance_confidence(signal_source_counts)
+            boost = prov.get('boost', 0.0)
+            for r in confidence_results:
+                base = float(r.get('coordination_confidence', r.get('confidence_score', 0.5)))
+                new_score = max(0.0, min(1.0, base + boost))
+                r['coordination_confidence'] = round(new_score, 3)
+                if new_score >= 0.8:
+                    r['confidence_class'] = 'high'
+                elif new_score >= 0.6:
+                    r['confidence_class'] = 'moderate'
+                elif new_score >= 0.4:
+                    r['confidence_class'] = 'low'
+                else:
+                    r['confidence_class'] = 'insufficient'
+            provenance_summary['provenance_label'] = prov.get('label')
+            provenance_summary['provenance_boost'] = prov.get('boost')
+            logger.info(f"Applied provenance adjustment in prospectus: label={prov.get('label')} boost={prov.get('boost')}")
+        except Exception as e:
+            logger.warning(f"Provenance adjustment for prospectus failed: {e}")
+
         # Only generate a prospectus when bankable coordination patterns exist
         bankable_patterns = []
         for pattern in confidence_results:
@@ -218,6 +254,7 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             "region": zone_key,
             "period": "7-cycle window (1 week)",
             "is_sample": False
+            ,"signal_source_counts": provenance_summary
         }
         
         cluster_summary = build_cluster_summary(signal_data)
@@ -312,6 +349,8 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
 
 @router.get("/prospectus/{prospectus_id}")
 async def get_prospectus(prospectus_id: str, db: Session = Depends(get_db)):
+                },
+                "provenance_summary": provenance_summary
     """
     Get prospectus details by ID.
     """

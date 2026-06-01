@@ -12,6 +12,7 @@ from core.lumoza.lumoza_engine import LumozaEngine
 from core.lundai.lundai_engine import LundaiEngine, evaluate_signal_integrity
 from core.zentari.zentari_engine import ZentariEngine
 from core.prospectus.prospectus_generator import ProspectusGenerator
+from backend.services.external_signals import augment_signals_with_external_sources, count_signal_sources
 from policy import compute_planning_reserve
 import os
 from pathlib import Path
@@ -87,6 +88,11 @@ class BackgroundTaskService:
             
             for i, signal in enumerate(signal_data):
                 signal["cycle_index"] = i
+
+            # Augment raw signals with external provenance signals
+            signal_data = augment_signals_with_external_sources(signal_data, zone)
+            signal_source_counts = count_signal_sources(signal_data)
+            logger.info(f"Background task {task_id}: signal source counts after augmentation: {signal_source_counts}")
             
             # Step 3: Run LUMOZA
             task_status[task_id]["progress"] = 40
