@@ -253,8 +253,8 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
         metadata = {
             "region": zone_key,
             "period": "7-cycle window (1 week)",
-            "is_sample": False
-            ,"signal_source_counts": provenance_summary
+            "is_sample": False,
+            "signal_source_counts": provenance_summary
         }
         
         cluster_summary = build_cluster_summary(signal_data)
@@ -349,8 +349,6 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
 
 @router.get("/prospectus/{prospectus_id}")
 async def get_prospectus(prospectus_id: str, db: Session = Depends(get_db)):
-                },
-                "provenance_summary": provenance_summary
     """
     Get prospectus details by ID.
     """
