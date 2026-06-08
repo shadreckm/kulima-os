@@ -4,6 +4,7 @@ Tests: signal submission → summary retrieval → prospectus generation
 """
 import requests
 import json
+import sys
 
 # API base URL
 API_URL = "http://localhost:8000/api/v1"
@@ -137,8 +138,10 @@ def main():
     
     if total_passed == total_tests:
         print("\n✓ All tests passed! System is working end-to-end.")
+        sys.exit(0)
     else:
         print(f"\n✗ {total_tests - total_passed} test(s) failed. Please review errors above.")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

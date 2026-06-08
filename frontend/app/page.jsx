@@ -376,107 +376,15 @@ export default function Home() {
       key: 'confidence',
       title: 'Confidence',
       value: `${trustScore}%`,
-      subtitle: trustLabel,
-      note: 'Decision readiness',
-      level: trustLabel.toLowerCase()
-    }
-  ];
-
   const downloadReport = () => {
-    setMessage('Generating decision artifact...');
-    setTimeout(() => {
-      const docContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Kulima OS Prospectus - ${zone}</title>
-  <style>
-    body { font-family: 'Inter', sans-serif; background: #fafafa; color: #111; padding: 40px; max-width: 800px; margin: 0 auto; line-height: 1.6; }
-    .header { border-bottom: 3px solid #00e676; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
-    .title-group { display: flex; flex-direction: column; }
-    .title { font-size: 28px; font-weight: 900; color: #0b2a17; text-transform: uppercase; margin: 0; }
-    .subtitle { font-size: 13px; color: #666; margin-top: 5px; font-weight: 600; letter-spacing: 0.05em; }
-    .meta-badge { background: #0b2a17; color: #00e676; padding: 6px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; text-transform: uppercase; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-    .card { border: 1px solid #e0e8e4; padding: 20px; border-radius: 12px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
-    .card-title { font-weight: 800; color: #555; text-transform: uppercase; font-size: 11px; letter-spacing: 0.1em; margin-bottom: 8px; }
-    .card-value { font-size: 28px; font-weight: 900; color: #0b2a17; margin: 0 0 8px 0; }
-    .badge { display: inline-block; padding: 4px 8px; background: #e7f6f1; color: #1f4d38; font-size: 11px; font-weight: bold; border-radius: 6px; }
-    .section { margin-bottom: 30px; background: white; border: 1px solid #e0e8e4; padding: 24px; border-radius: 12px; }
-    .section-title { font-size: 18px; font-weight: 800; color: #0b2a17; border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 0; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .text { font-size: 14px; color: #333; margin: 0; }
-    .footer { margin-top: 50px; font-size: 11px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 20px; font-weight: 600; }
-    .social-reserve-box { background: rgba(0, 230, 118, 0.05); border: 1px dashed #00e676; padding: 12px 18px; border-radius: 8px; margin-top: 12px; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="title-group">
-      <h1 class="title">Kulima OS Demand Prospectus</h1>
-      <div class="subtitle">DECISION-GRADE INVESTMENT BRIEFING | ZONE: ${zone}</div>
-    </div>
-    <div class="meta-badge">${isPaid ? 'CONFIRMED REPORT' : 'PREVIEW ONLY'}</div>
-  </div>
-  
-  <div class="grid">
-    <div class="card">
-      <div class="card-title">Coordination Confidence</div>
-      <h3 class="card-value">${trustScore}%</h3>
-      <div class="badge">${trustLabel} ZENTARI VERIFIED</div>
-    </div>
-    <div class="card">
-      <div class="card-title">Infrastructure Gap</div>
-      <h3 class="card-value">${summary?.infrastructure_gaps?.join(', ') || 'Water Shortage'}</h3>
-      <div class="badge">LUNDAI GAPS DETECTED</div>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2 class="section-title">1. Executive Summary</h2>
-    <p class="text">This document serves as a verified, bankable coordination prospectus for infrastructure planning in the <strong>${zone}</strong> region. By capturing collective livelihood patterns over a trailing 7-cycle evaluation window, Kulima OS converts decentralized agricultural activities into highly reliable investment signals without exposing individual identities, strictly adhering to the <strong>Zero-PII</strong> invariant.</p>
-  </div>
-
-  <div class="section">
-    <h2 class="section-title">2. Livelihood Demand Rhythms (LUMOZA)</h2>
-    <p class="text">Livelihood coordination tracking indicates that productive-use energy demands in this region are centered around collective agricultural cycles. Major irrigation and crop processing activities show a stable repeating peak across 5 out of 7 monitored weekly cycles. Telemetry corroboration confirms that load clusters align perfectly with market days, creating predictable, peak-milling schedules that reduce operational risks for utilities and infrastructure developers.</p>
-  </div>
-
-  <div class="section">
-    <h2 class="section-title">3. Spatial Mismatch Analysis (LUNDAI)</h2>
-    <p class="text">The spatial engine overlays community productive activity locations with existing transmission geometry. A high-density mismatch was successfully identified in ${zone}, indicating substantial unserved economic demand that is technically and financially viable for targeted mini-grid or multi-phase solar-irrigation infrastructure deployment, promising up to 22% yield growth.</p>
-  </div>
-
-  <div class="section">
-    <h2 class="section-title">4. Trust Persistence Framework (ZENTARI)</h2>
-    <p class="text">ZENTARI verifies trust purely as a property of coordination persistence across evaluation cycles, replacing traditional individual credit scoring. The trailing stability index stands at <strong>${trustScore}%</strong>. Signals were cross-validated across community submissions, sensor telemetry, and external data feeds, ensuring resilience against spoofing or noise.</p>
-  </div>
-
-  <div class="section">
-    <h2 class="section-title">5. Critical Load Protection & Social Reserve</h2>
-    <p class="text">Communal essential assets (local health clinics, drinking water access pumps, and primary schools) are designated as non-negotiable priority loads. To safeguard these resources:</p>
-    <div class="social-reserve-box">
-      <strong>Standard 20% Social Capacity Reserve:</strong> A baseline reservation of 20% of proposed micro-grid capacity is locked out from commercial monetization and load-shedding scheduling, maintaining absolute community resilience under all simulated shock scenarios.
-    </div>
-  </div>
-
-  <div class="footer">
-    KULIMA OS &copy; 2026 | Digital Public Infrastructure economic planning artifact.
-  </div>
-</body>
-</html>
-      `;
-      const blob = new Blob([docContent], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `kulima_os_decision_prospectus_${zone.toLowerCase()}.html`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setMessage(isPaid ? 'Institutional Decision Prospectus generated and downloaded.' : 'Preview prospectus generated and downloaded.');
-    }, 1500);
+    setMessage('Downloading investor-grade PDF prospectus...');
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://kulima-os-backend.onrender.com';
+      window.open(`${apiUrl}/api/v1/prospectus/${zone.toLowerCase()}/pdf`, '_blank');
+    } catch (err) {
+      console.error(err);
+      setMessage('Error downloading report.');
+    }
   };
 
   return (
@@ -976,19 +884,21 @@ export default function Home() {
         .swipe-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
         .card-controls button { border: 1px solid rgba(255,255,255,0.14); background: transparent; color: #e9ffe8; border-radius: 999px; width: 40px; height: 40px; cursor: pointer; }
         .card-row { display: grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: 14px; }
-        .insight-card { border-radius: 24px; padding: 22px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: transform 180ms ease, background 180ms ease; }
+        .insight-card { border-radius: 24px; padding: 22px; background: linear-gradient(145deg, rgba(5,27,19,0.9), rgba(2,12,8,0.95)); border: 1px solid rgba(0,230,118,0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease; }
+        .insight-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,255,118,0.15); }
         .insight-card.active { background: rgba(0,255,118,0.14); transform: translateY(-2px); }
-        .card-title { font-size: 18px; font-weight: 800; line-height: 1.1; margin-bottom: 10px; }
-        .card-note { font-size: 13px; color: #d8ffcd; }
+        .card-title { font-size: 18px; font-weight: 800; line-height: 1.1; margin-bottom: 10px; color: #ffffff; }
+        .card-note { font-size: 13px; color: #e9ffe8; }
         .activity-panel { display: flex; flex-direction: column; }
         .activity-stream { display: grid; gap: 12px; }
         .activity-bubble { padding: 16px 18px; border-radius: 999px; background: rgba(0,255,118,0.08); color: #e9ffe8; font-weight: 700; animation: pulse 2400ms ease-in-out infinite alternate; }
         .empty-state { color: rgba(255,255,255,0.68); font-size: 14px; }
         .report-panel { display: grid; gap: 18px; }
         .report-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-        .report-chip { border-radius: 24px; padding: 18px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
-        .chip-title { font-size: 15px; font-weight: 800; margin-bottom: 8px; }
-        .chip-subtitle { font-size: 13px; color: #c8ffc4; }
+        .report-chip { border-radius: 24px; padding: 18px; background: linear-gradient(145deg, rgba(5,27,19,0.9), rgba(2,12,8,0.95)); border: 1px solid rgba(0,230,118,0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: transform 180ms ease, box-shadow 180ms ease; }
+        .report-chip:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,255,118,0.15); }
+        .chip-title { font-size: 15px; font-weight: 800; margin-bottom: 8px; color: #ffffff; }
+        .chip-subtitle { font-size: 13px; color: #e9ffe8; }
         .report-actions { display: flex; gap: 12px; flex-wrap: wrap; }
         .dashboard-grid { display: grid; grid-template-columns: minmax(320px, 1.05fr) minmax(360px, 1.3fr) minmax(300px, 0.95fr); gap: 20px; align-items: start; }
         .column { display: flex; flex-direction: column; gap: 20px; }
@@ -1012,9 +922,10 @@ export default function Home() {
         .overlay-stat .label { font-size: 9px; text-transform: uppercase; color: rgba(233,255,232,0.6); }
         .overlay-stat .val { font-size: 11px; font-weight: 700; color: #e9ffe8; }
         .report-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-        .report-chip { border-radius: 16px; padding: 20px; background: rgba(0,255,118,0.08); min-height: 132px; display: flex; flex-direction: column; justify-content: space-between; }
-        .chip-title { font-size: 15px; font-weight: 800; margin-bottom: 10px; }
-        .chip-subtitle { font-size: 13px; color: #0a2a17; line-height: 1.35; }
+        .report-chip { border-radius: 16px; padding: 20px; background: linear-gradient(145deg, rgba(5,27,19,0.9), rgba(2,12,8,0.95)); border: 1px solid rgba(0,230,118,0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.2); min-height: 132px; display: flex; flex-direction: column; justify-content: space-between; transition: transform 180ms ease, box-shadow 180ms ease; }
+        .report-chip:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,255,118,0.15); }
+        .chip-title { font-size: 15px; font-weight: 800; margin-bottom: 10px; color: #ffffff; }
+        .chip-subtitle { font-size: 13px; color: #e9ffe8; line-height: 1.35; }
         .modal-card-value { font-size: 26px; font-weight: 800; margin-top: 10px; margin-bottom: 10px; color: #d7ffce; }
         .expanded-report { display: flex; flex-direction: column; gap: 18px; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.08); }
         .expanded-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
@@ -1042,7 +953,8 @@ export default function Home() {
         .activity-bubble span { width: 100%; display: block; }
         .empty-state { color: rgba(255,255,255,0.62); font-size: 14px; padding: 26px 18px; border-radius: 16px; background: rgba(255,255,255,0.03); }
         .insight-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-        .insight-card { min-height: 150px; display: flex; flex-direction: column; justify-content: space-between; padding: 18px; border-radius: 16px; background: rgba(0,255,118,0.07); border: 1px solid rgba(255,255,255,0.1); }
+        .insight-card { min-height: 150px; display: flex; flex-direction: column; justify-content: space-between; padding: 18px; border-radius: 16px; background: linear-gradient(145deg, rgba(5,27,19,0.9), rgba(2,12,8,0.95)); border: 1px solid rgba(0,230,118,0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: transform 180ms ease, box-shadow 180ms ease; }
+        .insight-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,255,118,0.15); }
         .trust-banner { margin: 18px 0; position: relative; }
         .trust-badge-large { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-radius: 14px; cursor: pointer; }
         .trust-badge-large .trust-emoji { font-size: 34px; }
@@ -1072,8 +984,8 @@ export default function Home() {
         .provenance-list { display: grid; gap: 8px; }
         .prov-item { font-size: 13px; color: #d8ffd8; font-weight: 700; }
         .insight-card.people, .insight-card.water, .insight-card.build, .insight-card.confidence { background: rgba(255,255,255,0.05); }
-        .card-title { font-size: 16px; font-weight: 800; margin-bottom: 12px; }
-        .card-note { font-size: 14px; line-height: 1.5; color: rgba(233,255,232,0.88); }
+        .card-title { font-size: 16px; font-weight: 800; margin-bottom: 12px; color: #ffffff; }
+        .card-note { font-size: 14px; line-height: 1.5; color: #e9ffe8; }
         .confidence-block { display: flex; flex-direction: column; gap: 10px; }
         .confidence-pill { align-self: flex-start; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
         .confidence-pill.low { background: rgba(255,195,0,0.16); color: #ffd86b; }
