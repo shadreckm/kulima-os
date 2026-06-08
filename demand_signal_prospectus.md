@@ -2,9 +2,9 @@
 
 ## Verified Coordination Patterns for Infrastructure Planning
 
-**Generated:** 2026-06-08T06:41:48.694899Z  
-**Region:** Pilot Region  
-**Period:** 7-cycle window  
+**Generated:** 2026-06-08T06:46:49.148980Z  
+**Region:** Pilot Region - Rural Energy Planning  
+**Period:** 7-cycle window (Week 1)  
 **System:** KULIMA OS Pilot v0.2 (LUMOZA + LUNDAI + Critical Load Protection)
 
 ---
@@ -16,8 +16,8 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - **Total Coordination Patterns:** 10
 - **High Confidence Patterns:** 2
 - **Moderate Confidence Patterns:** 1
-- **Zones with Coordinated Demand:** zone_b, zone_c, zone_a
-- **Productive Activities Detected:** clinic, school, emergency_services, milling, cold_storage, water_system, irrigation
+- **Zones with Coordinated Demand:** zone_a, zone_b, zone_c
+- **Productive Activities Detected:** emergency_services, clinic, cold_storage, irrigation, milling, school, water_system
 
 ---
 
@@ -159,9 +159,9 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 ### Capacity Reservation
 
-**Reserved Capacity:** 40%
+**Reserved Capacity:** 30%
 
-**Rationale:** High essential service density. 30% capacity reserved for critical loads. Increased by 10% due to critical infrastructure gaps in 2 zone(s) with essential services.
+**Rationale:** High essential service density. 30% capacity reserved for critical loads.
 
 **Enforcement:** Reserved capacity is excluded from optimization, monetization, and load-shedding logic
 
@@ -170,8 +170,8 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 **BASELINE Scenario:**
 - Description: Normal operation with all essential services active
-- Essential Load: 40%
-- Available for Productive Use: 60%
+- Essential Load: 30%
+- Available for Productive Use: 70%
 
 **PEAK Scenario:**
 - Description: Peak demand when all services operate simultaneously
@@ -185,7 +185,7 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 ### Planning Requirements
 
-- Infrastructure MUST reserve 40% capacity for essential services
+- Infrastructure MUST reserve 30% capacity for essential services
 - Essential service loads cannot be shed during peak demand periods
 - Productive use optimization must operate within remaining capacity only
 - Emergency scenarios require ability to scale essential capacity to 50%
@@ -292,7 +292,7 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 **Essential Services Protected:**
 - Count: 5
-- Types: clinic, school, emergency_services, water_system
+- Types: emergency_services, school, clinic, water_system
 - Capacity Reserved: 30-40% of total capacity (non-negotiable)
 - Impact: Ensures clinics, schools, water systems remain operational under all scenarios
 
@@ -417,7 +417,7 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 ## Infrastructure Planning Guidance
 
-**High Priority Zones:** zone_b, zone_a
+**High Priority Zones:** zone_a, zone_b
 
 **Moderate Priority Zones:** zone_a
 

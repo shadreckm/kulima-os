@@ -1,48 +1,72 @@
-# Python
+# =========================
+# 🔹 Python
+# =========================
 __pycache__/
-*.pyc 
-*.pyo 
-*.pyd 
-.pytest_cache/ 
-*.egg-info/ 
-.venv/ 
-venv/ 
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
 
-# Runtime data
+# =========================
+# 🔹 Runtime / Data Files
+# =========================
 lumoza_signals.json
 lumoza_processing_*.json
 
-# Generated artifacts
+# =========================
+# 🔹 Generated Artifacts
+# =========================
 artifacts/
 *.pdf
 
-# Generated prospectus files
+# Prospectus outputs
 lumoza_prospectus_*.json
 lumoza_prospectus_*.pdf
 demand_signal_prospectus*.json
 demand_signal_prospectus*.pdf
 
-# Environment variables
+# =========================
+# 🔹 Database
+# =========================
+*.db
+*.sqlite3
+
+# =========================
+# 🔹 Environment Variables
+# =========================
 .env
+.env.local
 
-# OS files
-.DS_Store
-Thumbs.db
-kulima_os.db 
-__pycache__/ 
-*.pyc 
-.env 
-
-# dependencies
+# =========================
+# 🔹 Node / Frontend
+# =========================
 node_modules/
 frontend/node_modules/
 
-# build output
+# =========================
+# 🔹 Build Output
+# =========================
 .next/
 dist/
 build/
 
-# misc
-.DS_Store
+# =========================
+# 🔹 Logs
+# =========================
 *.log
 
+# =========================
+# 🔹 OS / System Files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# 🔹 IDE / Editors
+# =========================
+.vscode/
+.idea/
+``

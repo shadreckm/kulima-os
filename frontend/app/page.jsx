@@ -67,7 +67,7 @@ export default function Home() {
   const reportUrl = reportData?.pdf_url ? `${BACKEND_BASE}${reportData.pdf_url}` : '';
 
   const trustLabel = buildTrustLabel(summary);
-  const trustScore = Math.round((summary?.trust_score ?? 0.55) * 100);
+  const trustScore = Math.round((summary?.trust_score ?? 0) * 100);
 
   useEffect(() => {
     fetchSummary();
