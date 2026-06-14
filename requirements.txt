@@ -7,6 +7,7 @@ pydantic-settings>=2.1.0
 
 # Core Engine Dependencies
 reportlab>=4.0.7
+weasyprint>=60.0
 
 # Database
 aiosqlite>=0.19.0

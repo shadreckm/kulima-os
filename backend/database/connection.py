@@ -14,17 +14,7 @@ logger = logging.getLogger(__name__)
 # Resolve DATABASE_URL — Render provides it without the dialect prefix sometimes
 _raw_url = settings.DATABASE_URL
 
-# Production guard: require DATABASE_URL in production
-_environment = settings.ENVIRONMENT.lower()
-_is_production = _environment == "production" or os.environ.get("RENDER") or os.environ.get("HEROKU")
-
-if _is_production and not _raw_url:
-    raise ValueError(
-        "DATABASE_URL must be set in production. "
-        "Provide a PostgreSQL connection string via environment variable."
-    )
-
-# Development fallback: use SQLite if DATABASE_URL not set
+# Fallback: use SQLite if DATABASE_URL not set
 if not _raw_url:
     _raw_url = "sqlite:///./kulima_os.db"
     logger.info("DATABASE_URL not set, using SQLite for development")

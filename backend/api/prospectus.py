@@ -431,7 +431,6 @@ async def download_file(filename: str):
         }
 
 from fastapi import Response
-from weasyprint import HTML
 from backend.api.summaries import get_summary
 
 @router.get("/{zone}/pdf")
@@ -562,11 +561,28 @@ async def get_bankable_prospectus_pdf(zone: str, db: Session = Depends(get_db)):
     </body>
     </html>
     """
-    
-    pdf_bytes = HTML(string=html_content).write_pdf()
-    
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=kulima_os_prospectus_{zone}.pdf"}
-    )
+
+    try:
+        from weasyprint import HTML
+        pdf_bytes = HTML(string=html_content).write_pdf()
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=kulima_os_prospectus_{zone}.pdf"}
+        )
+    except ImportError:
+        logger.warning("WeasyPrint not available, falling back to HTML")
+        html_bytes = html_content.encode('utf-8')
+        return Response(
+            content=html_bytes,
+            media_type="text/html",
+            headers={"Content-Disposition": f"attachment; filename=kulima_os_prospectus_{zone}.html"}
+        )
+    except Exception as e:
+        logger.error(f"PDF generation failed: {e}, falling back to HTML")
+        html_bytes = html_content.encode('utf-8')
+        return Response(
+            content=html_bytes,
+            media_type="text/html",
+            headers={"Content-Disposition": f"attachment; filename=kulima_os_prospectus_{zone}.html"}
+        )
