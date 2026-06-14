@@ -72,35 +72,17 @@ async def create_signal(request: SignalRequest, db: Session = Depends(get_db)):
             logger.warning(f"Sector classification failed: {e}; defaulting to 'general'")
             sector = "general"
 
-        # Store signal in database (include original_text)
-        # Anti-spam: limit signals per user per zone in the last hour
+        # Anti-spam: We no longer track user_id. We check for identical messages globally per zone in the last hour.
         try:
             recent_window = datetime.utcnow() - timedelta(hours=1)
-            recent_count = db.query(Signal).filter(
-                Signal.user_id == (request.user_id if request.user_id else "anonymous"),
-                Signal.zone == zone,
-                Signal.timestamp >= recent_window
-            ).count()
-            if recent_count >= 5:
-                logger.warning(f"Spam detected: user {request.user_id} exceeded limit in zone {zone}")
-                raise HTTPException(status_code=429, detail="Too many signals submitted recently. Please wait before sending more.")
-        except HTTPException:
-            raise
-        except Exception:
-            # If the DB check fails for any reason, proceed but log
-            logger.warning("Could not perform spam check; continuing")
-
-        # Duplicate identical message check (same user, same zone, same original_text within 1 hour)
-        try:
             if original_text:
                 dup = db.query(Signal).filter(
-                    Signal.user_id == (request.user_id if request.user_id else "anonymous"),
                     Signal.zone == zone,
                     Signal.original_text == original_text,
                     Signal.timestamp >= recent_window
                 ).first()
                 if dup:
-                    logger.info(f"Duplicate signal ignored for user {request.user_id} in zone {zone}")
+                    logger.info(f"Duplicate signal ignored in zone {zone}")
                     return {
                         "success": True,
                         "status": "success",
@@ -120,7 +102,6 @@ async def create_signal(request: SignalRequest, db: Session = Depends(get_db)):
             time_window=time_window,
             timestamp=timestamp,
             source=normalize_signal_source(request.source or "web"),
-            user_id=request.user_id if request.user_id else "anonymous",
             original_text=original_text or ''
         )
         db.add(signal)
@@ -212,7 +193,6 @@ async def get_signals(
                 "time_window": signal.time_window,
                 "timestamp": signal.timestamp.isoformat(),
                 "source": signal.source,
-                "user_id": signal.user_id,
                 "created_at": signal.created_at.isoformat()
             })
         

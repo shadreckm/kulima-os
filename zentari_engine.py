@@ -105,39 +105,61 @@ class ZentariEngine:
         # Trust configuration
         TRUST_THRESHOLD = 0.6  # Minimum trust required to allow actionable recommendations
 
-        def _compute_trust_score(pattern: Dict) -> float:
-            """Compute a trust score [0-1] from multiple signals.
+        def _compute_trust_score(pattern: Dict):
+            """Compute trustScore and confidenceBreakdown from multiple signals.
 
-            Components used:
-            - integrity_score (0-1)
-            - time_span (unique_days normalized to 7 days)
-            - user_diversity (unique_senders / signal_count)
-            - settlement_alignment (high=1, medium=0.6, low=0.3)
+            Derives trust from:
+            - signal persistence across cycles (persistenceScore)
+            - multi-source validation (validationScore)
+            - pattern convergence/spatial consistency (spatialConsistency)
+            - anomaly detection/temporal stability (temporalStability)
             """
-            integrity = float(pattern.get('integrity_score') or 0.0)
+            # Persistence across cycles
             unique_days = float(pattern.get('unique_days') or 0.0)
-            time_span = min(unique_days / 7.0, 1.0)
-            signal_count = float(pattern.get('signal_count') or 1.0)
-            unique_senders = float(pattern.get('unique_senders') or pattern.get('user_diversity') or 0.0)
-            user_diversity = min(unique_senders / max(1.0, signal_count), 1.0)
-
+            persistenceScore = min(unique_days / 7.0, 1.0)
+            
+            # Multi-source validation
             alignment_level = pattern.get('alignment_level') or pattern.get('validation_strength') or 'low'
-            alignment_map = {'high': 1.0, 'medium': 0.6, 'low': 0.3}
-            alignment = alignment_map.get(alignment_level, 0.3)
-
-            # weights
-            w_integrity = 0.4
-            w_time = 0.2
-            w_user = 0.2
-            w_align = 0.2
+            alignment_map = {'strong': 1.0, 'high': 1.0, 'moderate': 0.8, 'medium': 0.6, 'weak': 0.4, 'human_only': 0.3, 'low': 0.3, 'none': 0.1}
+            validationScore = alignment_map.get(alignment_level, 0.3)
+            
+            # Pattern convergence (cross-domain) / Spatial consistency
+            integrity = float(pattern.get('integrity_score') or 0.0)
+            user_diversity = float(pattern.get('user_diversity') or pattern.get('unique_senders') or 1.0)
+            signal_count = float(pattern.get('signal_count') or 1.0)
+            diversity_ratio = min(user_diversity / max(1.0, signal_count), 1.0)
+            spatialConsistency = (integrity + diversity_ratio) / 2.0
+            
+            # Anomaly detection / Temporal stability
+            burst_ratio = float(pattern.get('burst_ratio') or 1.0)
+            anomaly_flag = bool(pattern.get('anomaly_flag', False))
+            # Lower burst_ratio is better (less spiky). Normal range usually <= 0.5 for stable demand
+            stability = max(1.0 - (burst_ratio / 2.0), 0.0) if not anomaly_flag else 0.1
+            temporalStability = round(stability, 2)
+            
+            # Weighted overall score
+            w_pers = 0.3
+            w_val = 0.3
+            w_spatial = 0.2
+            w_temp = 0.2
 
             score = (
-                w_integrity * integrity
-                + w_time * time_span
-                + w_user * user_diversity
-                + w_align * alignment
+                w_pers * persistenceScore
+                + w_val * validationScore
+                + w_spatial * spatialConsistency
+                + w_temp * temporalStability
             )
-            return round(min(max(score, 0.0), 1.0), 2)
+            
+            trustScore = round(min(max(score, 0.0), 1.0), 2)
+            
+            confidenceBreakdown = {
+                'persistenceScore': round(persistenceScore, 2),
+                'validationScore': round(validationScore, 2),
+                'temporalStability': round(temporalStability, 2),
+                'spatialConsistency': round(spatialConsistency, 2)
+            }
+            
+            return trustScore, confidenceBreakdown
 
         def _classify_trust_level(score: float) -> str:
             if score >= 0.85:
@@ -255,15 +277,15 @@ class ZentariEngine:
             }
 
             # Compute institutional trust from multiple axes (separate from coordination_confidence)
-            trust_score = _compute_trust_score(pattern)
-            trust_level = _classify_trust_level(trust_score)
+            trust_score_val, confidence_breakdown = _compute_trust_score(pattern)
+            trust_level = _classify_trust_level(trust_score_val)
 
             # Refusal logic: disallow actionable recommendations when trust below threshold
-            action_allowed = trust_score >= TRUST_THRESHOLD
+            action_allowed = trust_score_val >= TRUST_THRESHOLD
             reason_for_refusal = None
             if not action_allowed:
                 reason_for_refusal = (
-                    f"Trust level '{trust_level}' (score={trust_score}) below required threshold ({TRUST_THRESHOLD}); "
+                    f"Trust level '{trust_level}' (score={trust_score_val}) below required threshold ({TRUST_THRESHOLD}); "
                     "refusing actionable recommendation."
                 )
                 # blank or weaken recommended_action to avoid over-assertion
@@ -271,8 +293,10 @@ class ZentariEngine:
                     confidence_result.get('recommended_action') if action_allowed else None
                 )
 
+            confidence_result['trustScore'] = trust_score_val
+            confidence_result['confidenceBreakdown'] = confidence_breakdown
             confidence_result['trust'] = {
-                'trust_score': trust_score,
+                'trust_score': trust_score_val,
                 'trust_level': trust_level,
                 'action_allowed': action_allowed,
                 'reason_for_refusal': reason_for_refusal,
@@ -316,7 +340,7 @@ class ZentariEngine:
                     f"Usable signals: {planning_reserve.get('usable_signals')} ; reserve_buffer: {planning_reserve.get('reserve_buffer')} ."
                 ),
                 'action_allowed_explanation': (
-                    f"Action is {'allowed' if action_allowed else 'not allowed'} because trust_score={trust_score} "
+                    f"Action is {'allowed' if action_allowed else 'not allowed'} because trust_score={trust_score_val} "
                     f"{'meets' if action_allowed else 'does not meet'} the threshold of {TRUST_THRESHOLD} for actionable recommendations."
                 ),
                 'signal_origin': signal_origin,

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { fetchSummaryData, fetchRecentSignalsData, submitActivitySignal, generateProspectusReport } from '../lib/api';
 
 const ZONES = ['MZUZU', 'LILONGWE', 'BLANTYRE', 'ZOMBA'];
 const PAYCHANGU_LINK = 'https://pay.paychangu.com/SC-GDDYA0';
@@ -77,28 +78,14 @@ export default function Home() {
   }, [zone]);
 
   const fetchSummary = async () => {
-    try {
-      const response = await fetch(`${BASE_URL}/summary/${zone}`, { cache: 'no-store' });
-      const data = await response.json();
-      if (data?.status === 'success') {
-        setSummary(data.data);
-      } else {
-        setSummary(null);
-      }
-    } catch {
-      setSummary(null);
-    }
+    const data = await fetchSummaryData(zone);
+    setSummary(data);
   };
 
   const fetchRecentSignals = async () => {
-    try {
-      const response = await fetch(`${BASE_URL}/recent-signals`, { cache: 'no-store' });
-      const data = await response.json();
-      if (data?.success && Array.isArray(data.data)) {
-        setRecentActivities(data.data.slice(0, 12));
-      }
-    } catch {
-      // ignore polling failures
+    const data = await fetchRecentSignalsData();
+    if (data && data.length > 0) {
+      setRecentActivities(data);
     }
   };
 
@@ -195,11 +182,7 @@ export default function Home() {
     setMessage('Signal added. Updating the live system...');
 
     try {
-      await fetch(`${BASE_URL}/signal`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zone: inferredZone, raw_text: text, source: 'web', user_id: `web_user_${Date.now()}` })
-      });
+      await submitActivitySignal(inferredZone, text);
     } catch {
       setMessage('Network issue. Local signal saved in the feed.');
     } finally {
@@ -217,12 +200,7 @@ export default function Home() {
     setMessage('Preparing the preview report...');
 
     try {
-      const response = await fetch(`${BASE_URL}/generate-prospectus`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zone, user_id: `web_user_${Date.now()}`, preview: true })
-      });
-      const data = await response.json();
+      const data = await generateProspectusReport(zone);
       if (data?.success) {
         setReportData({ ...(data.report || {}), pdf_url: data.pdf_url || data.report?.pdf_url || '', preview_locked: data.report?.preview_locked ?? true });
         setShowPreview(true);
@@ -376,6 +354,8 @@ export default function Home() {
       key: 'confidence',
       title: 'Confidence',
       value: `${trustScore}%`,
+    }
+  ];
   const downloadReport = () => {
     setMessage('Downloading investor-grade PDF prospectus...');
     try {

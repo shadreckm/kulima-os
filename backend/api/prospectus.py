@@ -57,7 +57,6 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
     """
     try:
         zone = request.zone.upper()
-        user_id = request.user_id or "anonymous"
         
         logger.info(f"Generating prospectus for zone: {zone}")
         
@@ -100,7 +99,6 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
                 "cluster_id": normalized.get('cluster_id'),
                 "timestamp": signal.timestamp.isoformat(),
                 "signal_source": signal.source,
-                "user_phone": signal.user_id,
                 "service_priority": "productive",
                 "original_text": signal.original_text or ''
             })
@@ -299,7 +297,6 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             db_prospectus = Prospectus(
                 id=prospectus_id,
                 zone=zone_key,
-                user_id=user_id,
                 pdf_url=f"/api/v1/download/{pdf_filename}",
                 json_url=f"/api/v1/download/{json_filename}",
                 meta_data=json.dumps(metadata),
@@ -370,7 +367,6 @@ async def get_prospectus(prospectus_id: str, db: Session = Depends(get_db)):
             "data": {
                 "prospectus_id": prospectus_id,
                 "zone": prospectus.zone,
-                "user_id": prospectus.user_id,
                 "pdf_url": prospectus.pdf_url,
                 "json_url": prospectus.json_url,
                 "created_at": prospectus.created_at.isoformat()

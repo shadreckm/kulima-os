@@ -19,7 +19,6 @@ class Signal(Base):
     time_window = Column(String, nullable=False)
     timestamp = Column(DateTime, nullable=False, index=True)
     source = Column(String, nullable=False)
-    user_id = Column(String, nullable=False, index=True)
     original_text = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -44,23 +43,13 @@ class Prospectus(Base):
     
     id = Column(String, primary_key=True)
     zone = Column(String, nullable=False, index=True)
-    user_id = Column(String, nullable=False, index=True)
     pdf_url = Column(String, nullable=False)
     json_url = Column(String, nullable=False)
     meta_data = Column(Text, nullable=False)  # JSON string
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
-class User(Base):
-    """User model for multi-user support"""
-    __tablename__ = "users"
-    
-    id = Column(String, primary_key=True)
-    phone_number = Column(String, unique=True, nullable=True)
-    email = Column(String, unique=True, nullable=True)
-    name = Column(String, nullable=True)
-    role = Column(String, default='user')
-    created_at = Column(DateTime, default=datetime.utcnow)
+
 
 
 class Zone(Base):

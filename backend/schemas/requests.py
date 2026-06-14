@@ -78,7 +78,6 @@ class SignalRequest(BaseModel):
     raw_text: Optional[str] = Field(None, description="Raw text input for normalization")
     timestamp: Optional[str] = Field(None, description="ISO format timestamp")
     source: str = Field(default="web", description="Signal source (whatsapp, web, manual)")
-    user_id: Optional[str] = Field(default="anonymous", description="User identifier")
     
     @validator('timestamp')
     def validate_timestamp(cls, v):
@@ -98,7 +97,6 @@ class SignalCreate(BaseModel):
     time_window: str = Field(..., min_length=1, description="Time window (morning, afternoon, evening, midday)")
     timestamp: Optional[str] = Field(None, description="ISO format timestamp")
     source: str = Field(default="manual", description="Signal source (whatsapp, web, manual)")
-    user_id: Optional[str] = Field(default="anonymous", description="User identifier")
     
     @validator('zone')
     def validate_zone(cls, v):
@@ -126,7 +124,6 @@ class SignalCreate(BaseModel):
 class ProspectusRequest(BaseModel):
     """Schema for prospectus generation"""
     zone: str = Field(..., min_length=1, description="Zone identifier")
-    user_id: Optional[str] = Field(None, description="User identifier")
     preview: Optional[bool] = Field(False, description="If true, generate a preview (partial) and lock full report")
     
     @validator('zone')
