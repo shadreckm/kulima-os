@@ -442,19 +442,23 @@ async def get_bankable_prospectus_pdf(zone: str, db: Session = Depends(get_db)):
     activities = ", ".join(data.get("productive_activities_detected", [])) or "None"
     key_finding = data.get("key_finding", "")
     
-    # Trust Score computation
-    trust_score = 0
+    # Trust Score computation from ZENTARI engine
+    trust_score = int(data.get("trust_score", 0) * 100)
     trust_label = "LOW"
-    if total_patterns > 0:
-        base_trust = min(100, (high_conf / total_patterns) * 100 + (signal_count * 2))
-        trust_score = int(base_trust)
-        if trust_score > 75:
-            trust_label = "HIGH"
-        elif trust_score > 40:
-            trust_label = "MEDIUM"
-    elif signal_count > 0:
-        trust_score = min(35, signal_count * 5)
-        trust_label = "LOW"
+    if trust_score > 75:
+        trust_label = "HIGH"
+    elif trust_score > 40:
+        trust_label = "MEDIUM"
+        
+    bd = data.get("confidence_breakdown", {})
+    bd_html = f"""
+      <ul style="font-size: 14px; color: #555;">
+        <li><strong>Persistence:</strong> {int(bd.get('persistenceScore', 0) * 100)}%</li>
+        <li><strong>Validation:</strong> {int(bd.get('validationScore', 0) * 100)}%</li>
+        <li><strong>Spatial Consistency:</strong> {int(bd.get('spatialConsistency', 0) * 100)}%</li>
+        <li><strong>Temporal Stability:</strong> {int(bd.get('temporalStability', 0) * 100)}%</li>
+      </ul>
+    """
 
     # Clusters
     cluster_summaries = data.get("cluster_summaries", [])
@@ -539,6 +543,7 @@ async def get_bankable_prospectus_pdf(zone: str, db: Session = Depends(get_db)):
 
       <h2>5. Trust & Validation (ZENTARI)</h2>
       <p>Trust Score: <strong>{trust_score}% ({trust_label})</strong>. Computed from {signal_count} signals, tracking consistency across multi-cycle windows and source diversity.</p>
+      {bd_html}
 
       <h2>6. Investment Opportunities</h2>
       <ul>

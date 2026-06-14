@@ -69,6 +69,12 @@ export default function Home() {
 
   const trustLabel = buildTrustLabel(summary);
   const trustScore = Math.round((summary?.trust_score ?? 0) * 100);
+  const confidenceBreakdown = summary?.confidence_breakdown || {
+    persistenceScore: 0,
+    validationScore: 0,
+    temporalStability: 0,
+    spatialConsistency: 0
+  };
 
   useEffect(() => {
     fetchSummary();
@@ -456,6 +462,32 @@ export default function Home() {
                   {card.key !== 'confidence' && <div className="insight-tag">{card.note}</div>}
                 </div>
               ))}
+            </div>
+          </section>
+          
+          <section className="breakdown-panel">
+            <div className="panel-title">ZENTARI Trust Breakdown</div>
+            <div className="breakdown-metrics">
+              <div className="metric-row">
+                <span className="metric-label">Pattern Persistence</span>
+                <div className="metric-bar-bg"><div className="metric-bar-fill" style={{width: `${Math.round(confidenceBreakdown.persistenceScore * 100)}%`}} /></div>
+                <span className="metric-val">{Math.round(confidenceBreakdown.persistenceScore * 100)}%</span>
+              </div>
+              <div className="metric-row">
+                <span className="metric-label">Cross-Validation</span>
+                <div className="metric-bar-bg"><div className="metric-bar-fill" style={{width: `${Math.round(confidenceBreakdown.validationScore * 100)}%`}} /></div>
+                <span className="metric-val">{Math.round(confidenceBreakdown.validationScore * 100)}%</span>
+              </div>
+              <div className="metric-row">
+                <span className="metric-label">Spatial Consistency</span>
+                <div className="metric-bar-bg"><div className="metric-bar-fill" style={{width: `${Math.round(confidenceBreakdown.spatialConsistency * 100)}%`}} /></div>
+                <span className="metric-val">{Math.round(confidenceBreakdown.spatialConsistency * 100)}%</span>
+              </div>
+              <div className="metric-row">
+                <span className="metric-label">Temporal Stability</span>
+                <div className="metric-bar-bg"><div className="metric-bar-fill" style={{width: `${Math.round(confidenceBreakdown.temporalStability * 100)}%`}} /></div>
+                <span className="metric-val">{Math.round(confidenceBreakdown.temporalStability * 100)}%</span>
+              </div>
             </div>
           </section>
         </div>

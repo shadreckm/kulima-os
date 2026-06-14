@@ -67,6 +67,13 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                     "zones_with_coordinated_demand": [],
                     "productive_activities_detected": [],
                     "key_finding": "Patterns are forming — record more activity to unlock insights",
+                    "trust_score": 0.0,
+                    "confidence_breakdown": {
+                        "persistenceScore": 0.0,
+                        "validationScore": 0.0,
+                        "temporalStability": 0.0,
+                        "spatialConsistency": 0.0
+                    },
                     "updated_at": datetime.utcnow().isoformat()
                 }
             }
@@ -120,6 +127,13 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                     "zones_with_coordinated_demand": [],
                     "productive_activities_detected": list({s.activity_type for s in signals}),
                     "key_finding": "Patterns are forming — record more activity to unlock insights",
+                    "trust_score": 0.0,
+                    "confidence_breakdown": {
+                        "persistenceScore": 0.0,
+                        "validationScore": 0.0,
+                        "temporalStability": 0.0,
+                        "spatialConsistency": 0.0
+                    },
                     "updated_at": datetime.utcnow().isoformat()
                 }
             }
@@ -136,6 +150,13 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                     "zones_with_coordinated_demand": [],
                     "productive_activities_detected": list({s.activity_type for s in signals}),
                     "key_finding": "Patterns are forming — record more activity to unlock insights",
+                    "trust_score": 0.0,
+                    "confidence_breakdown": {
+                        "persistenceScore": 0.0,
+                        "validationScore": 0.0,
+                        "temporalStability": 0.0,
+                        "spatialConsistency": 0.0
+                    },
                     "updated_at": datetime.utcnow().isoformat()
                 }
             }
@@ -228,6 +249,27 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
 
         logger.info(f"Summary computed: {total_patterns} total, {high_confidence_patterns} high confidence, {moderate_confidence_patterns} moderate confidence")
         
+        # Calculate aggregate trust score and confidence breakdown
+        aggregate_trust = 0.0
+        aggregate_breakdown = {
+            "persistenceScore": 0.0,
+            "validationScore": 0.0,
+            "temporalStability": 0.0,
+            "spatialConsistency": 0.0
+        }
+        if total_patterns > 0:
+            trust_scores = [r.get('trustScore', 0) for r in confidence_results]
+            aggregate_trust = sum(trust_scores) / len(trust_scores)
+            
+            for r in confidence_results:
+                bd = r.get('confidenceBreakdown', {})
+                aggregate_breakdown['persistenceScore'] += bd.get('persistenceScore', 0)
+                aggregate_breakdown['validationScore'] += bd.get('validationScore', 0)
+                aggregate_breakdown['temporalStability'] += bd.get('temporalStability', 0)
+                aggregate_breakdown['spatialConsistency'] += bd.get('spatialConsistency', 0)
+            
+            aggregate_breakdown = {k: round(v / total_patterns, 2) for k, v in aggregate_breakdown.items()}
+        
         # Calculate risk model from confidence results
         try:
             risk_model = _calculate_risk_model(confidence_results, lundai_analysis)
@@ -256,6 +298,8 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                 "clusters": clusters,
                 "recommended_projects": recommended_projects,
                 "key_finding": key_finding,
+                "trust_score": round(aggregate_trust, 2),
+                "confidence_breakdown": aggregate_breakdown,
                 "updated_at": datetime.utcnow().isoformat(),
                 "pipeline_output": {
                     "coordination_patterns": coordination_patterns,
@@ -283,6 +327,13 @@ async def get_summary(zone: str, db: Session = Depends(get_db)):
                 "zones_with_coordinated_demand": [],
                 "productive_activities_detected": [],
                 "key_finding": "Patterns are forming — record more activity to unlock insights",
+                "trust_score": 0.0,
+                "confidence_breakdown": {
+                    "persistenceScore": 0.0,
+                    "validationScore": 0.0,
+                    "temporalStability": 0.0,
+                    "spatialConsistency": 0.0
+                },
                 "updated_at": datetime.utcnow().isoformat()
             }
         }
