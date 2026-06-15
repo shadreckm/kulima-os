@@ -107,8 +107,11 @@ export default function Home() {
     setSummary(data);
   };
 
-  const clusters = summary?.clusters || [];
+  const clusters = (summary?.clusters || []).filter((c) => c.sub_zone);
   const activeCluster = clusters.find((c) => c.cluster_id === selectedClusterId) || clusters[0] || null;
+  const freshnessLabel = summary?.freshness_label || summary?.hours_since_update != null
+    ? `Last updated: ${summary?.freshness_label || `${summary?.hours_since_update} hours ago`}`
+    : null;
 
   const fetchRecentSignals = async () => {
     const data = await fetchRecentSignalsData();
@@ -210,7 +213,7 @@ export default function Home() {
     setMessage('Signal added. Updating the live system...');
 
     try {
-      await submitActivitySignal(inferredZone, text);
+      await submitActivitySignal(inferredZone, text, speechActive ? 'voice' : 'web');
     } catch {
       setMessage('Network issue. Local signal saved in the feed.');
     } finally {
@@ -416,9 +419,13 @@ export default function Home() {
   return (
     <div className="page-shell">
       <div className="top-bar">
-        <div>
-          <div className="tiny-label">COMMAND SYSTEM</div>
-          <div className="product-title">Kulima OS live command center</div>
+        <div className="top-brand">
+          <img src="/logo.png" alt="Kulima OS" className="brand-logo" />
+          <div>
+            <div className="tiny-label">COMMAND SYSTEM</div>
+            <div className="product-title">Kulima OS live command center</div>
+            {freshnessLabel && <div className="freshness-label">{freshnessLabel}</div>}
+          </div>
         </div>
         <div className="top-actions">
           <select
@@ -547,7 +554,7 @@ export default function Home() {
             </div>
           </section>
 
-          {clusters.length > 0 && (
+          {clusters.length > 0 ? (
             <section className="cluster-panel">
               <div className="panel-title">Cluster intelligence</div>
               <div className="cluster-controls">
@@ -574,6 +581,11 @@ export default function Home() {
                   <div className="cluster-detail-row"><span>Confidence</span><strong>{Math.round((activeCluster.confidence_score || 0) * 100)}%</strong></div>
                 </div>
               )}
+            </section>
+          ) : (
+            <section className="cluster-panel cluster-empty">
+              <div className="panel-title">Cluster intelligence</div>
+              <p className="cluster-empty-text">No validated sub-zone clusters yet. Include a known area (e.g. Chibanja, Area 25, Limbe) in your signal.</p>
             </section>
           )}
         </div>
@@ -786,9 +798,12 @@ export default function Home() {
         <div className="modal-shell" onClick={() => setShowPreview(false)}>
           <div className="modal-card" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
-              <div>
-                <div className="tiny-label">REPORT PREVIEW</div>
-                <div className="modal-title">Preview prospectus</div>
+              <div className="modal-brand-row">
+                <img src="/logo.png" alt="Kulima OS" className="modal-logo" />
+                <div>
+                  <div className="tiny-label">REPORT PREVIEW</div>
+                  <div className="modal-title">Preview prospectus</div>
+                </div>
               </div>
               <button className="close-button" onClick={() => setShowPreview(false)}>×</button>
             </div>
@@ -937,6 +952,12 @@ export default function Home() {
       <style jsx>{`
         .page-shell { min-height: 100vh; padding: 24px; background: radial-gradient(circle at top left, rgba(0,255,155,0.14), transparent 22%), radial-gradient(circle at bottom right, rgba(0,170,255,0.1), transparent 20%), #06130f; color: #e9ffe8; }
         .top-bar { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+        .top-brand { display: flex; align-items: center; gap: 14px; }
+        .brand-logo { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; }
+        .freshness-label { font-size: 11px; color: #7ef2ac; margin-top: 4px; opacity: 0.85; }
+        .modal-brand-row { display: flex; align-items: center; gap: 12px; }
+        .modal-logo { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
+        .cluster-empty-text { font-size: 13px; color: #ceffcd; line-height: 1.5; margin: 0; }
         .tiny-label { font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; color: #7ef2ac; }
         .product-title { font-size: 32px; font-weight: 800; line-height: 1.05; }
         .top-actions { display: flex; gap: 12px; flex-wrap: wrap; }

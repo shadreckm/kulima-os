@@ -9,51 +9,19 @@
   "total_patterns": 4,
   "high_confidence_patterns": 3,
   "moderate_confidence_patterns": 1,
-  "productive_activities_detected": ["irrigation", "cold_storage", "milling"],
+  "productive_activities_detected": ["irrigation", "storage", "milling"],
   "infrastructure_gaps": [
-    "High-capacity transformers",
-    "Three-phase distribution lines",
-    "Cold chain connectivity"
+    "No reliable three-phase irrigation supply",
+    "No cold chain or warehouse facility",
+    "No local milling or processing facility"
   ],
   "recommended_projects": [
-    "Solar irrigation mini-grid",
-    "Centralized cold storage hub",
-    "Community milling facility"
+    "Solar pump irrigation cluster",
+    "Community storage warehouse",
+    "Local grain milling facility"
   ],
-  "key_finding": "Strong coordination patterns detected across multiple sub-zones with validated demand rhythms.",
+  "key_finding": "Strong coordination patterns detected across validated sub-zones.",
   "is_simulated": true,
-  "clusters": [
-    {
-      "cluster_id": "MZUZU-Chibanja",
-      "zone": "MZUZU",
-      "sub_zone": "Chibanja",
-      "dominant_activity": "irrigation",
-      "demand_pattern": "Tuesday-Thursday mornings, 6 of 7 cycles",
-      "key_gap": "No reliable three-phase irrigation supply",
-      "recommended_project": "Solar pump irrigation cluster",
-      "confidence_score": 0.78
-    },
-    {
-      "cluster_id": "MZUZU-Katoto",
-      "zone": "MZUZU",
-      "sub_zone": "Katoto",
-      "dominant_activity": "storage",
-      "demand_pattern": "Weekend evenings, 5 of 7 cycles",
-      "key_gap": "No cold chain or warehouse facility",
-      "recommended_project": "Community storage warehouse",
-      "confidence_score": 0.71
-    },
-    {
-      "cluster_id": "MZUZU-Luwinga",
-      "zone": "MZUZU",
-      "sub_zone": "Luwinga",
-      "dominant_activity": "milling",
-      "demand_pattern": "Afternoon peaks, 5 of 7 cycles",
-      "key_gap": "No local milling or processing facility",
-      "recommended_project": "Local grain milling facility",
-      "confidence_score": 0.69
-    }
-  ],
   "zone_clusters": {
     "MZUZU": [
       {
@@ -61,7 +29,7 @@
         "zone": "MZUZU",
         "sub_zone": "Chibanja",
         "dominant_activity": "irrigation",
-        "demand_pattern": "Tuesday-Thursday mornings, 6 of 7 cycles",
+        "demand_pattern": "Morning peaks, 6 of 7 cycles",
         "key_gap": "No reliable three-phase irrigation supply",
         "recommended_project": "Solar pump irrigation cluster",
         "confidence_score": 0.78
@@ -71,10 +39,30 @@
         "zone": "MZUZU",
         "sub_zone": "Katoto",
         "dominant_activity": "storage",
-        "demand_pattern": "Weekend evenings, 5 of 7 cycles",
+        "demand_pattern": "Evening peaks, 5 of 7 cycles",
         "key_gap": "No cold chain or warehouse facility",
         "recommended_project": "Community storage warehouse",
         "confidence_score": 0.71
+      },
+      {
+        "cluster_id": "MZUZU-Luwinga",
+        "zone": "MZUZU",
+        "sub_zone": "Luwinga",
+        "dominant_activity": "milling",
+        "demand_pattern": "Afternoon peaks, 5 of 7 cycles",
+        "key_gap": "No local milling or processing facility",
+        "recommended_project": "Local grain milling facility",
+        "confidence_score": 0.69
+      },
+      {
+        "cluster_id": "MZUZU-Zolozolo",
+        "zone": "MZUZU",
+        "sub_zone": "Zolozolo",
+        "dominant_activity": "trading",
+        "demand_pattern": "Afternoon peaks, 4 of 7 cycles",
+        "key_gap": "No organized market access",
+        "recommended_project": "Market access hub for local trade",
+        "confidence_score": 0.67
       }
     ],
     "LILONGWE": [
@@ -93,34 +81,104 @@
         "zone": "LILONGWE",
         "sub_zone": "Area 18",
         "dominant_activity": "trading",
-        "demand_pattern": "Afternoon market days, 6 of 7 cycles",
+        "demand_pattern": "Afternoon peaks, 6 of 7 cycles",
         "key_gap": "No organized market access",
         "recommended_project": "Market access hub",
         "confidence_score": 0.68
+      },
+      {
+        "cluster_id": "LILONGWE-Kawale",
+        "zone": "LILONGWE",
+        "sub_zone": "Kawale",
+        "dominant_activity": "farming",
+        "demand_pattern": "Morning peaks, 5 of 7 cycles",
+        "key_gap": "No reliable irrigation system",
+        "recommended_project": "Community irrigation scheme",
+        "confidence_score": 0.66
+      },
+      {
+        "cluster_id": "LILONGWE-Mtandire",
+        "zone": "LILONGWE",
+        "sub_zone": "Mtandire",
+        "dominant_activity": "storage",
+        "demand_pattern": "Evening peaks, 4 of 7 cycles",
+        "key_gap": "No cold chain or warehouse facility",
+        "recommended_project": "Community storage warehouse",
+        "confidence_score": 0.65
       }
     ],
     "BLANTYRE": [
       {
+        "cluster_id": "BLANTYRE-Ndirande",
+        "zone": "BLANTYRE",
+        "sub_zone": "Ndirande",
+        "dominant_activity": "welding",
+        "demand_pattern": "Afternoon peaks, 5 of 7 cycles",
+        "key_gap": "No reliable workshop power supply",
+        "recommended_project": "Community workshop with reliable power",
+        "confidence_score": 0.73
+      },
+      {
+        "cluster_id": "BLANTYRE-Chilomoni",
+        "zone": "BLANTYRE",
+        "sub_zone": "Chilomoni",
+        "dominant_activity": "farming",
+        "demand_pattern": "Morning peaks, 5 of 7 cycles",
+        "key_gap": "No reliable irrigation system",
+        "recommended_project": "Community irrigation scheme",
+        "confidence_score": 0.70
+      },
+      {
         "cluster_id": "BLANTYRE-Limbe",
         "zone": "BLANTYRE",
         "sub_zone": "Limbe",
-        "dominant_activity": "cold_storage",
-        "demand_pattern": "Evening draw, 5 of 7 cycles",
-        "key_gap": "No cold chain connectivity",
-        "recommended_project": "Cold storage hub",
+        "dominant_activity": "storage",
+        "demand_pattern": "Evening peaks, 5 of 7 cycles",
+        "key_gap": "No cold chain or warehouse facility",
+        "recommended_project": "Community storage warehouse",
         "confidence_score": 0.73
+      },
+      {
+        "cluster_id": "BLANTYRE-Soche",
+        "zone": "BLANTYRE",
+        "sub_zone": "Soche",
+        "dominant_activity": "trading",
+        "demand_pattern": "Afternoon peaks, 4 of 7 cycles",
+        "key_gap": "No organized market access",
+        "recommended_project": "Market access hub for local trade",
+        "confidence_score": 0.68
       }
     ],
     "ZOMBA": [
       {
-        "cluster_id": "ZOMBA-Boma",
+        "cluster_id": "ZOMBA-Mulunguzi",
         "zone": "ZOMBA",
-        "sub_zone": "Boma",
+        "sub_zone": "Mulunguzi",
         "dominant_activity": "irrigation",
-        "demand_pattern": "Morning pumping, 5 of 7 cycles",
-        "key_gap": "No reliable pump supply",
-        "recommended_project": "River pump solar cluster",
+        "demand_pattern": "Morning peaks, 5 of 7 cycles",
+        "key_gap": "No reliable three-phase irrigation supply",
+        "recommended_project": "Solar pump irrigation cluster",
         "confidence_score": 0.70
+      },
+      {
+        "cluster_id": "ZOMBA-Chinamwali",
+        "zone": "ZOMBA",
+        "sub_zone": "Chinamwali",
+        "dominant_activity": "farming",
+        "demand_pattern": "Morning peaks, 5 of 7 cycles",
+        "key_gap": "No reliable irrigation system",
+        "recommended_project": "Community irrigation scheme",
+        "confidence_score": 0.68
+      },
+      {
+        "cluster_id": "ZOMBA-Domasi",
+        "zone": "ZOMBA",
+        "sub_zone": "Domasi",
+        "dominant_activity": "milling",
+        "demand_pattern": "Afternoon peaks, 4 of 7 cycles",
+        "key_gap": "No local milling or processing facility",
+        "recommended_project": "Local grain milling facility",
+        "confidence_score": 0.66
       }
     ]
   },

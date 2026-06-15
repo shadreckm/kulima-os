@@ -21,6 +21,7 @@ from core.lumoza.lumoza_engine import LumozaEngine
 from core.lundai.lundai_engine import LundaiEngine, evaluate_signal_integrity
 from core.zentari.zentari_engine import ZentariEngine
 from backend.services.external_signals import augment_signals_with_external_sources, count_signal_sources, compute_provenance_confidence, deduplicate_signals
+from backend.services.refresh_service import get_refresh_metadata, get_zone_signal_timestamps
 from policy import compute_planning_reserve
 
 # Configure logging
@@ -28,6 +29,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _attach_refresh_metadata(data: Dict, db: Session, zone: str) -> Dict:
+    last_signal = get_zone_signal_timestamps(db, zone)
+    refresh = get_refresh_metadata(last_signal_at=last_signal)
+    data.update(refresh)
+    data["updated_at"] = refresh["last_updated"]
+    return data
 
 
 @router.get("/summary/{zone}")
@@ -59,7 +68,7 @@ async def get_summary(zone: str, mode: str = "investor", db: Session = Depends(g
         if not signals or len(signals) < 5:
             logger.info(f"Insufficient signals ({len(signals)}) for zone {zone}. Returning simulated high-quality prospectus.")
             simulated = build_simulated_summary(zone, mode=mode, signal_count=len(signals))
-            simulated["updated_at"] = datetime.utcnow().isoformat()
+            simulated = _attach_refresh_metadata(simulated, db, zone)
             return {
                 "status": "success",
                 "data": simulated,
@@ -69,18 +78,20 @@ async def get_summary(zone: str, mode: str = "investor", db: Session = Depends(g
         # 2. Convert database signals to engine format with enriched metadata
         signal_data = []
         for signal in signals:
-            normalized = normalize_signal_text(signal.original_text)
+            normalized = normalize_signal_text(signal.original_text, default_zone=signal.zone)
             signal_data.append({
                 "zone": normalized.get('zone', signal.zone),
                 "activity_type": normalized.get('activity_type') or signal.activity_type,
                 "time_window": normalized.get('time_window') or signal.time_window,
-                "location": normalized.get('location', 'Local area'),
+                "location": normalized.get('location') or normalized.get('sub_zone') or '',
+                "sub_zone": normalized.get('sub_zone'),
                 "crop": normalized.get('crop', ''),
                 "cluster_id": normalized.get('cluster_id'),
                 "timestamp": signal.timestamp.isoformat(),
                 "signal_source": signal.source,
                 "service_priority": "productive",
-                "original_text": signal.original_text or ''
+                "original_text": signal.original_text or '',
+                "normalized_text": normalized.get('normalized_text', ''),
             })
         
         # Augment raw signals with external provenance signals for stronger coordination validation
@@ -339,39 +350,36 @@ async def get_summary(zone: str, mode: str = "investor", db: Session = Depends(g
             key_finding = "Vulnerable economic sectors lacking access to reliable energy."
             recommended_projects = [p + " (Impact & Resilience Focus)" for p in recommended_projects]
 
-        return {
-            "status": "success",
-            "data": {
-                "zone": zone,
-                "signal_count": len(signals),
-                "signal_source_counts": signal_source_counts,
-                "total_patterns": total_patterns,
-                "high_confidence_patterns": high_confidence_patterns,
-                "moderate_confidence_patterns": moderate_confidence_patterns,
-                "zones_with_coordinated_demand": [zone] if safe_num(total_patterns) > 0 else [],
-                "productive_activities_detected": productive_activities,
-                "infrastructure_gaps": infrastructure_gaps,
-                "cluster_summaries": cluster_summaries,
+        payload = {
+            "zone": zone,
+            "signal_count": len(signals),
+            "signal_source_counts": signal_source_counts,
+            "total_patterns": total_patterns,
+            "high_confidence_patterns": high_confidence_patterns,
+            "moderate_confidence_patterns": moderate_confidence_patterns,
+            "zones_with_coordinated_demand": [zone] if safe_num(total_patterns) > 0 else [],
+            "productive_activities_detected": productive_activities,
+            "infrastructure_gaps": infrastructure_gaps,
+            "cluster_summaries": cluster_summaries,
+            "clusters": clusters,
+            "recommended_projects": recommended_projects,
+            "key_finding": key_finding,
+            "trust_score": round(aggregate_trust, 2),
+            "confidence_breakdown": aggregate_breakdown,
+            "is_simulated": False,
+            "mode": mode,
+            **mode_output,
+            "pipeline_output": {
+                "coordination_patterns": coordination_patterns,
+                "lundai_analysis": lundai_analysis,
+                "flow_graph": flow_graph,
+                "confidence_results": confidence_results,
+                "risk_model": risk_model,
                 "clusters": clusters,
-                "recommended_projects": recommended_projects,
-                "key_finding": key_finding,
-                "trust_score": round(aggregate_trust, 2),
-                "confidence_breakdown": aggregate_breakdown,
-                "is_simulated": False,
-                "mode": mode,
-                **mode_output,
-                "updated_at": datetime.utcnow().isoformat(),
-                "pipeline_output": {
-                    "coordination_patterns": coordination_patterns,
-                    "lundai_analysis": lundai_analysis,
-                    "flow_graph": flow_graph,
-                    "confidence_results": confidence_results,
-                    "risk_model": risk_model,
-                    "clusters": clusters,
-                    "recommended_projects": recommended_projects
-                }
+                "recommended_projects": recommended_projects
             }
         }
+        return {"status": "success", "data": _attach_refresh_metadata(payload, db, zone)}
     except Exception as e:
         logger.error(f"Error in summary pipeline: {str(e)}")
         import traceback

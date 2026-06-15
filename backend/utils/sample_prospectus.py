@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from backend.services.refresh_service import get_refresh_metadata
+
 _SAMPLE_PATH = Path(__file__).resolve().parent.parent / "data" / "sample_prospectus.json"
 _CACHE: Optional[Dict[str, Any]] = None
 
@@ -69,4 +71,5 @@ def build_simulated_summary(zone: str, mode: str = "investor", signal_count: int
     elif mode == "ngo":
         result["access_gaps"] = mode_data.get("access_gaps", [])
 
+    result.update(get_refresh_metadata())
     return result

@@ -54,11 +54,11 @@ export async function fetchRecentSignalsData() {
   }
 }
 
-export async function submitActivitySignal(zone, raw_text) {
+export async function submitActivitySignal(zone, raw_text, source = 'web') {
   return fetchWithRetry(`${BASE_URL}/signal`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ zone, raw_text, source: 'web' })
+    body: JSON.stringify({ zone, raw_text, source })
   });
 }
 

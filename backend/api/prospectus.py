@@ -435,6 +435,7 @@ async def download_file(filename: str):
 
 from fastapi import Response
 from backend.api.summaries import get_summary
+from backend.utils.pdf_branding import build_pdf_header_html, draw_reportlab_header, BRAND_TAGLINE
 
 @router.get("/prospectus/{zone}/pdf")
 @router.get("/{zone}/pdf")
@@ -522,7 +523,8 @@ async def get_bankable_prospectus_pdf(zone: str, mode: str = "investor", db: Ses
       </style>
     </head>
     <body>
-      <h1>Kulima OS Demand Prospectus</h1>
+      {build_pdf_header_html()}
+      <h1>Demand Prospectus</h1>
       <div class="header-meta">INVESTMENT BRIEFING | ZONE: {zone}{' | SIMULATED DATA' if data.get('is_simulated') else ''}</div>
 
       <div class="card-row">
@@ -575,6 +577,7 @@ async def get_bankable_prospectus_pdf(zone: str, mode: str = "investor", db: Ses
 
       <h2>8. Social Reserve Policy</h2>
       <p><strong>20% Protected Capacity:</strong> Reserved exclusively for critical communal services to ensure infrastructure serves the collective economic baseline without extraction.</p>
+      <p style="font-size:10px;color:#888;margin-top:40px;">{BRAND_TAGLINE}</p>
     </body>
     </html>
     """
@@ -597,11 +600,10 @@ async def get_bankable_prospectus_pdf(zone: str, mode: str = "investor", db: Ses
             buffer = BytesIO()
             pdf = canvas.Canvas(buffer, pagesize=A4)
             width, height = A4
-            y = height - 50
-            pdf.setTitle(f"Kulima OS Prospectus - {zone}")
-            pdf.setFont("Helvetica-Bold", 16)
-            pdf.drawString(50, y, f"Kulima OS Demand Prospectus — {zone.upper()}")
-            y -= 30
+            y = draw_reportlab_header(pdf, width, height)
+            pdf.setFont("Helvetica-Bold", 14)
+            pdf.drawString(50, y, f"Demand Prospectus — {zone.upper()}")
+            y -= 24
             pdf.setFont("Helvetica", 11)
             for line in [
                 f"Coordination Confidence: {trust_score}% ({trust_label})",
@@ -618,7 +620,7 @@ async def get_bankable_prospectus_pdf(zone: str, mode: str = "investor", db: Ses
             ]:
                 if y < 60:
                     pdf.showPage()
-                    y = height - 50
+                    y = draw_reportlab_header(pdf, width, height)
                     pdf.setFont("Helvetica", 11)
                 pdf.drawString(50, y, line[:95])
                 y -= 16

@@ -11,6 +11,7 @@ from backend.database.connection import get_db
 from backend.database.models import Signal
 from backend.schemas.requests import SignalRequest, SignalCreate, SignalsQuery
 from backend.services.external_signals import normalize_signal_source
+from backend.utils.signal_validator import validate_signal_input, is_duplicate_signal
 from core.coordination.multi_sector_coordinator import MultiSectorCoordinator
 
 # Configure logging
@@ -34,16 +35,42 @@ async def create_signal(request: SignalRequest, db: Session = Depends(get_db)):
         # Generate signal ID
         signal_id = f"sig_{uuid.uuid4().hex[:12]}"
 
-        # If raw_text is provided, normalize it
+        # If raw_text is provided, normalize via NLP pipeline
+        is_voice = (request.source or "").lower() in ("voice", "speech", "microphone")
         if request.raw_text:
-            from backend.utils.signal_normalizer import normalize_signal_text
-            normalized = normalize_signal_text(request.raw_text)
-            zone = (request.zone or normalized.get('zone') or 'UNKNOWN').upper()
-            activity = normalized.get('activity_type') or request.activity_type or 'unknown'
-            time_window = normalized.get('time_window') or request.time_window or 'unknown'
-            location = normalized.get('location') or 'Local area'
-            crop = normalized.get('crop', '') or ''
-            original_text = normalized.get('original_text', request.raw_text) or ''
+            zone_hint = (request.zone or "MZUZU").upper()
+            accepted, parsed, reason = validate_signal_input(
+                request.raw_text, zone=zone_hint, is_voice=is_voice
+            )
+            if not accepted:
+                logger.info(f"Signal rejected: {reason}")
+                return {
+                    "success": True,
+                    "status": "success",
+                    "data": {
+                        "signal_id": None,
+                        "message": f"Signal not recorded: {reason.replace('_', ' ')}",
+                        "rejected": True,
+                        "reason": reason,
+                    }
+                }
+            zone = (request.zone or parsed.get('zone') or 'MZUZU').upper()
+            activity = parsed.get('activity_type') or request.activity_type or 'unknown'
+            time_window = parsed.get('time_window') or request.time_window or 'unknown'
+            original_text = parsed.get('original_text', request.raw_text) or ''
+
+            if is_duplicate_signal(db, zone, activity, time_window, parsed.get('normalized_text', '')):
+                logger.info(f"Duplicate signal ignored in zone {zone}")
+                return {
+                    "success": True,
+                    "status": "success",
+                    "data": {
+                        "signal_id": None,
+                        "message": "Duplicate activity ignored",
+                        "rejected": True,
+                        "reason": "duplicate",
+                    }
+                }
         else:
             # Expect structured fields
             zone = (request.zone or 'UNKNOWN').upper()
@@ -71,28 +98,6 @@ async def create_signal(request: SignalRequest, db: Session = Depends(get_db)):
         except Exception as e:
             logger.warning(f"Sector classification failed: {e}; defaulting to 'general'")
             sector = "general"
-
-        # Anti-spam: We no longer track user_id. We check for identical messages globally per zone in the last hour.
-        try:
-            recent_window = datetime.utcnow() - timedelta(hours=1)
-            if original_text:
-                dup = db.query(Signal).filter(
-                    Signal.zone == zone,
-                    Signal.original_text == original_text,
-                    Signal.timestamp >= recent_window
-                ).first()
-                if dup:
-                    logger.info(f"Duplicate signal ignored in zone {zone}")
-                    return {
-                        "success": True,
-                        "status": "success",
-                        "data": {
-                            "signal_id": dup.id,
-                            "message": "Duplicate activity ignored"
-                        }
-                    }
-        except Exception:
-            logger.warning("Could not perform duplicate-check; continuing")
 
         signal = Signal(
             id=signal_id,
