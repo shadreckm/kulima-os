@@ -34,7 +34,6 @@ async def get_recent_signals(response: Response, limit: int = 15, db: Session = 
                 'time_window': s.time_window or 'unknown',
                 'timestamp': s.timestamp.isoformat() if s.timestamp else None,
                 'source': s.source or 'web',
-                'user_id': s.user_id,
                 'original_text': s.original_text or '',
                 'created_at': s.created_at.isoformat() if s.created_at else None
             }

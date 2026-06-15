@@ -15,7 +15,7 @@ async function fetchWithRetry(url, options = {}, retries = 3, backoff = 300) {
       if (response.status >= 500 && retries > 0) {
         throw new Error(`Server error: ${response.status}`);
       }
-      return await response.json(); // May contain structured error
+      return await response.json();
     }
     return await response.json();
   } catch (error) {
@@ -27,9 +27,10 @@ async function fetchWithRetry(url, options = {}, retries = 3, backoff = 300) {
   }
 }
 
-export async function fetchSummaryData(zone) {
+export async function fetchSummaryData(zone, mode = 'investor') {
   try {
-    const data = await fetchWithRetry(`${BASE_URL}/summary/${zone}`, { cache: 'no-store' });
+    const params = new URLSearchParams({ mode });
+    const data = await fetchWithRetry(`${BASE_URL}/summary/${zone}?${params}`, { cache: 'no-store' });
     if (data?.status === 'success') {
       return data.data;
     }
@@ -57,7 +58,6 @@ export async function submitActivitySignal(zone, raw_text) {
   return fetchWithRetry(`${BASE_URL}/signal`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    // Zero-PII compliance: no user_id or personal data
     body: JSON.stringify({ zone, raw_text, source: 'web' })
   });
 }
@@ -66,7 +66,29 @@ export async function generateProspectusReport(zone) {
   return fetchWithRetry(`${BASE_URL}/generate-prospectus`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    // Zero-PII compliance: no user_id
     body: JSON.stringify({ zone, preview: true })
   });
 }
+
+/**
+ * Download zone prospectus PDF via blob fetch (correct endpoint, no duplicate /api/v1).
+ */
+export async function downloadProspectusPdf(zone, mode = 'investor') {
+  const params = new URLSearchParams({ mode });
+  const url = `${BASE_URL}/prospectus/${zone.toLowerCase()}/pdf?${params}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`PDF download failed: ${response.status}`);
+  }
+  const blob = await response.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = blobUrl;
+  anchor.download = `kulima_prospectus_${zone.toLowerCase()}.pdf`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(blobUrl);
+}
+
+export { BASE_URL };

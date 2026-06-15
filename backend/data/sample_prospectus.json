@@ -1,0 +1,150 @@
+{
+  "trust_score": 0.74,
+  "confidence_breakdown": {
+    "persistenceScore": 0.82,
+    "validationScore": 0.75,
+    "temporalStability": 0.80,
+    "spatialConsistency": 0.76
+  },
+  "total_patterns": 4,
+  "high_confidence_patterns": 3,
+  "moderate_confidence_patterns": 1,
+  "productive_activities_detected": ["irrigation", "cold_storage", "milling"],
+  "infrastructure_gaps": [
+    "High-capacity transformers",
+    "Three-phase distribution lines",
+    "Cold chain connectivity"
+  ],
+  "recommended_projects": [
+    "Solar irrigation mini-grid",
+    "Centralized cold storage hub",
+    "Community milling facility"
+  ],
+  "key_finding": "Strong coordination patterns detected across multiple sub-zones with validated demand rhythms.",
+  "is_simulated": true,
+  "clusters": [
+    {
+      "cluster_id": "MZUZU-Chibanja",
+      "zone": "MZUZU",
+      "sub_zone": "Chibanja",
+      "dominant_activity": "irrigation",
+      "demand_pattern": "Tuesday-Thursday mornings, 6 of 7 cycles",
+      "key_gap": "No reliable three-phase irrigation supply",
+      "recommended_project": "Solar pump irrigation cluster",
+      "confidence_score": 0.78
+    },
+    {
+      "cluster_id": "MZUZU-Katoto",
+      "zone": "MZUZU",
+      "sub_zone": "Katoto",
+      "dominant_activity": "storage",
+      "demand_pattern": "Weekend evenings, 5 of 7 cycles",
+      "key_gap": "No cold chain or warehouse facility",
+      "recommended_project": "Community storage warehouse",
+      "confidence_score": 0.71
+    },
+    {
+      "cluster_id": "MZUZU-Luwinga",
+      "zone": "MZUZU",
+      "sub_zone": "Luwinga",
+      "dominant_activity": "milling",
+      "demand_pattern": "Afternoon peaks, 5 of 7 cycles",
+      "key_gap": "No local milling or processing facility",
+      "recommended_project": "Local grain milling facility",
+      "confidence_score": 0.69
+    }
+  ],
+  "zone_clusters": {
+    "MZUZU": [
+      {
+        "cluster_id": "MZUZU-Chibanja",
+        "zone": "MZUZU",
+        "sub_zone": "Chibanja",
+        "dominant_activity": "irrigation",
+        "demand_pattern": "Tuesday-Thursday mornings, 6 of 7 cycles",
+        "key_gap": "No reliable three-phase irrigation supply",
+        "recommended_project": "Solar pump irrigation cluster",
+        "confidence_score": 0.78
+      },
+      {
+        "cluster_id": "MZUZU-Katoto",
+        "zone": "MZUZU",
+        "sub_zone": "Katoto",
+        "dominant_activity": "storage",
+        "demand_pattern": "Weekend evenings, 5 of 7 cycles",
+        "key_gap": "No cold chain or warehouse facility",
+        "recommended_project": "Community storage warehouse",
+        "confidence_score": 0.71
+      }
+    ],
+    "LILONGWE": [
+      {
+        "cluster_id": "LILONGWE-Area_25",
+        "zone": "LILONGWE",
+        "sub_zone": "Area 25",
+        "dominant_activity": "irrigation",
+        "demand_pattern": "Morning peaks, 5 of 7 cycles",
+        "key_gap": "No reliable irrigation system",
+        "recommended_project": "Community irrigation scheme",
+        "confidence_score": 0.72
+      },
+      {
+        "cluster_id": "LILONGWE-Area_18",
+        "zone": "LILONGWE",
+        "sub_zone": "Area 18",
+        "dominant_activity": "trading",
+        "demand_pattern": "Afternoon market days, 6 of 7 cycles",
+        "key_gap": "No organized market access",
+        "recommended_project": "Market access hub",
+        "confidence_score": 0.68
+      }
+    ],
+    "BLANTYRE": [
+      {
+        "cluster_id": "BLANTYRE-Limbe",
+        "zone": "BLANTYRE",
+        "sub_zone": "Limbe",
+        "dominant_activity": "cold_storage",
+        "demand_pattern": "Evening draw, 5 of 7 cycles",
+        "key_gap": "No cold chain connectivity",
+        "recommended_project": "Cold storage hub",
+        "confidence_score": 0.73
+      }
+    ],
+    "ZOMBA": [
+      {
+        "cluster_id": "ZOMBA-Boma",
+        "zone": "ZOMBA",
+        "sub_zone": "Boma",
+        "dominant_activity": "irrigation",
+        "demand_pattern": "Morning pumping, 5 of 7 cycles",
+        "key_gap": "No reliable pump supply",
+        "recommended_project": "River pump solar cluster",
+        "confidence_score": 0.70
+      }
+    ]
+  },
+  "mode_outputs": {
+    "investor": {
+      "key_finding": "Strong investment ROI potential identified in validated demand clusters.",
+      "opportunity_ranking": [
+        {"cluster": "Chibanja", "roi_signal": "High", "priority": 1},
+        {"cluster": "Katoto", "roi_signal": "Medium-High", "priority": 2}
+      ]
+    },
+    "government": {
+      "key_finding": "Critical infrastructure service gaps detected requiring public works integration.",
+      "service_coverage": [
+        {"gap": "Three-phase distribution lines", "coverage": "42%"},
+        {"gap": "Cold chain connectivity", "coverage": "28%"}
+      ]
+    },
+    "ngo": {
+      "key_finding": "Vulnerable economic sectors lacking access to reliable energy.",
+      "access_gaps": [
+        {"sector": "Smallholder irrigation", "vulnerability": "High"},
+        {"sector": "Peri-urban storage", "vulnerability": "Medium"}
+      ]
+    }
+  }
+}

@@ -19,7 +19,13 @@ from core.prospectus.prospectus_generator import ProspectusGenerator
 from core.lumoza.lumoza_engine import LumozaEngine
 from core.lundai.lundai_engine import LundaiEngine, evaluate_signal_integrity
 from core.zentari.zentari_engine import ZentariEngine
-from backend.services.external_signals import augment_signals_with_external_sources, count_signal_sources, compute_provenance_confidence
+from backend.services.external_signals import (
+    augment_signals_with_external_sources,
+    count_signal_sources,
+    compute_provenance_confidence,
+    deduplicate_signals,
+)
+from backend.utils.sample_prospectus import build_simulated_summary
 from policy import compute_planning_reserve
 
 # Configure logging
@@ -103,12 +109,13 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
                 "original_text": signal.original_text or ''
             })
         
-        # Add cycle_index to each signal
-        for i, signal in enumerate(signal_data):
-            signal["cycle_index"] = i
-
         # Augment with external provenance signals that corroborate the zone
         signal_data = augment_signals_with_external_sources(signal_data, zone)
+        signal_data = deduplicate_signals(signal_data)
+
+        for i, signal in enumerate(signal_data):
+            signal["cycle_index"] = i % 7
+
         signal_source_counts = count_signal_sources(signal_data)
         logger.info(f"Prospectus signal count after augmentation: {len(signal_data)} source_counts={signal_source_counts}")
         
@@ -429,9 +436,10 @@ async def download_file(filename: str):
 from fastapi import Response
 from backend.api.summaries import get_summary
 
+@router.get("/prospectus/{zone}/pdf")
 @router.get("/{zone}/pdf")
-async def get_bankable_prospectus_pdf(zone: str, db: Session = Depends(get_db)):
-    summary_resp = await get_summary(zone, db)
+async def get_bankable_prospectus_pdf(zone: str, mode: str = "investor", db: Session = Depends(get_db)):
+    summary_resp = await get_summary(zone, mode=mode, db=db)
     if summary_resp.get("status") == "error":
         return Response(content="Error generating summary", status_code=500)
     
@@ -467,9 +475,17 @@ async def get_bankable_prospectus_pdf(zone: str, db: Session = Depends(get_db)):
         for c in cluster_summaries:
             name = c.get("cluster_name", "Unknown Hub")
             summ = c.get("summary", {})
-            top_acts = summ.get('top_activities',[])
-            acts_str = ", ".join(top_acts) if top_acts else "Mixed"
-            cluster_html += f"<li><strong>{name}</strong>: {summ.get('signal_count',0)} signals, {acts_str}</li>"
+            if isinstance(summ, str):
+                cluster_html += f"<li><strong>{name}</strong>: {summ}</li>"
+                continue
+            top_acts = summ.get('top_activities', [])
+            acts_str = ", ".join(top_acts) if top_acts else summ.get('dominant_activity', 'Mixed')
+            sub_zone = c.get('sub_zone', name)
+            cluster_html += (
+                f"<li><strong>{sub_zone}</strong> — {acts_str}: "
+                f"{summ.get('signal_count', 0)} signals, gap: {summ.get('key_gap', 'N/A')}, "
+                f"project: {summ.get('recommended_project', 'N/A')}</li>"
+            )
     else:
         cluster_html = "<li>No specific clusters identified yet.</li>"
 
@@ -507,7 +523,7 @@ async def get_bankable_prospectus_pdf(zone: str, db: Session = Depends(get_db)):
     </head>
     <body>
       <h1>Kulima OS Demand Prospectus</h1>
-      <div class="header-meta">INVESTMENT BRIEFING | ZONE: {zone}</div>
+      <div class="header-meta">INVESTMENT BRIEFING | ZONE: {zone}{' | SIMULATED DATA' if data.get('is_simulated') else ''}</div>
 
       <div class="card-row">
         <div class="card">
@@ -571,19 +587,53 @@ async def get_bankable_prospectus_pdf(zone: str, db: Session = Depends(get_db)):
             media_type="application/pdf",
             headers={"Content-Disposition": f"attachment; filename=kulima_os_prospectus_{zone}.pdf"}
         )
-    except ImportError:
-        logger.warning("WeasyPrint not available, falling back to HTML")
-        html_bytes = html_content.encode('utf-8')
-        return Response(
-            content=html_bytes,
-            media_type="text/html",
-            headers={"Content-Disposition": f"attachment; filename=kulima_os_prospectus_{zone}.html"}
-        )
     except Exception as e:
-        logger.error(f"PDF generation failed: {e}, falling back to HTML")
-        html_bytes = html_content.encode('utf-8')
-        return Response(
-            content=html_bytes,
-            media_type="text/html",
-            headers={"Content-Disposition": f"attachment; filename=kulima_os_prospectus_{zone}.html"}
-        )
+        logger.warning(f"WeasyPrint PDF generation failed: {e}, falling back to ReportLab")
+        try:
+            from io import BytesIO
+            from reportlab.lib.pagesizes import A4
+            from reportlab.pdfgen import canvas
+
+            buffer = BytesIO()
+            pdf = canvas.Canvas(buffer, pagesize=A4)
+            width, height = A4
+            y = height - 50
+            pdf.setTitle(f"Kulima OS Prospectus - {zone}")
+            pdf.setFont("Helvetica-Bold", 16)
+            pdf.drawString(50, y, f"Kulima OS Demand Prospectus — {zone.upper()}")
+            y -= 30
+            pdf.setFont("Helvetica", 11)
+            for line in [
+                f"Coordination Confidence: {trust_score}% ({trust_label})",
+                f"Signals evaluated: {signal_count}",
+                f"Key finding: {key_finding}",
+                f"Infrastructure gaps: {gaps_html}",
+                f"Activities: {activities}",
+                "",
+                "Trust Breakdown:",
+                f"  Persistence: {int(bd.get('persistenceScore', 0) * 100)}%",
+                f"  Validation: {int(bd.get('validationScore', 0) * 100)}%",
+                f"  Spatial: {int(bd.get('spatialConsistency', 0) * 100)}%",
+                f"  Temporal: {int(bd.get('temporalStability', 0) * 100)}%",
+            ]:
+                if y < 60:
+                    pdf.showPage()
+                    y = height - 50
+                    pdf.setFont("Helvetica", 11)
+                pdf.drawString(50, y, line[:95])
+                y -= 16
+            pdf.save()
+            pdf_bytes = buffer.getvalue()
+            return Response(
+                content=pdf_bytes,
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"attachment; filename=kulima_os_prospectus_{zone}.pdf"}
+            )
+        except Exception as reportlab_error:
+            logger.error(f"ReportLab PDF fallback failed: {reportlab_error}, returning HTML")
+            html_bytes = html_content.encode('utf-8')
+            return Response(
+                content=html_bytes,
+                media_type="text/html",
+                headers={"Content-Disposition": f"attachment; filename=kulima_os_prospectus_{zone}.html"}
+            )

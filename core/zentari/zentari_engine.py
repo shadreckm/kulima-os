@@ -310,12 +310,28 @@ class ZentariEngine:
                     confidence_result.get('recommended_action') if action_allowed else None
                 )
 
+            validation_score_map = {
+                'strong': 0.9,
+                'moderate': 0.75,
+                'weak': 0.5,
+                'human_only': 0.45,
+                'none': 0.2,
+            }
+            validation_score = validation_score_map.get(validation_strength, 0.4)
+
             confidence_result['trust'] = {
                 'trust_score': trust_score,
                 'trust_level': trust_level,
                 'action_allowed': action_allowed,
                 'reason_for_refusal': reason_for_refusal,
                 'ethical_note': 'Trust derives from coordination, not identity or documents'
+            }
+            confidence_result['trustScore'] = trust_score
+            confidence_result['confidenceBreakdown'] = {
+                'persistenceScore': round(persistence, 2),
+                'validationScore': round(validation_score, 2),
+                'temporalStability': round(pattern_stability, 2),
+                'spatialConsistency': round(flow_strength, 2),
             }
             confidence_result['planning_reserve'] = planning_reserve
 

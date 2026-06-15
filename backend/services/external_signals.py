@@ -241,19 +241,17 @@ def count_signal_sources(signals: List[Dict]) -> Dict[str, int]:
 
 
 def compute_provenance_confidence(source_counts: Dict[str, int]) -> Dict[str, any]:
-    """Compute a simple provenance-derived confidence summary.
-
-    Returns a dict with:
-      - community_count
-      - external_count
-      - system_count
-      - label: 'HIGH'|'MEDIUM'|'LOW'
-      - boost: numeric value to adjust confidence scores ([-0.1, +0.2])
-    """
+    """Compute provenance-derived confidence with multi-source validation rules."""
     if not source_counts:
-        return {"community_count": 0, "external_count": 0, "system_count": 0, "label": "LOW", "boost": -0.05}
+        return {
+            "community_count": 0,
+            "external_count": 0,
+            "system_count": 0,
+            "unique_sources": 0,
+            "label": "LOW",
+            "boost": -0.15,
+        }
 
-    # Aggregate categories
     community_keys = ['web', 'whatsapp', 'manual', 'user', 'social']
     external_keys = ['news', 'external']
     system_keys = ['telemetry', 'sensor', 'infrastructure', 'system']
@@ -262,20 +260,27 @@ def compute_provenance_confidence(source_counts: Dict[str, int]) -> Dict[str, an
     external_count = sum(source_counts.get(k, 0) for k in external_keys)
     system_count = sum(source_counts.get(k, 0) for k in system_keys)
 
-    # Determine how many source categories have meaningful corroboration
+    unique_sources = sum(1 for count in [community_count, external_count, system_count] if count > 0)
+
+    # Minimum source rule: fewer than 2 categories reduces trust
+    if unique_sources < 2:
+        return {
+            "community_count": int(community_count),
+            "external_count": int(external_count),
+            "system_count": int(system_count),
+            "unique_sources": unique_sources,
+            "label": "LOW",
+            "boost": -0.15,
+        }
+
     category_present = 0
-    if community_count >= 2:
+    if community_count >= 1:
         category_present += 1
-    if external_count >= 2:
+    if external_count >= 1:
         category_present += 1
     if system_count >= 1:
-        # telemetry/system counts of 1+ are useful corroboration
         category_present += 1
 
-    # Scoring rules (conservative):
-    # - 3 categories corroborating -> HIGH
-    # - 2 categories -> MEDIUM
-    # - 1 or 0 -> LOW
     if category_present >= 3:
         label = 'HIGH'
         boost = 0.12
@@ -290,6 +295,26 @@ def compute_provenance_confidence(source_counts: Dict[str, int]) -> Dict[str, an
         "community_count": int(community_count),
         "external_count": int(external_count),
         "system_count": int(system_count),
+        "unique_sources": unique_sources,
         "label": label,
-        "boost": boost
+        "boost": boost,
     }
+
+
+def deduplicate_signals(signals: List[Dict]) -> List[Dict]:
+    """Remove duplicate signals based on activity, zone, time window, source, and text."""
+    seen = set()
+    unique: List[Dict] = []
+    for signal in signals:
+        key = (
+            signal.get('activity_type'),
+            signal.get('zone'),
+            signal.get('time_window'),
+            normalize_signal_source(signal.get('source') or signal.get('signal_source') or ''),
+            (signal.get('original_text') or '').strip().lower(),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(signal)
+    return unique

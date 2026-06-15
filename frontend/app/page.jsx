@@ -1,9 +1,19 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { fetchSummaryData, fetchRecentSignalsData, submitActivitySignal, generateProspectusReport } from '../lib/api';
+import { fetchSummaryData, fetchRecentSignalsData, submitActivitySignal, generateProspectusReport, downloadProspectusPdf, BASE_URL } from '../lib/api';
 
 const ZONES = ['MZUZU', 'LILONGWE', 'BLANTYRE', 'ZOMBA'];
+const CLIENT_MODES = [
+  { key: 'investor', label: 'Investor' },
+  { key: 'government', label: 'Government' },
+  { key: 'ngo', label: 'NGO' }
+];
+const LOADING_MESSAGES = [
+  'Analyzing coordination patterns...',
+  'Validating signals...',
+  'Generating prospectus...'
+];
 const PAYCHANGU_LINK = 'https://pay.paychangu.com/SC-GDDYA0';
 const ACTIVITY_TERMS = ['farming', 'irrigation', 'milling', 'trading', 'welding', 'storage', 'market', 'transport'];
 const RESOURCE_TERMS = ['water', 'energy', 'power', 'road', 'storage', 'market', 'transport'];
@@ -61,9 +71,11 @@ export default function Home() {
   const [fundingStatus, setFundingStatus] = useState('idle');
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [clientMode, setClientMode] = useState('investor');
+  const [selectedClusterId, setSelectedClusterId] = useState('');
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const recognitionRef = useRef(null);
-  const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '/api/v1').replace(/\/$/, '');
   const BACKEND_BASE = BASE_URL.replace(/\/api\/v1$/, '');
   const reportUrl = reportData?.pdf_url ? `${BACKEND_BASE}${reportData.pdf_url}` : '';
 
@@ -81,12 +93,22 @@ export default function Home() {
     fetchRecentSignals();
     const interval = setInterval(fetchRecentSignals, 7000);
     return () => clearInterval(interval);
-  }, [zone]);
+  }, [zone, clientMode]);
+
+  useEffect(() => {
+    const clusters = summary?.clusters || [];
+    if (clusters.length && !clusters.find((c) => c.cluster_id === selectedClusterId)) {
+      setSelectedClusterId(clusters[0].cluster_id);
+    }
+  }, [summary, zone]);
 
   const fetchSummary = async () => {
-    const data = await fetchSummaryData(zone);
+    const data = await fetchSummaryData(zone, clientMode);
     setSummary(data);
   };
+
+  const clusters = summary?.clusters || [];
+  const activeCluster = clusters.find((c) => c.cluster_id === selectedClusterId) || clusters[0] || null;
 
   const fetchRecentSignals = async () => {
     const data = await fetchRecentSignalsData();
@@ -198,24 +220,35 @@ export default function Home() {
   };
 
   const handleGenerateReport = async () => {
-    if (!summary || (summary.signal_count || 0) === 0) {
-      setMessage('Need more signals before generating a preview.');
-      return;
-    }
     setReportLoading(true);
-    setMessage('Preparing the preview report...');
+    setMessage(LOADING_MESSAGES[0]);
 
     try {
+      for (let i = 1; i < LOADING_MESSAGES.length; i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        setMessage(LOADING_MESSAGES[i]);
+      }
+
       const data = await generateProspectusReport(zone);
       if (data?.success) {
         setReportData({ ...(data.report || {}), pdf_url: data.pdf_url || data.report?.pdf_url || '', preview_locked: data.report?.preview_locked ?? true });
         setShowPreview(true);
         setMessage('Preview ready. Locked cards show gated sections.');
+      } else if (summary?.is_simulated || (summary?.signal_count || 0) < 5) {
+        setReportData({ preview_locked: true, simulated: true });
+        setShowPreview(true);
+        setMessage('Showing simulated prospectus due to limited data.');
       } else {
         setMessage(data?.message || 'Preview generation failed.');
       }
     } catch {
-      setMessage('Unable to generate report. Try again in a moment.');
+      if (summary?.is_simulated) {
+        setReportData({ preview_locked: true, simulated: true });
+        setShowPreview(true);
+        setMessage('Showing simulated prospectus due to limited data.');
+      } else {
+        setMessage('Unable to generate report. Try again in a moment.');
+      }
     } finally {
       setReportLoading(false);
     }
@@ -282,9 +315,13 @@ export default function Home() {
             recommended_projects: summary?.recommended_projects || ["Solar Irrigation pump deployment"]
           },
           zentari_trust_persistence: {
-            categories_cross_validated: 3,
-            source_weights: summary?.signal_source_counts || { web: 5, whatsapp: 3, telemetry: 2 }
+            score: trustScore,
+            label: trustLabel,
+            breakdown: confidenceBreakdown
           },
+          clusters: summary?.clusters || [],
+          is_simulated: summary?.is_simulated || false,
+          mode: clientMode,
           social_reserve: {
             baseline_priority_load: "20%",
             protected_communal_assets: ["clinics", "schools", "drinking_water_points"]
@@ -362,14 +399,17 @@ export default function Home() {
       value: `${trustScore}%`,
     }
   ];
-  const downloadReport = () => {
+  const downloadReport = async () => {
+    setPdfLoading(true);
     setMessage('Downloading investor-grade PDF prospectus...');
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://kulima-os-backend.onrender.com';
-      window.open(`${apiUrl}/api/v1/prospectus/${zone.toLowerCase()}/pdf`, '_blank');
+      await downloadProspectusPdf(zone, clientMode);
+      setMessage('PDF downloaded successfully.');
     } catch (err) {
       console.error(err);
-      setMessage('Error downloading report.');
+      setMessage('Error downloading report. Please try again.');
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -381,10 +421,26 @@ export default function Home() {
           <div className="product-title">Kulima OS live command center</div>
         </div>
         <div className="top-actions">
+          <select
+            value={clientMode}
+            onChange={(e) => setClientMode(e.target.value)}
+            className="mode-select-dropdown"
+            aria-label="Client mode"
+          >
+            {CLIENT_MODES.map((m) => (
+              <option key={m.key} value={m.key}>{m.label} view</option>
+            ))}
+          </select>
           <button className="ghost-button" onClick={() => setShowPreview(true)} disabled={reportLoading}>{reportLoading ? 'Loading…' : 'Preview report'}</button>
           <button className="primary-button" onClick={() => { setPaymentMessage(''); setShowUnlock(true); }}>Unlock</button>
         </div>
       </div>
+
+      {summary?.is_simulated && (
+        <div className="simulated-banner" role="status">
+          Showing simulated prospectus due to limited data
+        </div>
+      )}
 
       <div className="dashboard-grid">
         <div className="column column-left">
@@ -490,6 +546,36 @@ export default function Home() {
               </div>
             </div>
           </section>
+
+          {clusters.length > 0 && (
+            <section className="cluster-panel">
+              <div className="panel-title">Cluster intelligence</div>
+              <div className="cluster-controls">
+                <label htmlFor="cluster-select" className="cluster-label">Select cluster</label>
+                <select
+                  id="cluster-select"
+                  value={selectedClusterId || clusters[0]?.cluster_id || ''}
+                  onChange={(e) => setSelectedClusterId(e.target.value)}
+                  className="cluster-select-dropdown"
+                >
+                  {clusters.map((c) => (
+                    <option key={c.cluster_id} value={c.cluster_id}>
+                      {c.sub_zone || c.cluster_name || c.cluster_id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {activeCluster && (
+                <div className="cluster-detail-card">
+                  <div className="cluster-detail-row"><span>Activity</span><strong>{activeCluster.dominant_activity || 'Mixed'}</strong></div>
+                  <div className="cluster-detail-row"><span>Demand pattern</span><strong>{activeCluster.demand_pattern || 'Forming'}</strong></div>
+                  <div className="cluster-detail-row"><span>Key gap</span><strong>{activeCluster.key_gap || 'Monitoring'}</strong></div>
+                  <div className="cluster-detail-row"><span>Recommended project</span><strong>{activeCluster.recommended_project || summary?.recommended_projects?.[0] || 'TBD'}</strong></div>
+                  <div className="cluster-detail-row"><span>Confidence</span><strong>{Math.round((activeCluster.confidence_score || 0) * 100)}%</strong></div>
+                </div>
+              )}
+            </section>
+          )}
         </div>
 
         <div className="column column-center">
@@ -642,7 +728,7 @@ export default function Home() {
             </div>
             <div className="report-actions">
               <button className="primary-button" onClick={handleGenerateReport} disabled={reportLoading}>{reportLoading ? 'Generating…' : 'Preview report'}</button>
-              {reportUrl && <button className="ghost-button" onClick={downloadReport}>{isPaid ? 'Download full report' : 'Download preview'}</button>}
+              <button className="ghost-button" onClick={downloadReport} disabled={pdfLoading}>{pdfLoading ? 'Downloading…' : (isPaid ? 'Download full report' : 'Download PDF')}</button>
             </div>
           </section>
         </div>
@@ -721,7 +807,11 @@ export default function Home() {
                 <div className="expanded-grid">
                   <div className="expanded-card">
                     <div className="expanded-card-title">Market clusters</div>
-                    <div className="expanded-card-text">Three network clusters were identified with high irrigation potential, including northern agriculture hubs and peri-urban supply corridors.</div>
+                    <div className="expanded-card-text">
+                      {clusters.length
+                        ? `${clusters.length} sub-zone clusters identified. ${activeCluster ? `${activeCluster.sub_zone || activeCluster.cluster_name}: ${activeCluster.dominant_activity} → ${activeCluster.recommended_project}` : ''}`
+                        : 'Cluster analysis in progress — record more signals to unlock sub-zone intelligence.'}
+                    </div>
                   </div>
                   <div className="expanded-card">
                     <div className="expanded-card-title">Opportunity detail</div>
@@ -765,11 +855,11 @@ export default function Home() {
             )}
             <div className="modal-actions">
               {isPaid ? (
-                <button className="primary-button" onClick={downloadReport}>Download full report</button>
+                <button className="primary-button" onClick={downloadReport} disabled={pdfLoading}>{pdfLoading ? 'Downloading…' : 'Download full report'}</button>
               ) : (
                 <button className="primary-button" onClick={() => setShowUnlock(true)}>Unlock full report</button>
               )}
-              {reportUrl && <button className="ghost-button" onClick={downloadReport}>{isPaid ? 'Download full report' : 'Download preview'}</button>}
+              <button className="ghost-button" onClick={downloadReport} disabled={pdfLoading}>{pdfLoading ? 'Downloading…' : 'Download PDF'}</button>
             </div>
           </div>
         </div>
@@ -892,6 +982,17 @@ export default function Home() {
         .zone-select-dropdown { background: transparent; border: none; color: #d7ffd7; font-size: 13px; font-weight: bold; outline: none; cursor: pointer; padding: 6px 0; }
         .zone-select-dropdown option { background: #051b13; color: #d7ffd7; }
         .status-line { font-size: 13px; color: #ceffcd; margin-bottom: 24px; }
+        .simulated-banner { margin: 0 0 16px; padding: 12px 18px; border-radius: 12px; background: rgba(255, 203, 71, 0.12); border: 1px solid rgba(255, 203, 71, 0.35); color: #ffe9a8; font-size: 13px; font-weight: 600; }
+        .mode-select-dropdown { background: rgba(0,255,118,0.08); border: 1px solid rgba(0,255,118,0.2); color: #d7ffd7; border-radius: 999px; padding: 10px 14px; font-size: 13px; cursor: pointer; }
+        .mode-select-dropdown option { background: #051b13; color: #d7ffd7; }
+        .cluster-panel { margin-top: 18px; padding: 18px; border-radius: 18px; background: rgba(0,0,0,0.18); border: 1px solid rgba(0,230,118,0.2); }
+        .cluster-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+        .cluster-label { font-size: 12px; color: #7ef2ac; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .cluster-select-dropdown { flex: 1; min-width: 160px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #e9ffe8; border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+        .cluster-select-dropdown option { background: #051b13; }
+        .cluster-detail-card { display: grid; gap: 10px; }
+        .cluster-detail-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: #ceffcd; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px; }
+        .cluster-detail-row strong { color: #f5ffef; text-align: right; }
         .swipe-card-shell { background: rgba(0,0,0,0.12); border-radius: 26px; padding: 18px; }
         .swipe-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
         .card-controls button { border: 1px solid rgba(255,255,255,0.14); background: transparent; color: #e9ffe8; border-radius: 999px; width: 40px; height: 40px; cursor: pointer; }
