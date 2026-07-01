@@ -763,10 +763,16 @@ class LundaiEngine:
         if metadata.get('grid_connection') == 'none':
             return 'critical'
         
-        if metadata.get('distance_to_substation_km', 0) > self.CRITICAL_GAP_INDICATORS['distance_threshold_km']:
+        distance = metadata.get('distance_to_substation_km')
+        if distance is None:
+            distance = 0
+        if distance > self.CRITICAL_GAP_INDICATORS['distance_threshold_km']:
             return 'critical'
         
-        if metadata.get('transformer_capacity_kva', 0) < self.CRITICAL_GAP_INDICATORS['capacity_threshold_kva']:
+        capacity = metadata.get('transformer_capacity_kva')
+        if capacity is None:
+            capacity = 0
+        if capacity < self.CRITICAL_GAP_INDICATORS['capacity_threshold_kva']:
             return 'severe'
         
         if metadata.get('service_reliability') in ['none', 'intermittent']:
@@ -793,14 +799,18 @@ class LundaiEngine:
             score -= 25
         
         # Penalize for distance to substation
-        distance = metadata.get('distance_to_substation_km', 0)
+        distance = metadata.get('distance_to_substation_km')
+        if distance is None:
+            distance = 0
         if distance > 20:
             score -= 30
         elif distance > 10:
             score -= 15
         
         # Penalize for low capacity
-        capacity = metadata.get('transformer_capacity_kva', 0)
+        capacity = metadata.get('transformer_capacity_kva')
+        if capacity is None:
+            capacity = 0
         if capacity == 0:
             score -= 20
         elif capacity < 50:
@@ -830,8 +840,9 @@ class LundaiEngine:
         elif metadata.get('grid_connection') == 'partial':
             justifications.append("Partial grid access with frequent outages")
         
-        if metadata.get('distance_to_substation_km', 0) > 15:
-            justifications.append(f"Remote location ({metadata['distance_to_substation_km']}km from substation)")
+        _dist_km = metadata.get('distance_to_substation_km') or 0
+        if _dist_km > 15:
+            justifications.append(f"Remote location ({_dist_km}km from substation)")
         
         if len(essential_patterns) > 0:
             services = [p['activity_type'] for p in essential_patterns]

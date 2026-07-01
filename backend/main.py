@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 import logging
 
 from backend.config import settings
-from backend.api import signals, summaries, prospectus, health, twilio, system, visualization, recent_signals, zones
+from backend.api import signals, summaries, prospectus, health, twilio, system, visualization, recent_signals, zones, reports
 from backend.middleware.logging import setup_logging, RequestIDMiddleware, StructuredLoggingMiddleware
 from backend.middleware.rate_limiter import rate_limit_middleware
 from backend.middleware.error_handler import setup_error_handlers
@@ -24,7 +24,10 @@ async def lifespan(app: FastAPI):
     logging.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     
     # Initialize database
-    init_db()
+    try:
+        init_db()
+    except Exception as e:
+        logging.critical(f"Lifespan database initialization critical failure: {e}")
     
     # Store settings in app state
     app.state.settings = settings
@@ -65,12 +68,35 @@ setup_error_handlers(app)
 app.include_router(health.router, prefix=settings.API_PREFIX, tags=["Health"])
 app.include_router(signals.router, prefix=settings.API_PREFIX, tags=["Signals"])
 app.include_router(recent_signals.router, prefix=settings.API_PREFIX, tags=["Signals"])
+app.include_router(reports.router, prefix=settings.API_PREFIX, tags=["Reports"])
 app.include_router(summaries.router, prefix=settings.API_PREFIX, tags=["Summaries"])
 app.include_router(zones.router, prefix=settings.API_PREFIX, tags=["Zones"])
 app.include_router(prospectus.router, prefix=settings.API_PREFIX, tags=["Prospectus"])
 app.include_router(twilio.router, prefix=settings.API_PREFIX, tags=["Twilio"])
 app.include_router(system.router, prefix=settings.API_PREFIX, tags=["System"])
 app.include_router(visualization.router, prefix=settings.API_PREFIX, tags=["Visualization"])
+
+
+@app.get("/health")
+async def root_health():
+    """Simple health check endpoint returning OK or DB_CONNECTED"""
+    from backend.database import connection
+    from sqlalchemy import text
+    
+    db_status = "unhealthy"
+    try:
+        with connection.engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        db_status = "DB_CONNECTED"
+    except Exception as e:
+        logging.error(f"Root health check database connection failed: {e}")
+        db_status = f"error: {str(e)}"
+        
+    status = "OK" if db_status == "DB_CONNECTED" else "DEGRADED"
+    return {
+        "status": status,
+        "database": db_status
+    }
 
 
 @app.get("/")

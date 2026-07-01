@@ -858,7 +858,6 @@ class ProspectusGenerator:
         story.append(Paragraph(f"• 🌍 External confirmations: {dp.get('external_count', 0)}", st['body']))
         story.append(self._section_break(6))
         story.append(Paragraph(f"• 🤖 System telemetry: {dp.get('system_count', 0)}", st['body']))
-        story._story = getattr(story, '_story', None)
         story.append(self._section_break(12))
         confidence_label = dp.get('confidence_label', 'LOW')
         color = colors.green if confidence_label == 'HIGH' else (colors.blue if confidence_label == 'MEDIUM' else colors.orange)

@@ -74,6 +74,13 @@ export default function Home() {
   const [clientMode, setClientMode] = useState('investor');
   const [selectedClusterId, setSelectedClusterId] = useState('');
   const [pdfLoading, setPdfLoading] = useState(false);
+  
+  // Progressive disclosure states
+  const [showFullAnalysis, setShowFullAnalysis] = useState(false);
+  const [showAdvancedAnalysis, setShowAdvancedAnalysis] = useState(false);
+  const [activeTab, setActiveTab] = useState('confidence');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const recognitionRef = useRef(null);
   const BACKEND_BASE = BASE_URL.replace(/\/api\/v1$/, '');
@@ -103,8 +110,13 @@ export default function Home() {
   }, [summary, zone]);
 
   const fetchSummary = async () => {
-    const data = await fetchSummaryData(zone, clientMode);
-    setSummary(data);
+    try {
+      const data = await fetchSummaryData(zone, clientMode);
+      setSummary(data || null);
+    } catch (error) {
+      console.error('Failed to load summary:', error);
+      setSummary(null);
+    }
   };
 
   const clusters = (summary?.clusters || []).filter((c) => c.sub_zone);
@@ -114,9 +126,12 @@ export default function Home() {
     : null;
 
   const fetchRecentSignals = async () => {
-    const data = await fetchRecentSignalsData();
-    if (data && data.length > 0) {
-      setRecentActivities(data);
+    try {
+      const data = await fetchRecentSignalsData();
+      setRecentActivities(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Failed to load recent signals:', error);
+      setRecentActivities([]);
     }
   };
 
@@ -210,15 +225,37 @@ export default function Home() {
     addLocalActivity(text, inferredZone);
     setInputValue('');
     setRecordedPhrase('');
+    setSubmitError('');
+    setIsSubmitting(true);
     setMessage('Signal added. Updating the live system...');
 
     try {
-      await submitActivitySignal(inferredZone, text, speechActive ? 'voice' : 'web');
-    } catch {
+      const response = await submitActivitySignal(inferredZone, text, speechActive ? 'voice' : 'web');
+      if (response?.success === false) {
+        setMessage(response?.message || 'Signal could not be recorded right now.');
+        setSubmitError(response?.message || 'Signal could not be recorded right now.');
+      } else {
+        setMessage(response?.message || 'Signal received and queued for analysis.');
+      }
+    } catch (error) {
       setMessage('Network issue. Local signal saved in the feed.');
+      setSubmitError(error?.message || 'Unable to reach the backend right now.');
     } finally {
-      fetchSummary();
-      fetchRecentSignals();
+      setIsSubmitting(false);
+      await fetchSummary();
+      await fetchRecentSignals();
+    }
+  };
+
+  const downloadReport = async () => {
+    setPdfLoading(true);
+    try {
+      await downloadProspectusPdf(zone, clientMode);
+      setMessage('PDF download started.');
+    } catch (error) {
+      setMessage(error?.message || 'PDF download could not be started.');
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -367,63 +404,46 @@ export default function Home() {
   };
 
   const [showTrustTooltip, setShowTrustTooltip] = useState(false);
-  const insightCards = [
-    { key: 'people', title: 'People are farming', subtitle: `${zoneActivityCounts[zone] || 0} live signals`, note: 'Signal density' },
-    { key: 'water', title: 'Water is missing', subtitle: summary?.infrastructure_gaps?.includes('Water') ? 'gap detected' : 'monitoring', note: 'Supply alert' },
-    { key: 'build', title: 'Build irrigation', subtitle: summary?.recommended_projects?.[0] || 'ready', note: 'Priority action' },
-    { key: 'confidence', title: 'Confidence', subtitle: trustLabel, value: trustScore, level: trustLabel.toLowerCase() }
-  ];
-
+  const hasSignals = (summary?.signal_count ?? 0) > 0 || recentActivities.filter(a => (a.zone || '').toUpperCase() === zone).length > 0;
+  const topActivities = (summary?.productive_activities_detected || []).map(normalizeTag).join(' & ');
+  const simpleInsightDemand = topActivities ? `${topActivities} activity increasing` : 'Farming activity increasing';
+  const simpleInsightAction = summary?.recommended_projects?.[0] ? `${summary.recommended_projects[0]} recommended` : 'Irrigation investment recommended';
   const reportCards = [
     {
-      key: 'demand',
-      title: 'Demand Insight',
-      value: `${recentActivities.length || 12} activities recorded`,
-      subtitle: `Farming activity increasing in ${zone}`,
-      note: 'Emerging demand trend'
+      key: 'summary',
+      title: 'Demand Summary',
+      value: summary?.key_finding || 'Signals are forming into a clear demand pattern',
+      subtitle: `${summary?.signal_count || 0} signals currently tracked`
     },
     {
-      key: 'problem',
-      title: 'Problem',
-      value: `${summary?.infrastructure_gaps?.length || 1} shortage(s) identified`,
-      subtitle: 'Water shortage is limiting productivity',
-      note: 'Operational constraint'
+      key: 'clusters',
+      title: 'Clusters',
+      value: summary?.clusters?.length ? `${summary.clusters.length} active clusters` : 'Monitoring',
+      subtitle: summary?.recommended_projects?.[0] || 'More signals will reveal stronger clusters'
     },
     {
-      key: 'opportunity',
-      title: 'Opportunity',
-      value: summary?.recommended_projects?.[0] || 'Irrigation project recommended',
-      subtitle: 'Targeted investment can expand capacity',
-      note: 'Strategic recommendation'
+      key: 'gaps',
+      title: 'Infrastructure Gaps',
+      value: summary?.infrastructure_gaps?.[0] || 'No gaps identified yet',
+      subtitle: 'Submit more signals to reveal deeper infrastructure needs'
     },
     {
       key: 'confidence',
       title: 'Confidence',
       value: `${trustScore}%`,
+      subtitle: trustLabel
     }
   ];
-  const downloadReport = async () => {
-    setPdfLoading(true);
-    setMessage('Downloading investor-grade PDF prospectus...');
-    try {
-      await downloadProspectusPdf(zone, clientMode);
-      setMessage('PDF downloaded successfully.');
-    } catch (err) {
-      console.error(err);
-      setMessage('Error downloading report. Please try again.');
-    } finally {
-      setPdfLoading(false);
-    }
-  };
 
   return (
     <div className="page-shell">
-      <div className="top-bar">
+      {/* Top Header */}
+      <header className="top-bar">
         <div className="top-brand">
           <img src="/logo.png" alt="Kulima OS" className="brand-logo" />
           <div>
-            <div className="tiny-label">COMMAND SYSTEM</div>
-            <div className="product-title">Kulima OS live command center</div>
+            <div className="tiny-label">Dashboard</div>
+            <div className="product-title">Kulima OS Dashboard</div>
             {freshnessLabel && <div className="freshness-label">{freshnessLabel}</div>}
           </div>
         </div>
@@ -438,10 +458,10 @@ export default function Home() {
               <option key={m.key} value={m.key}>{m.label} view</option>
             ))}
           </select>
-          <button className="ghost-button" onClick={() => setShowPreview(true)} disabled={reportLoading}>{reportLoading ? 'Loading…' : 'Preview report'}</button>
+          <button className="ghost-button" onClick={() => setShowPreview(true)} disabled={reportLoading}>{reportLoading ? 'Loading…' : 'Preview Report'}</button>
           <button className="primary-button" onClick={() => { setPaymentMessage(''); setShowUnlock(true); }}>Unlock</button>
         </div>
-      </div>
+      </header>
 
       {summary?.is_simulated && (
         <div className="simulated-banner" role="status">
@@ -449,153 +469,63 @@ export default function Home() {
         </div>
       )}
 
-      <div className="dashboard-grid">
-        <div className="column column-left">
-          <section className="input-panel">
-            <div className="panel-title">Speak or type a live demand signal</div>
-            <div className="input-group">
-              <button className={`mic-button ${speechActive ? 'active' : ''}`} onClick={startVoiceCapture}>
-                <span className="mic-dot" />
-                {speechActive ? 'Listening' : 'Voice'}
-              </button>
-              <textarea 
-                value={inputValue} 
-                onChange={(e) => handleInputChange(e.target.value)} 
-                placeholder="e.g. Mzuzu farmers need water for dry-season irrigation..." 
-                rows={2}
-                className="input-textarea"
-              />
-              <button className="submit-button" onClick={submitActivity}>Submit</button>
-            </div>
-            <div className="waveform-row">
-              {Array.from({ length: 10 }).map((_, index) => (
-                <span key={index} className={`wave-bar ${speechActive ? 'wave-active' : ''}`} style={{ animationDelay: `${index * 60}ms` }} />
-              ))}
-            </div>
-            <div className="tag-row">
-              <div className="zone-select-container">
-                <span className="zone-select-label">Active Zone:</span>
-                <select 
-                  value={zone} 
-                  onChange={(e) => setZone(e.target.value)} 
-                  className="zone-select-dropdown"
-                >
-                  {ZONES.map((z) => (
-                    <option key={z} value={z}>{z}</option>
-                  ))}
-                </select>
-              </div>
-              <span className="tag-chip">Activity: {parsedTag.activity}</span>
-              <span className="tag-chip">Resource: {parsedTag.resource}</span>
-            </div>
-            <div className="status-line">{message}</div>
-          </section>
+      {/* Hero / Title Section */}
+      <section className="hero-section">
+        <h1>Kulima OS — Community Demand & Insight Platform</h1>
+        <p className="subtitle">Describe what is needed in your area and get data-driven insights</p>
+      </section>
 
-          <section className="trust-banner" onClick={() => setShowTrustTooltip((s) => !s)} role="region" aria-label="Trust banner">
-            <div className={`trust-badge-large ${trustLabel.toLowerCase()}`}>
-              <div className="trust-emoji">{trustLabel === 'HIGH' ? '✅' : (trustLabel === 'MEDIUM' ? '⏺️' : '⚠️')}</div>
-              <div className="trust-text">
-                <div className="trust-main">{trustLabel} TRUST</div>
-                <div className="trust-sub">Confidence: {trustScore}%</div>
-              </div>
-            </div>
-            <div className={`tooltip ${showTrustTooltip ? 'visible' : ''}`}>
-              Verified using multiple data sources including community reports, external signals, and system analysis.
-            </div>
-          </section>
-
-          <section className="insights-panel">
-            <div className="panel-title">Live insights</div>
-            <div className="insight-grid">
-              {insightCards.map((card, index) => (
-                <div key={card.title} className={`insight-card ${card.key}`}>
-                  <div>
-                    <div className="card-title">{card.title}</div>
-                    {card.key === 'confidence' ? (
-                      <div className="confidence-block">
-                        <div className={`confidence-pill ${card.level}`}>{card.subtitle}</div>
-                        <div className="confidence-progress">
-                          <div className={`confidence-fill ${card.level}`} style={{ width: `${card.value}%` }} />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="card-note">{card.subtitle}</div>
-                    )}
-                  </div>
-                  {card.key !== 'confidence' && <div className="insight-tag">{card.note}</div>}
-                </div>
-              ))}
-            </div>
-          </section>
-          
-          <section className="breakdown-panel">
-            <div className="panel-title">ZENTARI Trust Breakdown</div>
-            <div className="breakdown-metrics">
-              <div className="metric-row">
-                <span className="metric-label">Pattern Persistence</span>
-                <div className="metric-bar-bg"><div className="metric-bar-fill" style={{width: `${Math.round(confidenceBreakdown.persistenceScore * 100)}%`}} /></div>
-                <span className="metric-val">{Math.round(confidenceBreakdown.persistenceScore * 100)}%</span>
-              </div>
-              <div className="metric-row">
-                <span className="metric-label">Cross-Validation</span>
-                <div className="metric-bar-bg"><div className="metric-bar-fill" style={{width: `${Math.round(confidenceBreakdown.validationScore * 100)}%`}} /></div>
-                <span className="metric-val">{Math.round(confidenceBreakdown.validationScore * 100)}%</span>
-              </div>
-              <div className="metric-row">
-                <span className="metric-label">Spatial Consistency</span>
-                <div className="metric-bar-bg"><div className="metric-bar-fill" style={{width: `${Math.round(confidenceBreakdown.spatialConsistency * 100)}%`}} /></div>
-                <span className="metric-val">{Math.round(confidenceBreakdown.spatialConsistency * 100)}%</span>
-              </div>
-              <div className="metric-row">
-                <span className="metric-label">Temporal Stability</span>
-                <div className="metric-bar-bg"><div className="metric-bar-fill" style={{width: `${Math.round(confidenceBreakdown.temporalStability * 100)}%`}} /></div>
-                <span className="metric-val">{Math.round(confidenceBreakdown.temporalStability * 100)}%</span>
-              </div>
-            </div>
-          </section>
-
-          {clusters.length > 0 ? (
-            <section className="cluster-panel">
-              <div className="panel-title">Cluster intelligence</div>
-              <div className="cluster-controls">
-                <label htmlFor="cluster-select" className="cluster-label">Select cluster</label>
-                <select
-                  id="cluster-select"
-                  value={selectedClusterId || clusters[0]?.cluster_id || ''}
-                  onChange={(e) => setSelectedClusterId(e.target.value)}
-                  className="cluster-select-dropdown"
-                >
-                  {clusters.map((c) => (
-                    <option key={c.cluster_id} value={c.cluster_id}>
-                      {c.sub_zone || c.cluster_name || c.cluster_id}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {activeCluster && (
-                <div className="cluster-detail-card">
-                  <div className="cluster-detail-row"><span>Activity</span><strong>{activeCluster.dominant_activity || 'Mixed'}</strong></div>
-                  <div className="cluster-detail-row"><span>Demand pattern</span><strong>{activeCluster.demand_pattern || 'Forming'}</strong></div>
-                  <div className="cluster-detail-row"><span>Key gap</span><strong>{activeCluster.key_gap || 'Monitoring'}</strong></div>
-                  <div className="cluster-detail-row"><span>Recommended project</span><strong>{activeCluster.recommended_project || summary?.recommended_projects?.[0] || 'TBD'}</strong></div>
-                  <div className="cluster-detail-row"><span>Confidence</span><strong>{Math.round((activeCluster.confidence_score || 0) * 100)}%</strong></div>
-                </div>
-              )}
-            </section>
-          ) : (
-            <section className="cluster-panel cluster-empty">
-              <div className="panel-title">Cluster intelligence</div>
-              <p className="cluster-empty-text">No validated sub-zone clusters yet. Include a known area (e.g. Chibanja, Area 25, Limbe) in your signal.</p>
-            </section>
-          )}
+      {/* Main Input Section */}
+      <section className="input-panel">
+        <div className="input-group">
+          <button className={`mic-button ${speechActive ? 'active' : ''}`} onClick={startVoiceCapture}>
+            <span className="mic-dot" />
+            {speechActive ? 'Listening' : 'Voice'}
+          </button>
+          <textarea 
+            value={inputValue} 
+            onChange={(e) => handleInputChange(e.target.value)} 
+            placeholder="e.g. Farmers in Mzuzu need irrigation water" 
+            rows={2}
+            className="input-textarea"
+          />
+          <button className="submit-button" onClick={submitActivity} disabled={isSubmitting || !inputValue.trim()}>
+            {isSubmitting ? 'Submitting…' : 'Submit'}
+          </button>
         </div>
+        <div className="waveform-row">
+          {Array.from({ length: 10 }).map((_, index) => (
+            <span key={index} className={`wave-bar ${speechActive ? 'wave-active' : ''}`} style={{ animationDelay: `${index * 60}ms` }} />
+          ))}
+        </div>
+        <div className="tag-row">
+          <div className="zone-select-container">
+            <span className="zone-select-label">Active Zone:</span>
+            <select 
+              value={zone} 
+              onChange={(e) => setZone(e.target.value)} 
+              className="zone-select-dropdown"
+            >
+              {ZONES.map((z) => (
+                <option key={z} value={z}>{z}</option>
+              ))}
+            </select>
+          </div>
+          <span className="tag-chip">Activity: {parsedTag.activity}</span>
+          <span className="tag-chip">Resource: {parsedTag.resource}</span>
+        </div>
+        <div className="status-line">{isSubmitting ? 'Submitting signal…' : message}</div>
+        {submitError && <div className="status-line" style={{ color: '#ff8a80' }}>{submitError}</div>}
+      </section>
 
-        <div className="column column-center">
-          <section className="map-panel">
-            <div className="panel-title">Map & trends</div>
+      {/* LEVEL 1: Simplified Default View */}
+      <div className="level1-container">
+        <div className="level1-grid">
+          {/* Map visualization */}
+          <div className="map-panel">
+            <div className="panel-title">Map & Trends</div>
             <div className="map-visualization">
               <svg viewBox="0 0 300 290" className="map-svg">
-                {/* Background Grid Pattern */}
                 <defs>
                   <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
                     <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255, 255, 255, 0.03)" strokeWidth="1" />
@@ -603,7 +533,6 @@ export default function Home() {
                 </defs>
                 <rect width="100%" height="100%" fill="url(#grid)" rx="16" />
 
-                {/* Stylized Contour/Flow Lines */}
                 <path
                   d="M130,30 Q150,90 120,130 T170,220 T160,280"
                   fill="none"
@@ -620,12 +549,11 @@ export default function Home() {
                   strokeLinecap="round"
                 />
 
-                {/* Network Connections */}
                 {[
-                  { id: 'MZUZU', x: 140, y: 50, color: '#5af2a6', activity: 'Irrigation & Milling' },
-                  { id: 'LILONGWE', x: 120, y: 130, color: '#74a5ff', activity: 'Trading & Cold Storage' },
-                  { id: 'ZOMBA', x: 170, y: 200, color: '#ffcb47', activity: 'Farming & Welding' },
-                  { id: 'BLANTYRE', x: 160, y: 250, color: '#ff6b6b', activity: 'Milling & Cold Storage' }
+                  { id: 'MZUZU', x: 140, y: 50, color: '#5af2a6' },
+                  { id: 'LILONGWE', x: 120, y: 130, color: '#74a5ff' },
+                  { id: 'ZOMBA', x: 170, y: 200, color: '#ffcb47' },
+                  { id: 'BLANTYRE', x: 160, y: 250, color: '#ff6b6b' }
                 ].map((z, i, arr) => {
                   if (i < arr.length - 1) {
                     const next = arr[i + 1];
@@ -645,7 +573,6 @@ export default function Home() {
                   return null;
                 })}
 
-                {/* Hotspot Nodes */}
                 {[
                   { id: 'MZUZU', x: 140, y: 50, color: '#5af2a6' },
                   { id: 'LILONGWE', x: 120, y: 130, color: '#74a5ff' },
@@ -660,7 +587,6 @@ export default function Home() {
                       onClick={() => setZone(z.id)}
                       style={{ cursor: 'pointer' }}
                     >
-                      {/* Outer Glow Ring */}
                       {isActive && (
                         <circle
                           cx={z.x}
@@ -672,7 +598,6 @@ export default function Home() {
                           className="pulse-ring"
                         />
                       )}
-                      {/* Middle Pulse Circle */}
                       <circle
                         cx={z.x}
                         cy={z.y}
@@ -680,14 +605,12 @@ export default function Home() {
                         fill={z.color}
                         opacity={isActive ? "0.3" : "0.15"}
                       />
-                      {/* Core Dot */}
                       <circle
                         cx={z.x}
                         cy={z.y}
                         r={isActive ? "6" : "4"}
                         fill={z.color}
                       />
-                      {/* Label Text */}
                       <text
                         x={z.x + 12}
                         y={z.y + 4}
@@ -703,7 +626,6 @@ export default function Home() {
                 })}
               </svg>
 
-              {/* Map overlay with metadata */}
               <div className="map-overlay-card">
                 <div className="overlay-header">
                   <span className="overlay-dot" />
@@ -725,75 +647,260 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </section>
+          </div>
 
-          <section className={`report-panel ${!isPaid ? 'preview-locked' : ''}`}>
-            <div className="panel-title">Report center</div>
-            {!isPaid && <div className="panel-hint">Preview only. Unlock the full report to access investor-grade sections and downloads.</div>}
-            <div className="report-strip">
-              {reportCards.map((card) => (
-                <div key={card.key} className="report-chip">
-                  <div className="chip-title">{card.title}</div>
-                  <div className="chip-subtitle">{card.subtitle}</div>
+          {/* Simple Insight Card */}
+          <div className="simple-insight-panel">
+            <div className="panel-title">Current Insight</div>
+            {hasSignals ? (
+              <div className="simple-insight-card">
+                <div className="insight-header">
+                  <span className="insight-pin">📍</span>
+                  <h3>{normalizeTag(zone)}</h3>
                 </div>
-              ))}
-            </div>
-            <div className="report-actions">
-              <button className="primary-button" onClick={handleGenerateReport} disabled={reportLoading}>{reportLoading ? 'Generating…' : 'Preview report'}</button>
-              <button className="ghost-button" onClick={downloadReport} disabled={pdfLoading}>{pdfLoading ? 'Downloading…' : (isPaid ? 'Download full report' : 'Download PDF')}</button>
-            </div>
-          </section>
-        </div>
-
-        <div className="column column-right">
-          <section className="provenance-panel">
-            <div className="panel-title">Signal provenance</div>
-            {summary && summary.signal_source_counts ? (
-              (() => {
-                const src = summary.signal_source_counts;
-                const communityKeys = ['web','whatsapp','manual','user','social'];
-                const externalKeys = ['news','external'];
-                const systemKeys = ['telemetry','sensor','infrastructure','system'];
-                const community = communityKeys.reduce((s,k)=>s+(src[k]||0),0);
-                const external = externalKeys.reduce((s,k)=>s+(src[k]||0),0);
-                const system = systemKeys.reduce((s,k)=>s+(src[k]||0),0);
-                const categories = [community>0, external>0, system>0].filter(Boolean).length;
-                let trust = 'LOW';
-                if (categories >= 3) trust = 'HIGH';
-                else if (categories === 2) trust = 'MEDIUM';
-                else trust = 'LOW';
-                const trustClass = trust === 'HIGH' ? 'high' : (trust === 'MEDIUM' ? 'medium' : 'low');
-                return (
-                  <div>
-                    <div className="provenance-chips">
-                      <div className="chip prov-chip">👥 Community ({community})</div>
-                      <div className="chip prov-chip">🌍 External ({external})</div>
-                      <div className="chip prov-chip">🤖 System ({system})</div>
-                    </div>
-                    <div className={`trust-badge ${trustClass}`}>
-                      <div className="trust-label">Confidence: {trust}</div>
-                      <div className="trust-note">Data verified across multiple sources</div>
+                <div className="insight-body">
+                  <div className="insight-item">
+                    <span className="item-label">Demand detected:</span>
+                    <span className="item-val">{simpleInsightDemand}</span>
+                  </div>
+                  <div className="insight-item">
+                    <span className="item-label">Suggested action:</span>
+                    <span className="item-val">{simpleInsightAction}</span>
+                  </div>
+                  <div className="insight-badge-row">
+                    <div className={`trust-pill ${trustLabel.toLowerCase()}`}>
+                      {trustScore}% ({trustLabel} Confidence)
                     </div>
                   </div>
-                );
-              })()
-            ) : (
-              <div className="empty-state">No provenance summary available.</div>
-            )}
-          </section>
-          <section className="activity-panel">
-            <div className="panel-title">Live activity stream</div>
-            <div className="activity-stream">
-              {recentActivities.length ? recentActivities.slice(0, 10).map((activity, index) => (
-                <div key={activity.id || activity.original_text} className="activity-bubble" style={{ animationDelay: `${index * 50}ms` }}>
-                  <span>{activity.zone || zone} · {activity.activity?.toLowerCase() || activity.original_text?.slice(0, 24).toLowerCase()}</span>
                 </div>
-              )) : <div className="empty-state">No live activity yet. Add a signal.</div>}
-            </div>
-          </section>
+              </div>
+            ) : (
+              <div className="empty-state">
+                No activity yet — submit a signal to activate analysis
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="disclosure-toggle-row">
+          <button 
+            className="view-analysis-button" 
+            onClick={() => setShowFullAnalysis(!showFullAnalysis)}
+          >
+            {showFullAnalysis ? 'Hide Detailed Analysis' : 'View Full Analysis'}
+          </button>
         </div>
       </div>
 
+      {/* LEVEL 2: Detailed Analysis View */}
+      {showFullAnalysis && (
+        <div className="level2-container">
+          <section className="analysis-section">
+            <div className="panel-title">Detailed Analysis</div>
+            <div className="analysis-grid">
+              {/* Demand Insight Card */}
+              <div className="analysis-card">
+                <div className="card-header-icon">📈</div>
+                <div className="analysis-card-content">
+                  <h4>Demand Insight</h4>
+                  <div className="card-main-val">{summary?.signal_count || 0} activities recorded</div>
+                  <p>{topActivities ? `${topActivities} activity increasing in ${normalizeTag(zone)}` : `Farming activity increasing in ${normalizeTag(zone)}`}</p>
+                </div>
+              </div>
+
+              {/* Problem Card */}
+              <div className="analysis-card">
+                <div className="card-header-icon">⚠️</div>
+                <div className="analysis-card-content">
+                  <h4>Problem</h4>
+                  <div className="card-main-val">{summary?.infrastructure_gaps?.length || 0} shortage(s) identified</div>
+                  <p>{summary?.infrastructure_gaps?.length ? `${summary.infrastructure_gaps.join(', ')} shortage is limiting productivity.` : 'No critical shortages detected yet — submit more signals to reveal deeper gaps.'}</p>
+                </div>
+              </div>
+
+              {/* Opportunity Card */}
+              <div className="analysis-card">
+                <div className="card-header-icon">💡</div>
+                <div className="analysis-card-content">
+                  <h4>Opportunity</h4>
+                  <div className="card-main-val">{summary?.recommended_projects?.[0] || 'Awaiting patterns'}</div>
+                  <p>Targeted deployment can satisfy communal demand and optimize resources.</p>
+                </div>
+              </div>
+
+              {/* Confidence Card */}
+              <div className="analysis-card">
+                <div className="card-header-icon">🛡️</div>
+                <div className="analysis-card-content">
+                  <h4>Confidence</h4>
+                  <div className="card-main-val">{trustScore}%</div>
+                  <p>{trustLabel} Confidence - Verified via multi-source logic.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="analysis-actions">
+              <button className="primary-button" onClick={handleGenerateReport} disabled={reportLoading}>
+                {reportLoading ? 'Generating Preview…' : 'Preview Report'}
+              </button>
+              <button className="ghost-button" onClick={downloadReport} disabled={pdfLoading}>
+                {pdfLoading ? 'Downloading PDF…' : 'Download PDF'}
+              </button>
+            </div>
+
+            <div className="advanced-toggle-row">
+              <button 
+                className="show-advanced-button" 
+                onClick={() => setShowAdvancedAnalysis(!showAdvancedAnalysis)}
+              >
+                {showAdvancedAnalysis ? 'Hide Advanced Data' : 'Show Advanced Analysis'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* LEVEL 3: Advanced Analysis */}
+      {showFullAnalysis && showAdvancedAnalysis && (
+        <div className="level3-container">
+          <div className="level3-grid">
+            <div className="advanced-tabs-panel">
+              <div className="advanced-accordion">
+                <details className="accordion-item" open>
+                  <summary className="accordion-summary">Data Confidence</summary>
+                  <div className="accordion-body">
+                    <h5>Confidence Score Breakdown</h5>
+                    <div className="breakdown-metrics">
+                      <div className="metric-row">
+                        <span className="metric-label">Pattern Persistence</span>
+                        <div className="metric-bar-bg">
+                          <div className="metric-bar-fill" style={{ width: `${Math.round(confidenceBreakdown.persistenceScore * 100)}%` }} />
+                        </div>
+                        <span className="metric-val">{Math.round(confidenceBreakdown.persistenceScore * 100)}%</span>
+                      </div>
+                      <div className="metric-row">
+                        <span className="metric-label">Cross-Validation</span>
+                        <div className="metric-bar-bg">
+                          <div className="metric-bar-fill" style={{ width: `${Math.round(confidenceBreakdown.validationScore * 100)}%` }} />
+                        </div>
+                        <span className="metric-val">{Math.round(confidenceBreakdown.validationScore * 100)}%</span>
+                      </div>
+                      <div className="metric-row">
+                        <span className="metric-label">Spatial Consistency</span>
+                        <div className="metric-bar-bg">
+                          <div className="metric-bar-fill" style={{ width: `${Math.round(confidenceBreakdown.spatialConsistency * 100)}%` }} />
+                        </div>
+                        <span className="metric-val">{Math.round(confidenceBreakdown.spatialConsistency * 100)}%</span>
+                      </div>
+                      <div className="metric-row">
+                        <span className="metric-label">Temporal Stability</span>
+                        <div className="metric-bar-bg">
+                          <div className="metric-bar-fill" style={{ width: `${Math.round(confidenceBreakdown.temporalStability * 100)}%` }} />
+                        </div>
+                        <span className="metric-val">{Math.round(confidenceBreakdown.temporalStability * 100)}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+
+                <details className="accordion-item">
+                  <summary className="accordion-summary">Data Sources</summary>
+                  <div className="accordion-body">
+                    <h5>Data Source Provenance</h5>
+                    {summary && summary.signal_source_counts ? (
+                      (() => {
+                        const src = summary.signal_source_counts;
+                        const communityKeys = ['web','whatsapp','manual','user','social'];
+                        const externalKeys = ['news','external'];
+                        const systemKeys = ['telemetry','sensor','infrastructure','system'];
+                        const community = communityKeys.reduce((s,k)=>s+(src[k]||0),0);
+                        const external = externalKeys.reduce((s,k)=>s+(src[k]||0),0);
+                        const system = systemKeys.reduce((s,k)=>s+(src[k]||0),0);
+                        const categories = [community>0, external>0, system>0].filter(Boolean).length;
+                        let trust = 'LOW';
+                        if (categories >= 3) trust = 'HIGH';
+                        else if (categories === 2) trust = 'MEDIUM';
+                        else trust = 'LOW';
+                        const trustClass = trust === 'HIGH' ? 'high' : (trust === 'MEDIUM' ? 'medium' : 'low');
+                        return (
+                          <div className="sources-container">
+                            <div className="provenance-chips">
+                              <div className="chip prov-chip">👥 Community ({community})</div>
+                              <div className="chip prov-chip">🌍 External ({external})</div>
+                              <div className="chip prov-chip">🤖 System ({system})</div>
+                            </div>
+                            <div className={`trust-badge ${trustClass}`}>
+                              <div className="trust-label">Confidence: {trust}</div>
+                              <div className="trust-note">Data verified across multiple sources</div>
+                            </div>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <div className="empty-state">
+                        No activity yet — submit a signal to activate analysis
+                      </div>
+                    )}
+                  </div>
+                </details>
+
+                <details className="accordion-item">
+                  <summary className="accordion-summary">Demand Patterns</summary>
+                  <div className="accordion-body">
+                    <h5>Sub-zone Demand Patterns</h5>
+                    {clusters.length > 0 ? (
+                      <div className="cluster-container">
+                        <div className="cluster-controls">
+                          <label htmlFor="cluster-select" className="cluster-label">Select Cluster</label>
+                          <select
+                            id="cluster-select"
+                            value={selectedClusterId || clusters[0]?.cluster_id || ''}
+                            onChange={(e) => setSelectedClusterId(e.target.value)}
+                            className="cluster-select-dropdown"
+                          >
+                            {clusters.map((c) => (
+                              <option key={c.cluster_id} value={c.cluster_id}>
+                                {c.sub_zone || c.cluster_name || c.cluster_id}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        {activeCluster && (
+                          <div className="cluster-detail-card">
+                            <div className="cluster-detail-row"><span>Activity</span><strong>{activeCluster.dominant_activity || 'Mixed'}</strong></div>
+                            <div className="cluster-detail-row"><span>Demand pattern</span><strong>{activeCluster.demand_pattern || 'Forming'}</strong></div>
+                            <div className="cluster-detail-row"><span>Key gap</span><strong>{activeCluster.key_gap || 'Monitoring'}</strong></div>
+                            <div className="cluster-detail-row"><span>Recommended project</span><strong>{activeCluster.recommended_project || summary?.recommended_projects?.[0] || 'TBD'}</strong></div>
+                            <div className="cluster-detail-row"><span>Confidence</span><strong>{Math.round((activeCluster.confidence_score || 0) * 100)}%</strong></div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="empty-state">
+                        No activity yet — submit a signal to activate analysis
+                      </div>
+                    )}
+                  </div>
+                </details>
+              </div>
+            </div>
+
+            {/* Live Activity Stream */}
+            <div className="activity-panel">
+              <div className="panel-title">Live Activity Stream</div>
+              <div className="activity-stream">
+                {recentActivities.length ? recentActivities.slice(0, 10).map((activity, index) => (
+                  <div key={activity.id || activity.original_text} className="activity-bubble" style={{ animationDelay: `${index * 50}ms` }}>
+                    <span>{activity.zone || zone} · {activity.activity?.toLowerCase() || activity.original_text?.slice(0, 24).toLowerCase()}</span>
+                  </div>
+                )) : <div className="empty-state">No activity yet — submit a signal to activate analysis</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODALS & OVERLAYS */}
       {showPreview && (
         <div className="modal-shell" onClick={() => setShowPreview(false)}>
           <div className="modal-card" onClick={(event) => event.stopPropagation()}>
@@ -949,332 +1056,1163 @@ export default function Home() {
         </div>
       )}
 
+      {/* CSS DESIGN SYSTEM STYLES */}
       <style jsx>{`
-        .page-shell { min-height: 100vh; padding: 24px; background: radial-gradient(circle at top left, rgba(0,255,155,0.14), transparent 22%), radial-gradient(circle at bottom right, rgba(0,170,255,0.1), transparent 20%), #06130f; color: #e9ffe8; }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
-        .top-brand { display: flex; align-items: center; gap: 14px; }
-        .brand-logo { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; }
-        .freshness-label { font-size: 11px; color: #7ef2ac; margin-top: 4px; opacity: 0.85; }
-        .modal-brand-row { display: flex; align-items: center; gap: 12px; }
-        .modal-logo { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
-        .cluster-empty-text { font-size: 13px; color: #ceffcd; line-height: 1.5; margin: 0; }
-        .tiny-label { font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; color: #7ef2ac; }
-        .product-title { font-size: 32px; font-weight: 800; line-height: 1.05; }
-        .top-actions { display: flex; gap: 12px; flex-wrap: wrap; }
-        .primary-button, .ghost-button, .submit-button, .mic-button { border: none; border-radius: 999px; padding: 14px 20px; font-weight: 700; cursor: pointer; }
-        .primary-button { background: #00e676; color: #02100c; }
-        .ghost-button { background: rgba(255,255,255,0.08); color: #e9ffe8; border: 1px solid rgba(255,255,255,0.14); }
-        .main-grid { display: grid; grid-template-columns: minmax(360px, 1.35fr) minmax(320px, 1fr); gap: 22px; margin-bottom: 22px; }
-        .input-panel, .activity-panel, .report-panel { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 28px; padding: 24px; }
-        .panel-title { font-size: 16px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #c8ffc5; margin-bottom: 16px; }
-        .input-group { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; margin-bottom: 16px; }
-        .mic-button { display: inline-flex; align-items: center; gap: 10px; background: rgba(0,255,118,0.16); color: #e9ffe8; }
-        .mic-button.active { background: rgba(0,255,118,0.28); box-shadow: 0 0 0 4px rgba(0,255,118,0.08); }
-        .mic-dot { width: 10px; height: 10px; border-radius: 50%; background: #00ff88; box-shadow: 0 0 12px rgba(0,255,118,0.45); }
-        input { width: 100%; min-height: 56px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: #f5ffef; padding: 12px 24px; font-size: 16px; transition: all 0.2s ease-in-out; }
-        input:focus { border-color: #00e676; box-shadow: 0 0 12px rgba(0, 230, 118, 0.15); outline: none; background: rgba(255,255,255,0.08); }
+        * { box-sizing: border-box; }
+        .page-shell { 
+          min-height: 100vh; 
+          padding: 32px 40px; 
+          background: #0B0F0A; 
+          color: #FFFFFF; 
+          font-family: 'Inter', system-ui, -apple-system, sans-serif;
+          overflow-x: hidden;
+          max-width: 100%;
+        }
+        .top-bar { 
+          display: flex; 
+          justify-content: space-between; 
+          align-items: center; 
+          gap: 16px; 
+          flex-wrap: wrap; 
+          margin-bottom: 40px; 
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          padding-bottom: 20px;
+        }
+        .top-brand { 
+          display: flex; 
+          align-items: center; 
+          gap: 14px; 
+        }
+        .brand-logo { 
+          width: 40px; 
+          height: 40px; 
+          border-radius: 8px; 
+          object-fit: cover; 
+        }
+        .freshness-label { 
+          font-size: 12px; 
+          color: #A1A1AA; 
+          margin-top: 4px; 
+        }
+        .tiny-label { 
+          font-size: 11px; 
+          letter-spacing: 0.15em; 
+          text-transform: uppercase; 
+          color: #A1A1AA; 
+          font-weight: 700;
+        }
+        .product-title { 
+          font-size: 24px; 
+          font-weight: 800; 
+          color: #FFFFFF;
+        }
+        .top-actions { 
+          display: flex; 
+          gap: 12px; 
+          flex-wrap: wrap; 
+        }
+        .primary-button, .ghost-button, .submit-button, .mic-button, .view-analysis-button, .show-advanced-button, .accordion-summary, .social-btn, .payment-option { 
+          border: none; 
+          border-radius: 8px; 
+          padding: 12px 24px; 
+          font-weight: 700; 
+          font-size: 14px;
+          cursor: pointer; 
+          transition: all 0.2s ease;
+          min-height: 44px;
+          touch-action: manipulation;
+        }
+        .primary-button { 
+          background: #00e676; 
+          color: #0B0F0A; 
+        }
+        .primary-button:hover {
+          background: #00c853;
+          transform: translateY(-1px);
+        }
+        .ghost-button { 
+          background: rgba(255,255,255,0.06); 
+          color: #FFFFFF; 
+          border: 1px solid rgba(255,255,255,0.1); 
+        }
+        .ghost-button:hover {
+          background: rgba(255,255,255,0.12);
+        }
+        .hero-section {
+          text-align: center;
+          margin-bottom: 32px;
+        }
+        .hero-section h1 {
+          font-size: 36px;
+          font-weight: 800;
+          margin-bottom: 8px;
+          color: #FFFFFF;
+        }
+        .hero-section .subtitle {
+          font-size: 16px;
+          color: #E5E7EB;
+          max-width: 600px;
+          margin: 0 auto;
+        }
+        .input-panel { 
+          background: rgba(255, 255, 255, 0.03); 
+          border: 1px solid rgba(255, 255, 255, 0.08); 
+          border-radius: 16px; 
+          padding: 24px; 
+          margin-bottom: 32px;
+        }
+        .input-group { 
+          display: grid; 
+          grid-template-columns: auto 1fr auto; 
+          gap: 16px; 
+          align-items: center; 
+        }
+        .mic-button { 
+          display: inline-flex; 
+          align-items: center; 
+          gap: 8px; 
+          background: rgba(255, 255, 255, 0.06); 
+          color: #FFFFFF; 
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .mic-button.active { 
+          background: rgba(0, 230, 118, 0.15); 
+          border-color: #00e676; 
+          color: #00e676;
+        }
+        .mic-dot { 
+          width: 8px; 
+          height: 8px; 
+          border-radius: 50%; 
+          background: #00ff88; 
+          box-shadow: 0 0 8px rgba(0, 255, 118, 0.6); 
+        }
         .input-textarea { 
           width: 100%; 
-          min-height: 80px; 
-          border-radius: 16px; 
-          border: 1px solid rgba(255,255,255,0.15); 
-          background: rgba(255,255,255,0.05); 
-          color: #f5ffef; 
+          min-height: 56px; 
+          border-radius: 8px; 
+          border: 1px solid rgba(255, 255, 255, 0.12); 
+          background: rgba(0, 0, 0, 0.2); 
+          color: #FFFFFF; 
           padding: 14px 20px; 
           font-size: 16px; 
-          transition: all 0.2s ease-in-out; 
-          resize: vertical;
+          line-height: 1.4; 
+          transition: all 0.2s ease; 
+          resize: none;
           font-family: inherit;
         }
         .input-textarea:focus { 
           border-color: #00e676; 
-          box-shadow: 0 0 12px rgba(0, 230, 118, 0.15); 
           outline: none; 
-          background: rgba(255,255,255,0.08); 
+          background: rgba(0, 0, 0, 0.3); 
         }
-        .submit-button { background: #00e676; color: #02100c; }
-        .waveform-row { display: flex; gap: 6px; margin-bottom: 18px; }
-        .wave-bar { width: 6px; height: 20px; border-radius: 999px; background: rgba(255,255,255,0.1); transform-origin: bottom; animation: wave-static 1200ms infinite ease-in-out; }
-        .wave-active { animation: wave-pulse 900ms infinite ease-in-out; }
-        .tag-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
-        .tag-chip { padding: 11px 16px; border-radius: 999px; background: rgba(0,255,118,0.08); color: #d7ffd7; font-size: 13px; }
-        .zone-select-container { display: flex; align-items: center; gap: 8px; background: rgba(0,255,118,0.08); border: 1px solid rgba(0,255,118,0.15); border-radius: 999px; padding: 4px 16px; }
-        .zone-select-label { font-size: 13px; color: #7ef2ac; font-weight: bold; }
-        .zone-select-dropdown { background: transparent; border: none; color: #d7ffd7; font-size: 13px; font-weight: bold; outline: none; cursor: pointer; padding: 6px 0; }
-        .zone-select-dropdown option { background: #051b13; color: #d7ffd7; }
-        .status-line { font-size: 13px; color: #ceffcd; margin-bottom: 24px; }
-        .simulated-banner { margin: 0 0 16px; padding: 12px 18px; border-radius: 12px; background: rgba(255, 203, 71, 0.12); border: 1px solid rgba(255, 203, 71, 0.35); color: #ffe9a8; font-size: 13px; font-weight: 600; }
-        .mode-select-dropdown { background: rgba(0,255,118,0.08); border: 1px solid rgba(0,255,118,0.2); color: #d7ffd7; border-radius: 999px; padding: 10px 14px; font-size: 13px; cursor: pointer; }
-        .mode-select-dropdown option { background: #051b13; color: #d7ffd7; }
-        .cluster-panel { margin-top: 18px; padding: 18px; border-radius: 18px; background: rgba(0,0,0,0.18); border: 1px solid rgba(0,230,118,0.2); }
-        .cluster-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-        .cluster-label { font-size: 12px; color: #7ef2ac; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-        .cluster-select-dropdown { flex: 1; min-width: 160px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #e9ffe8; border-radius: 10px; padding: 10px 12px; font-size: 13px; }
-        .cluster-select-dropdown option { background: #051b13; }
-        .cluster-detail-card { display: grid; gap: 10px; }
-        .cluster-detail-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: #ceffcd; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px; }
-        .cluster-detail-row strong { color: #f5ffef; text-align: right; }
-        .swipe-card-shell { background: rgba(0,0,0,0.12); border-radius: 26px; padding: 18px; }
-        .swipe-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
-        .card-controls button { border: 1px solid rgba(255,255,255,0.14); background: transparent; color: #e9ffe8; border-radius: 999px; width: 40px; height: 40px; cursor: pointer; }
-        .card-row { display: grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: 14px; }
-        .insight-card { border-radius: 24px; padding: 22px; background: linear-gradient(145deg, rgba(5,27,19,0.9), rgba(2,12,8,0.95)); border: 1px solid rgba(0,230,118,0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease; }
-        .insight-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,255,118,0.15); }
-        .insight-card.active { background: rgba(0,255,118,0.14); transform: translateY(-2px); }
-        .card-title { font-size: 18px; font-weight: 800; line-height: 1.1; margin-bottom: 10px; color: #ffffff; }
-        .card-note { font-size: 13px; color: #e9ffe8; }
-        .activity-panel { display: flex; flex-direction: column; }
-        .activity-stream { display: grid; gap: 12px; }
-        .activity-bubble { padding: 16px 18px; border-radius: 999px; background: rgba(0,255,118,0.08); color: #e9ffe8; font-weight: 700; animation: pulse 2400ms ease-in-out infinite alternate; }
-        .empty-state { color: rgba(255,255,255,0.68); font-size: 14px; }
-        .report-panel { display: grid; gap: 18px; }
-        .report-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-        .report-chip { border-radius: 24px; padding: 18px; background: linear-gradient(145deg, rgba(5,27,19,0.9), rgba(2,12,8,0.95)); border: 1px solid rgba(0,230,118,0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: transform 180ms ease, box-shadow 180ms ease; }
-        .report-chip:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,255,118,0.15); }
-        .chip-title { font-size: 15px; font-weight: 800; margin-bottom: 8px; color: #ffffff; }
-        .chip-subtitle { font-size: 13px; color: #e9ffe8; }
-        .report-actions { display: flex; gap: 12px; flex-wrap: wrap; }
-        .dashboard-grid { display: grid; grid-template-columns: minmax(320px, 1.05fr) minmax(360px, 1.3fr) minmax(300px, 0.95fr); gap: 20px; align-items: start; }
-        .column { display: flex; flex-direction: column; gap: 20px; }
-        .column-left, .column-center, .column-right { min-height: 0; }
-        .input-panel, .insights-panel, .map-panel, .report-panel, .activity-panel { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.12); display: flex; flex-direction: column; gap: 16px; border: 1px solid rgba(255,255,255,0.08); }
-        .map-panel { min-height: 320px; }
-        .map-visualization { position: relative; width: 100%; height: 100%; min-height: 290px; background: rgba(0, 0, 0, 0.2); border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; display: flex; flex-direction: column; }
-        .map-svg { width: 100%; height: 100%; max-height: 290px; }
-        .pulse-ring { animation: map-pulse 2s infinite ease-out; transform-origin: center; }
+        .submit-button { 
+          background: #00e676; 
+          color: #0B0F0A; 
+          height: 56px;
+        }
+        .submit-button:hover {
+          background: #00c853;
+        }
+        .waveform-row { 
+          display: flex; 
+          gap: 6px; 
+          margin-top: 14px; 
+          margin-bottom: 8px; 
+        }
+        .wave-bar { 
+          width: 4px; 
+          height: 16px; 
+          border-radius: 2px; 
+          background: rgba(255, 255, 255, 0.08); 
+          transform-origin: bottom; 
+          animation: wave-static 1.2s infinite ease-in-out; 
+        }
+        .wave-active { 
+          animation: wave-pulse 0.9s infinite ease-in-out; 
+          background: #00e676;
+        }
+        .tag-row { 
+          display: flex; 
+          gap: 12px; 
+          flex-wrap: wrap; 
+          margin-top: 16px; 
+          align-items: center; 
+        }
+        .tag-chip { 
+          padding: 8px 16px; 
+          border-radius: 6px; 
+          background: rgba(255, 255, 255, 0.04); 
+          color: #E5E7EB; 
+          font-size: 13px; 
+          border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .zone-select-container { 
+          display: flex; 
+          align-items: center; 
+          gap: 8px; 
+          background: rgba(0, 230, 118, 0.06); 
+          border: 1px solid rgba(0, 230, 118, 0.2); 
+          border-radius: 6px; 
+          padding: 4px 12px; 
+        }
+        .zone-select-label { 
+          font-size: 13px; 
+          color: #E5E7EB; 
+          font-weight: 700; 
+        }
+        .zone-select-dropdown { 
+          background: transparent; 
+          border: none; 
+          color: #FFFFFF; 
+          font-size: 13px; 
+          font-weight: 700; 
+          outline: none; 
+          cursor: pointer; 
+          padding: 4px 0; 
+        }
+        .zone-select-dropdown option { 
+          background: #0B0F0A; 
+          color: #FFFFFF; 
+        }
+        .status-line { 
+          font-size: 13px; 
+          color: #A1A1AA; 
+          margin-top: 12px; 
+        }
+        .simulated-banner { 
+          margin-bottom: 24px; 
+          padding: 12px 18px; 
+          border-radius: 8px; 
+          background: rgba(255, 203, 71, 0.1); 
+          border: 1px solid rgba(255, 203, 71, 0.25); 
+          color: #ffe9a8; 
+          font-size: 13px; 
+          font-weight: 600; 
+        }
+        .mode-select-dropdown { 
+          background: rgba(255, 255, 255, 0.06); 
+          border: 1px solid rgba(255, 255, 255, 0.1); 
+          color: #FFFFFF; 
+          border-radius: 6px; 
+          padding: 8px 12px; 
+          font-size: 13px; 
+          cursor: pointer; 
+        }
+        .mode-select-dropdown option { 
+          background: #0B0F0A; 
+          color: #FFFFFF; 
+        }
+        
+        /* LEVEL 1 */
+        .level1-grid {
+          display: grid;
+          grid-template-columns: 1.2fr 0.8fr;
+          gap: 24px;
+          margin-bottom: 24px;
+        }
+        .map-panel, .simple-insight-panel {
+          background: rgba(255, 255, 255, 0.03); 
+          border: 1px solid rgba(255, 255, 255, 0.08); 
+          border-radius: 16px; 
+          padding: 24px; 
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .panel-title { 
+          font-size: 14px; 
+          font-weight: 800; 
+          letter-spacing: 0.1em; 
+          text-transform: uppercase; 
+          color: #A1A1AA; 
+        }
+        .map-visualization { 
+          position: relative; 
+          width: 100%; 
+          background: rgba(0, 0, 0, 0.3); 
+          border-radius: 12px; 
+          border: 1px solid rgba(255, 255, 255, 0.06); 
+          overflow: hidden; 
+        }
+        .map-svg { 
+          width: 100%; 
+          height: min(300px, 64vw); 
+          max-height: 320px; 
+          display: block;
+        }
+        .pulse-ring { 
+          animation: map-pulse 2s infinite ease-out; 
+          transform-origin: center; 
+        }
         @keyframes map-pulse {
-          0% { r: 8; opacity: 1; stroke-width: 3; }
+          0% { r: 8; opacity: 1; stroke-width: 2; }
           100% { r: 24; opacity: 0; stroke-width: 0.5; }
         }
-        .map-node:hover circle { opacity: 0.5; transform: scale(1.1); transition: all 0.2s ease; }
-        .map-overlay-card { position: absolute; bottom: 12px; left: 12px; right: 12px; background: rgba(5, 27, 19, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(0, 230, 118, 0.2); border-radius: 12px; padding: 10px 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .overlay-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-        .overlay-dot { width: 6px; height: 6px; border-radius: 50%; background: #00e676; box-shadow: 0 0 8px #00e676; }
-        .overlay-title { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #7ef2ac; }
-        .overlay-body { display: flex; justify-content: space-between; gap: 12px; }
-        .overlay-stat { display: flex; flex-direction: column; }
-        .overlay-stat .label { font-size: 9px; text-transform: uppercase; color: rgba(233,255,232,0.6); }
-        .overlay-stat .val { font-size: 11px; font-weight: 700; color: #e9ffe8; }
-        .report-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-        .report-chip { border-radius: 16px; padding: 20px; background: linear-gradient(145deg, rgba(5,27,19,0.9), rgba(2,12,8,0.95)); border: 1px solid rgba(0,230,118,0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.2); min-height: 132px; display: flex; flex-direction: column; justify-content: space-between; transition: transform 180ms ease, box-shadow 180ms ease; }
-        .report-chip:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,255,118,0.15); }
-        .chip-title { font-size: 15px; font-weight: 800; margin-bottom: 10px; color: #ffffff; }
-        .chip-subtitle { font-size: 13px; color: #e9ffe8; line-height: 1.35; }
-        .modal-card-value { font-size: 26px; font-weight: 800; margin-top: 10px; margin-bottom: 10px; color: #d7ffce; }
-        .expanded-report { display: flex; flex-direction: column; gap: 18px; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.08); }
-        .expanded-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-        .expanded-card { padding: 18px; border-radius: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
-        .expanded-card-title { font-size: 14px; font-weight: 800; margin-bottom: 10px; }
-        .expanded-card-text { font-size: 13px; color: rgba(233,255,232,0.88); line-height: 1.6; }
-        .cta-panel { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
-        .funding-success-badge { background: rgba(0, 230, 118, 0.15); color: #5af2a6; border: 1px solid rgba(0, 230, 118, 0.3); border-radius: 999px; padding: 10px 20px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
-        .payment-option { width: 100%; text-align: left; border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 18px; background: rgba(255,255,255,0.04); color: #e9ffe8; cursor: pointer; transition: border-color 180ms ease, transform 180ms ease, background 180ms ease; }
-        .payment-option.selected { border-color: #00e676; background: rgba(0,230,118,0.12); transform: translateY(-1px); }
-        .payment-option:hover { border-color: rgba(0,230,118,0.4); }
-        .option-title { font-size: 15px; font-weight: 800; margin-bottom: 8px; }
-        .option-price { font-size: 20px; font-weight: 900; margin-bottom: 8px; }
-        .option-description { font-size: 13px; color: rgba(233,255,232,0.78); line-height: 1.4; }
-        .payment-status { margin-top: 14px; font-size: 13px; color: #b1ffc7; display: flex; align-items: center; gap: 8px; }
-        .payment-status.verifying { color: #74a5ff; font-weight: 700; }
-        .spinner-dot { width: 10px; height: 10px; border-radius: 50%; background: #74a5ff; box-shadow: 0 0 10px #74a5ff; animation: spin-pulse 1s infinite alternate; }
-        @keyframes spin-pulse { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(1.4); opacity: 1; } }
-        .unlocked-shell { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 18px; background: rgba(0,255,118,0.06); border: 1px solid rgba(0,255,118,0.15); margin-bottom: 18px; }
-        .unlocked-shell .panel-title { margin-bottom: 0; }
-        .report-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: flex-start; }
-        .activity-panel { min-height: 620px; }
-        .activity-stream { display: grid; gap: 12px; overflow-y: auto; max-height: 590px; padding-right: 4px; }
-        .activity-bubble { min-height: 58px; display: flex; align-items: center; padding: 16px 18px; border-radius: 16px; background: rgba(0,255,118,0.08); color: #e9ffe8; font-weight: 700; opacity: 0; transform: translateY(10px); animation: slide-in 0.32s ease-in-out forwards; }
-        .activity-bubble span { width: 100%; display: block; }
-        .empty-state { color: rgba(255,255,255,0.62); font-size: 14px; padding: 26px 18px; border-radius: 16px; background: rgba(255,255,255,0.03); }
-        .insight-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-        .insight-card { min-height: 150px; display: flex; flex-direction: column; justify-content: space-between; padding: 18px; border-radius: 16px; background: linear-gradient(145deg, rgba(5,27,19,0.9), rgba(2,12,8,0.95)); border: 1px solid rgba(0,230,118,0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: transform 180ms ease, box-shadow 180ms ease; }
-        .insight-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,255,118,0.15); }
-        .trust-banner { margin: 18px 0; position: relative; }
-        .trust-badge-large { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-radius: 14px; cursor: pointer; }
-        .trust-badge-large .trust-emoji { font-size: 34px; }
-        .trust-badge-large .trust-main { font-size: 22px; font-weight: 900; letter-spacing: 0.06em; }
-        .trust-badge-large .trust-sub { font-size: 14px; color: rgba(3,20,10,0.7); font-weight: 800; }
-        .trust-badge-large.high { background: linear-gradient(90deg, rgba(90,242,166,0.14), rgba(0,255,150,0.06)); box-shadow: 0 8px 30px rgba(90,242,166,0.18); border: 1px solid rgba(90,242,166,0.22); color: #05321a; }
-        .trust-badge-large.medium { background: linear-gradient(90deg, rgba(116,165,255,0.12), rgba(116,165,255,0.06)); box-shadow: 0 8px 30px rgba(116,165,255,0.12); border: 1px solid rgba(116,165,255,0.12); color: #07223b; }
-        .trust-badge-large.low { background: linear-gradient(90deg, rgba(255,195,0,0.12), rgba(255,195,0,0.05)); box-shadow: 0 8px 24px rgba(255,195,0,0.08); border: 1px solid rgba(255,195,0,0.12); color: #3a2a00; }
-        .tooltip { display: none; position: absolute; left: 0; top: 100%; margin-top: 10px; background: rgba(0,0,0,0.86); color: #fff; padding: 10px 12px; border-radius: 8px; width: 280px; font-size: 13px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }
-        .trust-banner:hover .tooltip, .tooltip.visible { display: block; }
-        .provenance-panel { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 12px; }
-        .provenance-chips { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-        .chip { padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,0.04); color: #dfffe0; font-weight: 800; }
-        .prov-chip { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
-        .trust-badge { padding: 12px; border-radius: 12px; display: inline-block; margin-top: 6px; }
-        .trust-badge.high { background: rgba(90,242,166,0.08); box-shadow: 0 0 18px rgba(90,242,166,0.14); border: 1px solid rgba(90,242,166,0.16); }
-        .trust-badge.medium { background: rgba(116,165,255,0.06); box-shadow: 0 0 12px rgba(116,165,255,0.08); border: 1px solid rgba(116,165,255,0.12); }
-        .trust-badge.low { background: rgba(255,195,0,0.06); box-shadow: 0 0 10px rgba(255,195,0,0.06); border: 1px solid rgba(255,195,0,0.08); }
-        .trust-label { font-weight: 900; font-size: 14px; margin-bottom: 2px; }
-        .trust-badge.high .trust-label { color: #5af2a6; }
+        .map-overlay-card { 
+          position: absolute; 
+          bottom: 12px; 
+          left: 12px; 
+          right: 12px; 
+          background: rgba(11, 15, 10, 0.9); 
+          backdrop-filter: blur(8px); 
+          border: 1px solid rgba(255, 255, 255, 0.08); 
+          border-radius: 8px; 
+          padding: 10px 14px; 
+        }
+        .overlay-header { 
+          display: flex; 
+          align-items: center; 
+          gap: 6px; 
+          margin-bottom: 4px; 
+        }
+        .overlay-dot { 
+          width: 6px; 
+          height: 6px; 
+          border-radius: 50%; 
+          background: #00e676; 
+          box-shadow: 0 0 8px #00e676; 
+        }
+        .overlay-title { 
+          font-size: 11px; 
+          font-weight: 800; 
+          letter-spacing: 0.05em; 
+          text-transform: uppercase; 
+          color: #FFFFFF; 
+        }
+        .overlay-body { 
+          display: flex; 
+          justify-content: space-between; 
+          gap: 12px; 
+        }
+        .overlay-stat { 
+          display: flex; 
+          flex-direction: column; 
+        }
+        .overlay-stat .label { 
+          font-size: 10px; 
+          text-transform: uppercase; 
+          color: #A1A1AA; 
+        }
+        .overlay-stat .val { 
+          font-size: 12px; 
+          font-weight: 700; 
+          color: #FFFFFF; 
+        }
+        .simple-insight-card {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 12px;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .insight-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          padding-bottom: 12px;
+        }
+        .insight-header h3 {
+          font-size: 18px;
+          font-weight: 800;
+          margin: 0;
+          color: #FFFFFF;
+        }
+        .insight-body {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .insight-item {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .item-label {
+          font-size: 12px;
+          color: #A1A1AA;
+          text-transform: uppercase;
+          font-weight: 600;
+        }
+        .item-val {
+          font-size: 14px;
+          font-weight: 700;
+          color: #FFFFFF;
+        }
+        .insight-badge-row {
+          margin-top: 8px;
+        }
+        .trust-pill {
+          display: inline-block;
+          padding: 6px 12px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 700;
+        }
+        .trust-pill.high { background: rgba(0, 230, 118, 0.1); color: #00e676; border: 1px solid rgba(0, 230, 118, 0.2); }
+        .trust-pill.medium { background: rgba(116, 165, 255, 0.1); color: #74a5ff; border: 1px solid rgba(116, 165, 255, 0.2); }
+        .trust-pill.low { background: rgba(255, 195, 0, 0.1); color: #ffcb47; border: 1px solid rgba(255, 195, 0, 0.2); }
+        
+        .empty-state { 
+          color: #E5E7EB; 
+          font-size: 14px; 
+          padding: 32px 20px; 
+          border-radius: 12px; 
+          background: rgba(255, 255, 255, 0.02); 
+          border: 1px dashed rgba(255, 255, 255, 0.08);
+          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 120px;
+        }
+        
+        .disclosure-toggle-row {
+          text-align: center;
+          margin-top: 16px;
+          margin-bottom: 40px;
+        }
+        .view-analysis-button {
+          background: rgba(255, 255, 255, 0.06);
+          color: #FFFFFF;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          font-size: 15px;
+          padding: 14px 32px;
+        }
+        .view-analysis-button:hover {
+          background: rgba(255, 255, 255, 0.1);
+          transform: translateY(-1px);
+        }
+        
+        /* LEVEL 2 */
+        .level2-container {
+          margin-bottom: 40px;
+        }
+        .analysis-section {
+          background: rgba(255, 255, 255, 0.03); 
+          border: 1px solid rgba(255, 255, 255, 0.08); 
+          border-radius: 16px; 
+          padding: 32px;
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+        .analysis-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 20px;
+        }
+        .analysis-card {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 12px;
+          padding: 24px;
+          display: flex;
+          gap: 16px;
+          transition: all 0.2s ease;
+        }
+        .analysis-card:hover {
+          border-color: rgba(255, 255, 255, 0.12);
+          transform: translateY(-2px);
+        }
+        .card-header-icon {
+          font-size: 24px;
+        }
+        .analysis-card-content {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .analysis-card-content h4 {
+          margin: 0;
+          font-size: 14px;
+          text-transform: uppercase;
+          color: #A1A1AA;
+          font-weight: 700;
+          letter-spacing: 0.05em;
+        }
+        .card-main-val {
+          font-size: 18px;
+          font-weight: 800;
+          color: #FFFFFF;
+          line-height: 1.2;
+        }
+        .analysis-card-content p {
+          margin: 0;
+          font-size: 13px;
+          color: #E5E7EB;
+          line-height: 1.4;
+        }
+        .analysis-actions {
+          display: flex;
+          gap: 14px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          padding-bottom: 24px;
+          margin-top: 12px;
+        }
+        .advanced-toggle-row {
+          text-align: center;
+          margin-top: 12px;
+        }
+        .show-advanced-button {
+          background: transparent;
+          color: #A1A1AA;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .show-advanced-button:hover {
+          background: rgba(255, 255, 255, 0.04);
+          color: #FFFFFF;
+        }
+        
+        /* LEVEL 3 */
+        .level3-container {
+          margin-bottom: 40px;
+        }
+        .level3-grid {
+          display: grid;
+          grid-template-columns: 1.2fr 0.8fr;
+          gap: 24px;
+        }
+        .advanced-tabs-panel {
+          background: rgba(255, 255, 255, 0.03); 
+          border: 1px solid rgba(255, 255, 255, 0.08); 
+          border-radius: 16px; 
+          padding: 24px;
+        }
+        .advanced-accordion {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .accordion-item {
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.025);
+          overflow: hidden;
+        }
+        .accordion-summary {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 14px 16px;
+          color: #FFFFFF;
+          font-size: 14px;
+          list-style: none;
+          background: transparent;
+        }
+        .accordion-summary::-webkit-details-marker {
+          display: none;
+        }
+        .accordion-summary::after {
+          content: '+';
+          font-size: 18px;
+          color: #00e676;
+        }
+        .accordion-item[open] .accordion-summary::after {
+          content: '−';
+        }
+        .accordion-body {
+          padding: 0 16px 16px;
+          color: #E5E7EB;
+        }
+        .accordion-body h5 {
+          margin-top: 0;
+          margin-bottom: 12px;
+          font-size: 15px;
+          color: #FFFFFF;
+        }
+        .tab-pane h5 {
+          margin-top: 0;
+          margin-bottom: 16px;
+          font-size: 16px;
+          font-weight: 800;
+        }
+        .breakdown-metrics { 
+          display: flex; 
+          flex-direction: column; 
+          gap: 16px; 
+        }
+        .metric-row { 
+          display: flex; 
+          align-items: center; 
+          gap: 14px; 
+        }
+        .metric-label { 
+          width: 140px; 
+          font-size: 13px; 
+          color: #E5E7EB; 
+        }
+        .metric-bar-bg { 
+          flex: 1; 
+          height: 8px; 
+          background: rgba(255, 255, 255, 0.06); 
+          border-radius: 4px; 
+          overflow: hidden; 
+        }
+        .metric-bar-fill { 
+          height: 100%; 
+          background: #00e676; 
+          border-radius: 4px; 
+        }
+        .metric-val { 
+          width: 44px; 
+          font-size: 13px; 
+          font-weight: 700; 
+          text-align: right; 
+        }
+        .sources-container {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .provenance-chips { 
+          display: flex; 
+          gap: 8px; 
+          flex-wrap: wrap; 
+        }
+        .chip { 
+          padding: 8px 14px; 
+          border-radius: 6px; 
+          font-size: 13px; 
+          font-weight: 700;
+        }
+        .prov-chip { 
+          background: rgba(255, 255, 255, 0.04); 
+          border: 1px solid rgba(255, 255, 255, 0.08); 
+          color: #FFFFFF;
+        }
+        .trust-badge { 
+          padding: 16px; 
+          border-radius: 8px; 
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .trust-badge.high { background: rgba(0, 230, 118, 0.06); border: 1px solid rgba(0, 230, 118, 0.15); }
+        .trust-badge.medium { background: rgba(116, 165, 255, 0.06); border: 1px solid rgba(116, 165, 255, 0.15); }
+        .trust-badge.low { background: rgba(255, 195, 0, 0.06); border: 1px solid rgba(255, 195, 0, 0.15); }
+        .trust-badge.high .trust-label { color: #00e676; }
         .trust-badge.medium .trust-label { color: #74a5ff; }
         .trust-badge.low .trust-label { color: #ffcb47; }
-        .trust-note { font-size: 12px; font-weight: 500; }
-        .trust-badge.high .trust-note { color: #b9ffde; }
-        .trust-badge.medium .trust-note { color: #cbdfff; }
-        .trust-badge.low .trust-note { color: #ffeab3; }
-        .provenance-list { display: grid; gap: 8px; }
-        .prov-item { font-size: 13px; color: #d8ffd8; font-weight: 700; }
-        .insight-card.people, .insight-card.water, .insight-card.build, .insight-card.confidence { background: rgba(255,255,255,0.05); }
-        .card-title { font-size: 16px; font-weight: 800; margin-bottom: 12px; color: #ffffff; }
-        .card-note { font-size: 14px; line-height: 1.5; color: #e9ffe8; }
-        .confidence-block { display: flex; flex-direction: column; gap: 10px; }
-        .confidence-pill { align-self: flex-start; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
-        .confidence-pill.low { background: rgba(255,195,0,0.16); color: #ffd86b; }
-        .confidence-pill.medium { background: rgba(63,126,255,0.16); color: #b1d2ff; }
-        .confidence-pill.high { background: rgba(104,255,141,0.16); color: #b9ffde; }
-        .confidence-progress { width: 100%; height: 10px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
-        .confidence-fill { height: 100%; border-radius: 999px; transition: width 0.35s ease; }
-        .confidence-fill.low { background: #ffcb47; }
-        .confidence-fill.medium { background: #74a5ff; }
-        .confidence-fill.high { background: #5af2a6; box-shadow: 0 0 18px rgba(90,242,166,0.35); }
-        .confidence-label { font-size: 13px; color: rgba(233,255,232,0.8); }
-        .input-panel .tag-row { display: flex; gap: 10px; flex-wrap: wrap; }
-        .tag-chip { padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,0.06); color: #d7ffd7; font-size: 13px; }
-        .status-line { font-size: 13px; color: rgba(233,255,232,0.8); }
-        .modal-shell { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; padding: 24px 18px; z-index: 100; }
-        .modal-card { width: min(100%, 880px); max-height: calc(100vh - 60px); overflow-y: auto; background: #051b13; border-radius: 24px; padding: 26px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 40px 120px rgba(0,0,0,0.35); }
-        .modal-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
-        .modal-card-item { border-radius: 18px; padding: 20px; background: rgba(255,255,255,0.04); }
-        .modal-card-title { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
-        .modal-card-subtitle { font-size: 13px; color: #c8ffc4; line-height: 1.5; }
-        .locked-shell { margin: 24px 0 18px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 18px; }
-        .locked-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-        .locked-card { display: grid; gap: 10px; align-items: center; justify-items: center; padding: 18px; border-radius: 18px; background: rgba(255,255,255,0.04); }
-        .locked-icon { font-size: 24px; }
-        .locked-label { font-size: 14px; font-weight: 800; text-align: center; }
-        .unlock-copy { font-size: 14px; color: #c8ffc2; margin-bottom: 16px; }
-        .panel-hint { font-size: 13px; color: rgba(184, 255, 199, 0.9); margin-bottom: 12px; }
-        .preview-locked { position: relative; }
-        .preview-locked::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: 16px;
-          background: rgba(0, 0, 0, 0.12);
-          pointer-events: none;
-          backdrop-filter: blur(1px);
-          z-index: -1;
+        .trust-label { font-weight: 800; font-size: 14px; }
+        .trust-note { font-size: 12px; color: #E5E7EB; }
+        
+        .cluster-container {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
         }
-        .modal-actions { display: flex; gap: 12px; flex-wrap: wrap; }
-        .payment-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-        .payment-option { width: 100%; text-align: left; border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 18px; background: rgba(255,255,255,0.04); color: #e9ffe8; cursor: pointer; transition: border-color 180ms ease, transform 180ms ease, background 180ms ease; }
-        .payment-option.selected { border-color: #00e676; background: rgba(0,230,118,0.12); transform: translateY(-1px); }
-        .payment-option:hover { border-color: rgba(0,230,118,0.4); }
-        .option-title { font-size: 15px; font-weight: 800; margin-bottom: 8px; }
-        .option-price { font-size: 20px; font-weight: 900; margin-bottom: 8px; }
-        .option-description { font-size: 13px; color: rgba(233,255,232,0.78); line-height: 1.4; }
-        .payment-status { margin-top: 14px; font-size: 13px; color: #b1ffc7; }
-        .unlocked-shell { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 18px; background: rgba(0,255,118,0.06); border: 1px solid rgba(0,255,118,0.15); margin-bottom: 18px; }
-        .unlocked-shell .panel-title { margin-bottom: 0; }
-        .share-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 110; }
-        .share-card { background: #051b13; border: 1px solid rgba(0, 230, 118, 0.25); border-radius: 16px; padding: 20px; width: min(100%, 420px); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-        .share-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .share-title { font-size: 16px; font-weight: 800; color: #5af2a6; }
-        .share-desc { font-size: 13px; color: rgba(233,255,232,0.8); margin-bottom: 14px; }
-        .share-copy-row { display: flex; gap: 8px; margin-bottom: 16px; }
-        .share-link-input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); padding: 8px 12px; border-radius: 8px; color: #fff; font-size: 13px; outline: none; }
-        .share-social-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .social-btn { text-align: center; background: rgba(255,255,255,0.05); color: #fff; padding: 10px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px; transition: background 0.2s; }
-        .social-btn:hover { background: rgba(255,255,255,0.1); }
-        .social-btn.whatsapp { background: rgba(37, 211, 102, 0.15); color: #25d366; border: 1px solid rgba(37, 211, 102, 0.3); }
-        .social-btn.whatsapp:hover { background: rgba(37, 211, 102, 0.25); }
-        .report-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: flex-start; }
-        .activity-panel { min-height: 620px; }
-        .activity-stream { display: grid; gap: 12px; overflow-y: auto; max-height: 590px; padding-right: 4px; }
-        .activity-bubble { min-height: 58px; display: flex; align-items: center; padding: 16px 18px; border-radius: 16px; background: rgba(0,255,118,0.08); color: #e9ffe8; font-weight: 700; opacity: 0; transform: translateY(10px); animation: slide-in 0.32s ease-in-out forwards; }
-        .activity-bubble span { width: 100%; display: block; }
-        .empty-state { color: rgba(255,255,255,0.62); font-size: 14px; padding: 26px 18px; border-radius: 16px; background: rgba(255,255,255,0.03); }
-        .insight-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-        .insight-card { min-height: 150px; display: flex; flex-direction: column; justify-content: space-between; padding: 18px; border-radius: 16px; background: rgba(0,255,118,0.07); border: 1px solid rgba(255,255,255,0.1); }
-        .trust-banner { margin: 18px 0; position: relative; }
-        .trust-badge-large { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-radius: 14px; cursor: pointer; }
-        .trust-badge-large .trust-emoji { font-size: 34px; }
-        .trust-badge-large .trust-main { font-size: 22px; font-weight: 900; letter-spacing: 0.06em; }
-        .trust-badge-large .trust-sub { font-size: 14px; color: rgba(3,20,10,0.7); font-weight: 800; }
-        .trust-badge-large.high { background: linear-gradient(90deg, rgba(90,242,166,0.14), rgba(0,255,150,0.06)); box-shadow: 0 8px 30px rgba(90,242,166,0.18); border: 1px solid rgba(90,242,166,0.22); color: #05321a; }
-        .trust-badge-large.medium { background: linear-gradient(90deg, rgba(116,165,255,0.12), rgba(116,165,255,0.06)); box-shadow: 0 8px 30px rgba(116,165,255,0.12); border: 1px solid rgba(116,165,255,0.12); color: #07223b; }
-        .trust-badge-large.low { background: linear-gradient(90deg, rgba(255,195,0,0.12), rgba(255,195,0,0.05)); box-shadow: 0 8px 24px rgba(255,195,0,0.08); border: 1px solid rgba(255,195,0,0.12); color: #3a2a00; }
-        .tooltip { display: none; position: absolute; left: 0; top: 100%; margin-top: 10px; background: rgba(0,0,0,0.86); color: #fff; padding: 10px 12px; border-radius: 8px; width: 280px; font-size: 13px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }
-        .trust-banner:hover .tooltip, .tooltip.visible { display: block; }
-        .provenance-panel { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 12px; }
-        .provenance-chips { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-        .chip { padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,0.04); color: #dfffe0; font-weight: 800; }
-        .prov-chip { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
-        .trust-badge { padding: 12px; border-radius: 12px; display: inline-block; margin-top: 6px; width: 100%; }
-        .trust-badge.high { background: rgba(90,242,166,0.1); border: 1px solid rgba(90,242,166,0.3); }
-        .trust-badge.medium { background: rgba(116,165,255,0.08); border: 1px solid rgba(116,165,255,0.25); }
-        .trust-badge.low { background: rgba(255,195,0,0.08); border: 1px solid rgba(255,195,0,0.2); }
-        .trust-label { font-weight: 900; font-size: 14px; margin-bottom: 2px; }
-        .trust-badge.high .trust-label { color: #5af2a6; }
-        .trust-badge.medium .trust-label { color: #74a5ff; }
-        .trust-badge.low .trust-label { color: #ffcb47; }
-        .trust-note { font-size: 12px; font-weight: 500; }
-        .trust-badge.high .trust-note { color: #b9ffde; }
-        .trust-badge.medium .trust-note { color: #cbdfff; }
-        .trust-badge.low .trust-note { color: #ffeab3; }
-        .provenance-list { display: grid; gap: 8px; }
-        .prov-item { font-size: 13px; color: #d8ffd8; font-weight: 700; }
-        .insight-card.people, .insight-card.water, .insight-card.build, .insight-card.confidence { background: rgba(255,255,255,0.05); }
-        .card-title { font-size: 16px; font-weight: 800; margin-bottom: 12px; }
-        .card-note { font-size: 14px; line-height: 1.5; color: rgba(233,255,232,0.88); }
-        .confidence-block { display: flex; flex-direction: column; gap: 10px; }
-        .confidence-pill { align-self: flex-start; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
-        .confidence-pill.low { background: rgba(255,195,0,0.16); color: #ffd86b; }
-        .confidence-pill.medium { background: rgba(63,126,255,0.16); color: #b1d2ff; }
-        .confidence-pill.high { background: rgba(104,255,141,0.16); color: #b9ffde; }
-        .confidence-progress { width: 100%; height: 10px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
-        .confidence-fill { height: 100%; border-radius: 999px; transition: width 0.35s ease; }
-        .confidence-fill.low { background: #ffcb47; }
-        .confidence-fill.medium { background: #74a5ff; }
-        .confidence-fill.high { background: #5af2a6; box-shadow: 0 0 18px rgba(90,242,166,0.35); }
-        .confidence-label { font-size: 13px; color: rgba(233,255,232,0.8); }
-        .input-panel .tag-row { display: flex; gap: 10px; flex-wrap: wrap; }
-        .tag-chip { padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,0.06); color: #d7ffd7; font-size: 13px; }
-        .status-line { font-size: 13px; color: rgba(233,255,232,0.8); }
-        .modal-shell { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; padding: 24px 18px; z-index: 100; }
-        .modal-card { width: min(100%, 880px); max-height: calc(100vh - 60px); overflow-y: auto; background: #051b13; border-radius: 24px; padding: 26px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 40px 120px rgba(0,0,0,0.35); }
-        .modal-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
-        .modal-card-item { border-radius: 18px; padding: 20px; background: rgba(255,255,255,0.04); }
-        .modal-card-title { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
-        .modal-card-subtitle { font-size: 13px; color: #c8ffc4; line-height: 1.5; }
-        .locked-shell { margin: 24px 0 18px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 18px; }
-        .locked-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-        .locked-card { display: grid; gap: 10px; align-items: center; justify-items: center; padding: 18px; border-radius: 18px; background: rgba(255,255,255,0.04); }
-        .locked-icon { font-size: 24px; }
-        .locked-label { font-size: 14px; font-weight: 800; text-align: center; }
-        .unlock-copy { font-size: 14px; color: #c8ffc2; margin-bottom: 16px; }
-        .panel-hint { font-size: 13px; color: rgba(184, 255, 199, 0.9); margin-bottom: 12px; }
-        .preview-locked { position: relative; }
-        .preview-locked::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: 16px;
-          background: rgba(0, 0, 0, 0.12);
-          pointer-events: none;
-          backdrop-filter: blur(1px);
-          z-index: -1;
+        .cluster-controls { 
+          display: flex; 
+          align-items: center; 
+          gap: 10px; 
+          flex-wrap: wrap; 
         }
-        .modal-actions { display: flex; gap: 12px; flex-wrap: wrap; }
-        .payment-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-        .payment-option { width: 100%; text-align: left; border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 18px; background: rgba(255,255,255,0.04); color: #e9ffe8; cursor: pointer; transition: border-color 180ms ease, transform 180ms ease, background 180ms ease; }
-        .payment-option.selected { border-color: #00e676; background: rgba(0,230,118,0.12); transform: translateY(-1px); }
-        .payment-option:hover { border-color: rgba(0,230,118,0.4); }
-        .option-title { font-size: 15px; font-weight: 800; margin-bottom: 8px; }
-        .option-price { font-size: 20px; font-weight: 900; margin-bottom: 8px; }
-        .option-description { font-size: 13px; color: rgba(233,255,232,0.78); line-height: 1.4; }
-        .payment-status { margin-top: 14px; font-size: 13px; color: #b1ffc7; }
-        .unlocked-shell { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 18px; background: rgba(0,255,118,0.06); border: 1px solid rgba(0,255,118,0.15); margin-bottom: 18px; }
-        .unlocked-shell .panel-title { margin-bottom: 0; }
-        @keyframes pulse { from { transform: translateY(0px); } to { transform: translateY(-4px); } }
+        .cluster-label { 
+          font-size: 12px; 
+          color: #A1A1AA; 
+          font-weight: 700; 
+          text-transform: uppercase; 
+        }
+        .cluster-select-dropdown { 
+          flex: 1; 
+          min-width: 160px; 
+          background: rgba(255, 255, 255, 0.04); 
+          border: 1px solid rgba(255, 255, 255, 0.1); 
+          color: #FFFFFF; 
+          border-radius: 6px; 
+          padding: 8px 12px; 
+          font-size: 13px; 
+          outline: none;
+        }
+        .cluster-select-dropdown option { 
+          background: #0B0F0A; 
+        }
+        .cluster-detail-card { 
+          display: grid; 
+          gap: 8px; 
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 8px;
+          padding: 16px;
+        }
+        .cluster-detail-row { 
+          display: flex; 
+          justify-content: space-between; 
+          gap: 12px; 
+          font-size: 13px; 
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06); 
+          padding-bottom: 6px; 
+        }
+        .cluster-detail-row span {
+          color: #A1A1AA;
+        }
+        .cluster-detail-row strong { 
+          color: #FFFFFF; 
+        }
+        
+        .activity-panel { 
+          background: rgba(255, 255, 255, 0.03); 
+          border: 1px solid rgba(255, 255, 255, 0.08); 
+          border-radius: 16px; 
+          padding: 24px;
+          display: flex; 
+          flex-direction: column; 
+          gap: 16px;
+          max-height: 400px;
+        }
+        .activity-stream { 
+          display: flex; 
+          flex-direction: column;
+          gap: 10px; 
+          overflow-y: auto; 
+          padding-right: 4px; 
+        }
+        .activity-bubble { 
+          padding: 12px 16px; 
+          border-radius: 8px; 
+          background: rgba(255, 255, 255, 0.04); 
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          color: #FFFFFF; 
+          font-weight: 600; 
+          font-size: 13px;
+          opacity: 0; 
+          transform: translateY(10px); 
+          animation: slide-in 0.3s ease-out forwards; 
+        }
+        .activity-bubble span { 
+          width: 100%; 
+          display: block; 
+        }
+        
+        /* MODALS & OVERLAYS */
+        .modal-shell { 
+          position: fixed; 
+          inset: 0; 
+          background: rgba(0, 0, 0, 0.8); 
+          display: flex; 
+          justify-content: center; 
+          align-items: center; 
+          padding: 24px; 
+          z-index: 100; 
+          backdrop-filter: blur(4px);
+        }
+        .modal-card { 
+          width: min(100%, 800px); 
+          max-height: calc(100vh - 60px); 
+          overflow-y: auto; 
+          background: #0B0F0A; 
+          border-radius: 16px; 
+          padding: 32px; 
+          border: 1px solid rgba(255, 255, 255, 0.12); 
+          box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6); 
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          padding-bottom: 16px;
+        }
+        .modal-title {
+          font-size: 20px;
+          font-weight: 800;
+        }
+        .modal-brand-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .modal-logo {
+          width: 32px;
+          height: 32px;
+          border-radius: 6px;
+        }
+        .close-button {
+          background: transparent;
+          border: none;
+          color: #A1A1AA;
+          font-size: 28px;
+          cursor: pointer;
+          transition: color 0.2s;
+        }
+        .close-button:hover {
+          color: #FFFFFF;
+        }
+        .modal-grid { 
+          display: grid; 
+          grid-template-columns: repeat(3, 1fr); 
+          gap: 16px; 
+        }
+        .modal-card-item { 
+          border-radius: 8px; 
+          padding: 18px; 
+          background: rgba(255, 255, 255, 0.03); 
+          border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .modal-card-title { 
+          font-size: 12px; 
+          font-weight: 700; 
+          text-transform: uppercase;
+          color: #A1A1AA;
+          letter-spacing: 0.05em;
+        }
+        .modal-card-subtitle { 
+          font-size: 13px; 
+          color: #E5E7EB; 
+          line-height: 1.4; 
+        }
+        .modal-card-value { 
+          font-size: 22px; 
+          font-weight: 800; 
+          margin-top: 8px; 
+          margin-bottom: 4px; 
+          color: #00e676; 
+        }
+        .expanded-report { 
+          display: flex; 
+          flex-direction: column; 
+          gap: 20px; 
+          background: rgba(255, 255, 255, 0.02); 
+          padding: 24px; 
+          border-radius: 12px; 
+          border: 1px solid rgba(255, 255, 255, 0.08); 
+        }
+        .expanded-grid { 
+          display: grid; 
+          grid-template-columns: repeat(3, 1fr); 
+          gap: 16px; 
+        }
+        .expanded-card { 
+          padding: 16px; 
+          border-radius: 8px; 
+          background: rgba(255, 255, 255, 0.03); 
+          border: 1px solid rgba(255, 255, 255, 0.06); 
+        }
+        .expanded-card-title { 
+          font-size: 13px; 
+          font-weight: 700; 
+          text-transform: uppercase;
+          color: #A1A1AA;
+          margin-bottom: 8px; 
+        }
+        .expanded-card-text { 
+          font-size: 13px; 
+          color: #E5E7EB; 
+          line-height: 1.5; 
+        }
+        .cta-panel { 
+          display: flex; 
+          gap: 12px; 
+          flex-wrap: wrap; 
+          margin-top: 8px; 
+          align-items: center; 
+        }
+        .funding-success-badge { 
+          background: rgba(0, 230, 118, 0.1); 
+          color: #00e676; 
+          border: 1px solid rgba(0, 230, 118, 0.25); 
+          border-radius: 6px; 
+          padding: 10px 16px; 
+          font-size: 13px; 
+          font-weight: 700; 
+        }
+        .locked-shell { 
+          border-top: 1px solid rgba(255, 255, 255, 0.08); 
+          padding-top: 20px; 
+        }
+        .locked-grid { 
+          display: grid; 
+          grid-template-columns: repeat(3, 1fr); 
+          gap: 16px; 
+        }
+        .locked-card { 
+          display: flex; 
+          flex-direction: column;
+          align-items: center; 
+          justify-content: center; 
+          gap: 8px;
+          padding: 24px; 
+          border-radius: 8px; 
+          background: rgba(255, 255, 255, 0.03); 
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          color: #A1A1AA;
+        }
+        .locked-icon { 
+          font-size: 20px; 
+        }
+        .locked-label { 
+          font-size: 13px; 
+          font-weight: 700; 
+        }
+        .unlock-copy { 
+          font-size: 14px; 
+          color: #E5E7EB; 
+        }
+        .modal-actions { 
+          display: flex; 
+          gap: 12px; 
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
+          padding-top: 20px;
+        }
+        .payment-options { 
+          display: grid; 
+          grid-template-columns: repeat(2, 1fr); 
+          gap: 16px; 
+        }
+        .payment-option { 
+          text-align: left; 
+          border: 1px solid rgba(255, 255, 255, 0.12); 
+          border-radius: 8px; 
+          padding: 16px; 
+          background: rgba(255, 255, 255, 0.02); 
+          color: #FFFFFF; 
+          cursor: pointer; 
+          transition: all 0.2s ease; 
+        }
+        .payment-option.selected { 
+          border-color: #00e676; 
+          background: rgba(0, 230, 118, 0.08); 
+        }
+        .payment-option:hover:not(.selected) { 
+          border-color: rgba(255, 255, 255, 0.2); 
+        }
+        .option-title { 
+          font-size: 14px; 
+          font-weight: 700; 
+          margin-bottom: 4px; 
+        }
+        .option-price { 
+          font-size: 18px; 
+          font-weight: 800; 
+          margin-bottom: 4px; 
+          color: #00e676;
+        }
+        .option-description { 
+          font-size: 12px; 
+          color: #E5E7EB; 
+          line-height: 1.4; 
+        }
+        .payment-status { 
+          font-size: 13px; 
+          color: #00e676; 
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .payment-status.verifying {
+          color: #74a5ff;
+        }
+        .spinner-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #74a5ff;
+          animation: spin-pulse 1s infinite alternate;
+        }
+        @keyframes spin-pulse { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(1.3); opacity: 1; } }
+        
+        .share-overlay { 
+          position: fixed; 
+          inset: 0; 
+          background: rgba(0, 0, 0, 0.8); 
+          display: flex; 
+          justify-content: center; 
+          align-items: center; 
+          z-index: 110; 
+          backdrop-filter: blur(4px);
+        }
+        .share-card { 
+          background: #0B0F0A; 
+          border: 1px solid rgba(255, 255, 255, 0.12); 
+          border-radius: 12px; 
+          padding: 24px; 
+          width: min(100%, 420px); 
+          box-shadow: 0 20px 50px rgba(0,0,0,0.5); 
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .share-header { 
+          display: flex; 
+          justify-content: space-between; 
+          align-items: center; 
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          padding-bottom: 12px;
+        }
+        .share-title { 
+          font-size: 16px; 
+          font-weight: 800; 
+          color: #00e676; 
+        }
+        .share-desc { 
+          font-size: 13px; 
+          color: #E5E7EB; 
+        }
+        .share-copy-row { 
+          display: flex; 
+          gap: 8px; 
+        }
+        .share-link-input { 
+          flex: 1; 
+          background: rgba(0, 0, 0, 0.2); 
+          border: 1px solid rgba(255, 255, 255, 0.12); 
+          padding: 8px 12px; 
+          border-radius: 6px; 
+          color: #FFFFFF; 
+          font-size: 13px; 
+          outline: none; 
+        }
+        .share-social-grid { 
+          display: grid; 
+          grid-template-columns: 1fr 1fr; 
+          gap: 10px; 
+        }
+        .social-btn { 
+          text-align: center; 
+          background: rgba(255, 255, 255, 0.04); 
+          color: #FFFFFF; 
+          padding: 10px; 
+          border-radius: 6px; 
+          font-weight: 700; 
+          text-decoration: none; 
+          font-size: 13px; 
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          transition: background 0.2s; 
+        }
+        .social-btn:hover { 
+          background: rgba(255, 255, 255, 0.08); 
+        }
+        .social-btn.whatsapp { 
+          background: rgba(37, 211, 102, 0.1); 
+          color: #25d366; 
+          border: 1px solid rgba(37, 211, 102, 0.2); 
+        }
+        .social-btn.whatsapp:hover { 
+          background: rgba(37, 211, 102, 0.15); 
+        }
+
         @keyframes wave-pulse { 0%, 100% { transform: scaleY(0.7); opacity: 0.55; } 50% { transform: scaleY(1.7); opacity: 1; } }
         @keyframes wave-static { 0%, 100% { transform: scaleY(1); opacity: 0.42; } 50% { transform: scaleY(1.1); opacity: 0.6; } }
         @keyframes slide-in { to { transform: translateY(0); opacity: 1; } }
-        @media (max-width: 1220px) { .dashboard-grid { grid-template-columns: 1fr; } .report-strip, .modal-grid, .insight-grid, .locked-grid { grid-template-columns: 1fr; } .activity-panel { min-height: auto; } }
-        @media (max-width: 760px) { .top-bar, .input-group, .report-actions, .modal-actions { flex-direction: column; align-items: stretch; } .mic-button, .submit-button, .primary-button, .ghost-button { width: 100%; } .panel-title { font-size: 15px; } }
+
+        @media (max-width: 1024px) {
+          .level1-grid, .level3-grid {
+            grid-template-columns: 1fr;
+          }
+          .analysis-grid {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+        @media (max-width: 768px) {
+          .page-shell {
+            padding: 20px 14px 36px;
+          }
+          .top-bar {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 24px;
+          }
+          .product-title {
+            font-size: 20px;
+          }
+          .top-actions {
+            width: 100%;
+            flex-direction: column;
+          }
+          .top-actions > * {
+            width: 100%;
+          }
+          .hero-section {
+            text-align: left;
+            margin-bottom: 20px;
+          }
+          .hero-section h1 {
+            font-size: 26px;
+            line-height: 1.2;
+          }
+          .hero-section .subtitle {
+            font-size: 14px;
+            text-align: left;
+          }
+          .input-panel {
+            padding: 16px;
+          }
+          .input-group {
+            grid-template-columns: 1fr;
+            gap: 12px;
+          }
+          .submit-button, .mic-button {
+            width: 100%;
+            justify-content: center;
+          }
+          .tag-row {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .zone-select-container {
+            justify-content: space-between;
+          }
+          .map-panel, .simple-insight-panel, .analysis-section, .advanced-tabs-panel, .activity-panel {
+            padding: 16px;
+          }
+          .map-visualization {
+            min-height: 220px;
+          }
+          .map-overlay-card {
+            left: 8px;
+            right: 8px;
+            bottom: 8px;
+            padding: 8px 10px;
+          }
+          .overlay-body {
+            flex-direction: column;
+            gap: 4px;
+          }
+          .analysis-grid, .modal-grid, .locked-grid, .payment-options, .share-social-grid {
+            grid-template-columns: 1fr;
+          }
+          .analysis-actions, .modal-actions, .cta-panel {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .analysis-card, .modal-card-item, .expanded-card, .locked-card, .share-card, .modal-card {
+            width: 100%;
+          }
+          .view-analysis-button, .show-advanced-button {
+            width: 100%;
+          }
+          .share-copy-row {
+            flex-direction: column;
+          }
+          .share-link-input {
+            width: 100%;
+          }
+        }
+        @media (max-width: 640px) {
+          .analysis-grid, .modal-grid, .locked-grid, .payment-options {
+            grid-template-columns: 1fr;
+          }
+          .top-bar {
+            align-items: stretch;
+          }
+          .input-group {
+            grid-template-columns: 1fr;
+          }
+          .submit-button {
+            width: 100%;
+          }
+          .activity-bubble {
+            font-size: 12px;
+          }
+        }
       `}</style>
     </div>
   );

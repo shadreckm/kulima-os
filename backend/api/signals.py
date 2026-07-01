@@ -136,6 +136,82 @@ async def create_signal(request: SignalRequest, db: Session = Depends(get_db)):
         }
 
 
+@router.post("/signals")
+async def create_signal_alias(request: SignalRequest, db: Session = Depends(get_db)):
+    """Compatibility alias for clients that submit to /signals instead of /signal."""
+    return await create_signal(request, db)
+
+
+@router.get("/signals")
+async def list_signals(
+    zone: Optional[str] = Query(None),
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    activity_type: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Return stored signals for the requested zone or all zones when none is provided."""
+    try:
+        zone_upper = zone.upper() if zone else None
+        query = db.query(Signal)
+        if zone_upper:
+            query = query.filter(Signal.zone == zone_upper)
+
+        if activity_type:
+            query = query.filter(Signal.activity_type == activity_type.lower())
+
+        if date_from:
+            try:
+                from_date = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
+                query = query.filter(Signal.timestamp >= from_date)
+            except ValueError:
+                logger.warning(f"Invalid date_from format: {date_from}")
+
+        if date_to:
+            try:
+                to_date = datetime.fromisoformat(date_to.replace('Z', '+00:00'))
+                query = query.filter(Signal.timestamp <= to_date)
+            except ValueError:
+                logger.warning(f"Invalid date_to format: {date_to}")
+
+        total = query.count()
+        signals = query.order_by(Signal.timestamp.desc()).offset(offset).limit(limit).all()
+        signal_list = [{
+            "id": signal.id,
+            "zone": signal.zone,
+            "activity_type": signal.activity_type,
+            "sector": signal.sector,
+            "time_window": signal.time_window,
+            "timestamp": signal.timestamp.isoformat(),
+            "source": signal.source,
+            "created_at": signal.created_at.isoformat()
+        } for signal in signals]
+
+        return {
+            "status": "success",
+            "data": {
+                "zone": zone_upper or "ALL",
+                "signals": signal_list,
+                "pagination": {
+                    "total": total,
+                    "limit": limit,
+                    "offset": offset,
+                    "has_more": offset + limit < total
+                }
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error fetching signals: {str(e)}")
+        return {
+            "status": "error",
+            "data": {
+                "error": str(e)
+            }
+        }
+
+
 @router.get("/signals/{zone}")
 async def get_signals(
     zone: str,

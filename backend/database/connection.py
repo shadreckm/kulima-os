@@ -8,65 +8,66 @@ from pathlib import Path
 from backend.config import settings
 import logging
 import os
+import time
 
 logger = logging.getLogger(__name__)
 
-# Resolve DATABASE_URL — Render provides it without the dialect prefix sometimes
-_raw_url = settings.DATABASE_URL
 
-# Fallback: use SQLite if DATABASE_URL not set
-if not _raw_url:
-    _raw_url = "sqlite:///./kulima_os.db"
-    logger.info("DATABASE_URL not set, using SQLite for development")
+def _normalize_database_url(raw_url: str | None) -> str:
+    if not raw_url:
+        logger.info("DATABASE_URL not set, using SQLite for development")
+        return "sqlite:///./kulima_os.db"
 
-if _raw_url.startswith("postgres://"):
-    _raw_url = _raw_url.replace("postgres://", "postgresql://", 1)
+    url = raw_url.strip()
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    return url
 
-# Determine database type
-is_postgresql = "postgresql" in _raw_url
-is_sqlite = "sqlite" in _raw_url
 
-# SQLite-specific setup
-if is_sqlite:
-    db_path = Path(_raw_url.replace("sqlite:///", ""))
-    if db_path.parent != Path("."):
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-    logger.info(f"Using SQLite database: {db_path}")
+def _build_engine(url: str):
+    if url.startswith("sqlite"):
+        db_path = Path(url.replace("sqlite:///", ""))
+        if db_path.parent != Path("."):
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Using SQLite database: {db_path}")
+        return create_engine(url, echo=settings.DATABASE_ECHO, connect_args={"check_same_thread": False})
 
-# PostgreSQL-specific setup
-if is_postgresql:
-    logger.info("Using PostgreSQL database")
+    if url.startswith("postgresql"):
+        logger.info("Using PostgreSQL database")
+        return create_engine(
+            url,
+            echo=settings.DATABASE_ECHO,
+            pool_size=settings.DATABASE_POOL_SIZE,
+            max_overflow=settings.DATABASE_MAX_OVERFLOW,
+            pool_pre_ping=True,
+        )
 
-# Create database engine with appropriate configuration
-if is_sqlite:
-    engine = create_engine(
-        _raw_url,
-        echo=settings.DATABASE_ECHO,
-        connect_args={"check_same_thread": False}
-    )
-elif is_postgresql:
-    engine = create_engine(
-        _raw_url,
-        echo=settings.DATABASE_ECHO,
-        pool_size=settings.DATABASE_POOL_SIZE,
-        max_overflow=settings.DATABASE_MAX_OVERFLOW,
-        pool_pre_ping=True
-    )
-else:
-    raise ValueError(f"Unsupported database URL scheme: {_raw_url}")
+    raise ValueError(f"Unsupported database URL scheme: {url}")
 
-# Log the database engine being used (mask password for security)
-_display_url = str(engine.url)
-if "@" in _display_url:
-    # Mask password: postgresql://user:****@host:5432/db
-    parts = _display_url.split("@")
-    prefix = parts[0].split(":")
-    if len(prefix) >= 3:
-        _display_url = f"{prefix[0]}:{prefix[1]}:****@{parts[1]}"
-logger.info(f"OK DATABASE ENGINE: {_display_url}")
 
-# Create session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+def _create_session_factory(engine):
+    return sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def _safe_engine():
+    url = _normalize_database_url(os.getenv("DATABASE_URL") or settings.DATABASE_URL)
+    try:
+        engine = _build_engine(url)
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        logger.info("OK DATABASE ENGINE")
+        return engine
+    except Exception as exc:
+        logger.warning(f"Primary database connection failed: {exc}. Falling back to SQLite")
+        fallback_url = "sqlite:///./kulima_os_fallback.db"
+        fallback_engine = _build_engine(fallback_url)
+        with fallback_engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return fallback_engine
+
+
+engine = _safe_engine()
+SessionLocal = _create_session_factory(engine)
 
 
 def get_db() -> Session:
@@ -82,34 +83,22 @@ def get_db() -> Session:
 
 def init_db(reset: bool = False):
     """
-    Initialize database tables
-    
-    Args:
-        reset: If True, drop all tables and recreate them. Use with caution.
+    Initialize database tables with graceful retry and SQLite fallback.
     """
+    global engine, SessionLocal
     from backend.database.models import Base
-    
-    try:
-        if reset:
-            logger.warning("Dropping all database tables...")
-            Base.metadata.drop_all(bind=engine)
-        
-        logger.info("Creating database tables...")
-        Base.metadata.create_all(bind=engine, checkfirst=True)
 
-        # Ensure schema upgrades (add missing columns safely)
-        def _ensure_schema():
-            """Inspect table schema and add missing columns (non-destructive)."""
-            required_columns = {
-                'sector': "TEXT NOT NULL DEFAULT ''",
-                'original_text': "TEXT NOT NULL DEFAULT ''",
-                'source': "TEXT NOT NULL DEFAULT 'web'",
-                'user_id': "TEXT NOT NULL DEFAULT 'anonymous'",
-            }
-            try:
-                insp = inspect(engine)
-                if not insp.has_table('signals'):
-                    return
+    def _ensure_schema():
+        """Inspect table schema and add missing columns (non-destructive)."""
+        required_columns = {
+            'sector': "TEXT NOT NULL DEFAULT ''",
+            'original_text': "TEXT NOT NULL DEFAULT ''",
+            'source': "TEXT NOT NULL DEFAULT 'web'",
+            'user_id': "TEXT NOT NULL DEFAULT 'anonymous'",
+        }
+        try:
+            insp = inspect(engine)
+            if insp.has_table('signals'):
                 existing = {c['name'] for c in insp.get_columns('signals')}
                 with engine.begin() as conn:
                     for col_name, col_def in required_columns.items():
@@ -117,17 +106,55 @@ def init_db(reset: bool = False):
                             logger.info(f"'{col_name}' column missing from 'signals' table; adding it now")
                             conn.execute(text(f"ALTER TABLE signals ADD COLUMN {col_name} {col_def}"))
                             logger.info(f"Added '{col_name}' column to 'signals' table")
-            except Exception as e:
-                logger.error(f"Failed to ensure schema: {e}")
 
+            if insp.has_table('prospectuses'):
+                existing_pros = {c['name'] for c in insp.get_columns('prospectuses')}
+                if 'user_id' not in existing_pros:
+                    logger.info("'user_id' column missing from 'prospectuses' table; adding it now")
+                    with engine.begin() as conn:
+                        conn.execute(text("ALTER TABLE prospectuses ADD COLUMN user_id TEXT NOT NULL DEFAULT 'anonymous'"))
+                    logger.info("Added 'user_id' column to 'prospectuses' table")
+        except Exception as e:
+            logger.error(f"Failed to ensure schema: {e}")
+
+    max_retries = 3
+    retry_delay = 2
+    last_error = None
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            logger.info(f"Database initialization attempt {attempt}/{max_retries}...")
+            if reset:
+                logger.warning("Dropping all database tables...")
+                Base.metadata.drop_all(bind=engine)
+
+            logger.info("Creating database tables...")
+            Base.metadata.create_all(bind=engine, checkfirst=True)
+            _ensure_schema()
+
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            logger.info("OK DATABASE CONNECTION: verified")
+            logger.info("Database initialization complete")
+            return
+        except Exception as e:
+            last_error = e
+            logger.warning(f"Database initialization attempt {attempt} failed: {e}")
+            if attempt < max_retries:
+                time.sleep(retry_delay)
+
+    logger.error(f"Failed to connect to primary database after {max_retries} attempts: {last_error}")
+    fallback_url = "sqlite:///./kulima_os_fallback.db"
+    logger.warning(f"Falling back to local SQLite database: {fallback_url}")
+
+    try:
+        engine = _build_engine(fallback_url)
+        SessionLocal = _create_session_factory(engine)
+        logger.info("Initializing fallback SQLite database...")
+        Base.metadata.create_all(bind=engine, checkfirst=True)
         _ensure_schema()
-
-        # Verify database connectivity
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        logger.info("OK DATABASE CONNECTION: verified")
-
-        logger.info("Database initialization complete")
-    except Exception as e:
-        logger.error(f"Database initialization failed: {str(e)}")
-        raise
+        logger.info("Fallback SQLite database initialized successfully")
+    except Exception as fallback_err:
+        logger.critical(f"SQLite fallback database initialization failed: {fallback_err}")

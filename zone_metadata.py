@@ -58,7 +58,34 @@ ZONE_METADATA: Dict[str, Dict] = {
         "population_density_category": "medium",
         "grid_edge_exposure": True,
         "description": "Informal settlement with no grid access, critical infrastructure gap, essential services at risk"
-    }
+    },
+    # Pilot zone: Mzuzu, Northern Malawi — peri-urban city with partial grid coverage
+    "mzuzu": {
+        "settlement_type": "peri_urban",
+        "infrastructure_status": "underserved",
+        "grid_connection": "partial",
+        "distance_to_substation_km": 8,
+        "transformer_capacity_kva": 75,
+        "service_reliability": "intermittent",
+        "essential_services_present": ["clinic", "school", "water_system"],
+        "productive_activities": ["irrigation", "milling", "cold_storage"],
+        "population_density_category": "medium",
+        "grid_edge_exposure": True,
+        "description": "Peri-urban zone in northern Malawi with partial grid access and growing productive demand"
+    },
+    "MZUZU": {
+        "settlement_type": "peri_urban",
+        "infrastructure_status": "underserved",
+        "grid_connection": "partial",
+        "distance_to_substation_km": 8,
+        "transformer_capacity_kva": 75,
+        "service_reliability": "intermittent",
+        "essential_services_present": ["clinic", "school", "water_system"],
+        "productive_activities": ["irrigation", "milling", "cold_storage"],
+        "population_density_category": "medium",
+        "grid_edge_exposure": True,
+        "description": "Peri-urban zone in northern Malawi with partial grid access and growing productive demand"
+    },
 }
 
 
@@ -76,12 +103,18 @@ def get_zone_metadata(zone: str) -> Dict:
     Returns:
         Zone metadata dictionary
     """
-    return ZONE_METADATA.get(zone, {
+    # Normalize zone key: try as-is first, then uppercase, then lowercase
+    zone_key = zone
+    if zone_key not in ZONE_METADATA:
+        zone_key = zone.upper()
+    if zone_key not in ZONE_METADATA:
+        zone_key = zone.lower()
+    return ZONE_METADATA.get(zone_key, {
         "settlement_type": "unknown",
         "infrastructure_status": "unknown",
         "grid_connection": "unknown",
-        "distance_to_substation_km": None,
-        "transformer_capacity_kva": None,
+        "distance_to_substation_km": 0,
+        "transformer_capacity_kva": 0,
         "service_reliability": "unknown",
         "essential_services_present": [],
         "productive_activities": [],

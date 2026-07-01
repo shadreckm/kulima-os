@@ -1,9 +1,12 @@
-/**
- * API Service for Kulima OS Frontend
- * Handles fetching, error handling, and retries.
- */
-
-const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '/api/v1').replace(/\/$/, '');
+let rawUrl = process.env.NEXT_PUBLIC_API_URL || '';
+if (rawUrl) {
+  if (!rawUrl.includes('/api/v1')) {
+    rawUrl = `${rawUrl}/api/v1`;
+  }
+} else {
+  rawUrl = '/api/v1';
+}
+const BASE_URL = rawUrl.replace(/\/$/, '');
 
 /**
  * Helper to perform fetch with retries
@@ -11,13 +14,22 @@ const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '/api/v1').replace(/\/$/, '
 async function fetchWithRetry(url, options = {}, retries = 3, backoff = 300) {
   try {
     const response = await fetch(url, options);
+    const contentType = response.headers.get('content-type') || '';
     if (!response.ok) {
       if (response.status >= 500 && retries > 0) {
         throw new Error(`Server error: ${response.status}`);
       }
+      if (contentType.includes('application/json')) {
+        return await response.json();
+      }
+      const text = await response.text();
+      return { message: text || 'Request failed' };
+    }
+    if (contentType.includes('application/json')) {
       return await response.json();
     }
-    return await response.json();
+    const text = await response.text();
+    return text ? { message: text } : {};
   } catch (error) {
     if (retries > 0) {
       await new Promise(resolve => setTimeout(resolve, backoff));

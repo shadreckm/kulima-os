@@ -20,6 +20,7 @@ class Signal(Base):
     timestamp = Column(DateTime, nullable=False, index=True)
     source = Column(String, nullable=False)
     original_text = Column(Text, nullable=False)
+    user_id = Column(String, nullable=False, default="anonymous")
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -46,6 +47,7 @@ class Prospectus(Base):
     pdf_url = Column(String, nullable=False)
     json_url = Column(String, nullable=False)
     meta_data = Column(Text, nullable=False)  # JSON string
+    user_id = Column(String, nullable=False, default="anonymous")
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

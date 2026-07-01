@@ -238,17 +238,30 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
 
         # Only generate a prospectus when bankable coordination patterns exist
         bankable_patterns = []
+        preliminary_patterns = []
         for pattern in confidence_results:
             conf = pattern.get('confidence') or pattern.get('confidence_class')
-            # Normalize: accept 'high' or 'medium'/'moderate' as bankable
-            if conf in ('high', 'medium', 'moderate') and pattern.get('trust', {}).get('action_allowed') is True:
+            action_allowed = pattern.get('trust', {}).get('action_allowed') is True
+            # Fully bankable: high/moderate confidence AND action allowed
+            if conf in ('high', 'medium', 'moderate') and action_allowed:
                 bankable_patterns.append(pattern)
+            # Preliminary: any confidence with data (even if trust not yet sufficient)
+            elif conf in ('high', 'medium', 'moderate', 'low'):
+                preliminary_patterns.append(pattern)
+
+        is_preliminary = False
+        if not bankable_patterns and preliminary_patterns:
+            # Use preliminary patterns but mark the report clearly
+            bankable_patterns = preliminary_patterns
+            is_preliminary = True
+            logger.info(f"Using {len(bankable_patterns)} preliminary patterns for zone {zone} — trust threshold not yet met")
 
         if not bankable_patterns:
-            logger.warning(f"No bankable coordination patterns found for zone {zone}")
+            logger.warning(f"No coordination patterns found for zone {zone}")
             return {
                 "success": False,
                 "status": "error",
+                "report": None,
                 "message": "Insufficient coordination activity to generate a report."
             }
 
@@ -259,6 +272,7 @@ async def generate_prospectus(request: ProspectusRequest, db: Session = Depends(
             "region": zone_key,
             "period": "7-cycle window (1 week)",
             "is_sample": False,
+            "is_preliminary": is_preliminary,
             "signal_source_counts": provenance_summary
         }
         

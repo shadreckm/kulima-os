@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from backend.database.connection import get_db, engine
+from backend.database.connection import get_db
+from backend.database import connection
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ async def health_check(db: Session = Depends(get_db)):
         db_status = f"error: {str(e)}"
 
     # Get DB engine URL and mask user/password for safety
-    _display_url = str(engine.url)
+    _display_url = str(connection.engine.url)
     if "@" in _display_url:
         parts = _display_url.split("@")
         prefix = parts[0].split(":")
