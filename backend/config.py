@@ -6,7 +6,8 @@ import secrets
 import logging
 from pathlib import Path
 from pydantic_settings import BaseSettings
-from typing import Optional
+from pydantic import field_validator
+from typing import Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +98,20 @@ class Settings(BaseSettings):
     
     # CORS
     # TODO(security): Replace wildcard with specific frontend origins in production
-    CORS_ORIGINS: list = ["*"]
+    # Accepts either a comma-separated string or a list
+    CORS_ORIGINS: Union[str, list[str]] = ["*"]
+    
+    @field_validator('CORS_ORIGINS', mode='before')
+    @classmethod
+    def parse_cors_origins(cls, v):
+        """Parse CORS_ORIGINS from environment variable (string or list)"""
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            # Handle comma-separated string
+            origins = [origin.strip() for origin in v.split(",") if origin.strip()]
+            return origins if origins else ["*"]
+        return ["*"]
     
     # File Storage
     ARTIFACTS_DIR: str = "./artifacts"
