@@ -15,12 +15,31 @@ logger = logging.getLogger(__name__)
 
 def _normalize_database_url(raw_url: str | None) -> str:
     if not raw_url:
-        logger.info("DATABASE_URL not set, using SQLite for development")
+        logger.warning("DATABASE_URL not set, using SQLite for development")
         return "sqlite:///./kulima_os.db"
 
     url = raw_url.strip()
+    
+    # Log the database type being configured (masked for security)
+    if url.startswith("postgresql") or url.startswith("postgres"):
+        masked_url = url
+        if "@" in masked_url:
+            parts = masked_url.split("@")
+            prefix_parts = parts[0].split(":")
+            if len(prefix_parts) >= 3:
+                masked_url = f"{prefix_parts[0]}:{prefix_parts[1]}:****@{parts[1]}"
+        logger.info(f"Configuring PostgreSQL connection: {masked_url}")
+    else:
+        logger.info(f"Configuring database connection: {url}")
+    
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
+        logger.info("Normalized postgres:// to postgresql://")
+    
+    if url.startswith("postgresql://") and "sslmode=" not in url:
+        url = f"{url}?sslmode=require"
+        logger.info("Added sslmode=require to PostgreSQL URL")
+    
     return url
 
 
@@ -51,19 +70,51 @@ def _create_session_factory(engine):
 
 def _safe_engine():
     url = _normalize_database_url(os.getenv("DATABASE_URL") or settings.DATABASE_URL)
-    try:
-        engine = _build_engine(url)
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        logger.info("OK DATABASE ENGINE")
-        return engine
-    except Exception as exc:
-        logger.warning(f"Primary database connection failed: {exc}. Falling back to SQLite")
+    max_retries = 3
+    last_error = None
+
+    if url.startswith("postgresql"):
+        logger.info(f"Attempting PostgreSQL connection (max {max_retries} retries)...")
+        for attempt in range(1, max_retries + 1):
+            try:
+                engine = _build_engine(url)
+                with engine.connect() as conn:
+                    result = conn.execute(text("SELECT version()"))
+                    version = result.scalar()
+                    logger.info(f"✅ PostgreSQL connection successful: {version}")
+                logger.info("✅ OK DATABASE ENGINE: PostgreSQL")
+                return engine
+            except Exception as exc:
+                last_error = exc
+                logger.error(f"❌ PostgreSQL connection attempt {attempt}/{max_retries} failed: {exc}")
+                if attempt < max_retries:
+                    logger.info(f"Retrying in 2 seconds...")
+                    time.sleep(2)
+        
+        # All PostgreSQL attempts failed
+        logger.error(f"❌ PostgreSQL connection failed after {max_retries} attempts")
+        logger.error(f"Last error: {last_error}")
+        logger.warning("⚠️  FALLING BACK TO SQLITE - This should NOT happen in production!")
+        logger.warning("⚠️  Check DATABASE_URL environment variable and network connectivity")
+        
         fallback_url = "sqlite:///./kulima_os_fallback.db"
         fallback_engine = _build_engine(fallback_url)
         with fallback_engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+        logger.warning(f"⚠️  Using SQLite fallback: {fallback_url}")
         return fallback_engine
+    else:
+        # SQLite path
+        try:
+            engine = _build_engine(url)
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            logger.info("✅ OK DATABASE ENGINE: SQLite")
+            return engine
+        except Exception as exc:
+            last_error = exc
+            logger.error(f"❌ SQLite connection failed: {exc}")
+            raise
 
 
 engine = _safe_engine()

@@ -4,10 +4,52 @@ Configuration for Kulima OS Backend API
 import os
 import secrets
 import logging
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+
+
+def _load_env_file() -> None:
+    """Load environment variables from the repository .env file when present."""
+    env_path = ROOT_DIR / ".env"
+    if not env_path.exists():
+        logger.warning(f".env file not found at {env_path}")
+        return
+
+    loaded_vars = []
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        os.environ.setdefault(key, value)
+        loaded_vars.append(key)
+    
+    if loaded_vars:
+        logger.info(f"Loaded environment variables from .env: {', '.join(loaded_vars)}")
+    
+    # Explicitly log DATABASE_URL status (masked for security)
+    db_url = os.environ.get("DATABASE_URL")
+    if db_url:
+        if "postgresql" in db_url or "postgres" in db_url:
+            # Mask password in log
+            masked_url = db_url
+            if "@" in masked_url:
+                parts = masked_url.split("@")
+                prefix_parts = parts[0].split(":")
+                if len(prefix_parts) >= 3:
+                    masked_url = f"{prefix_parts[0]}:{prefix_parts[1]}:****@{parts[1]}"
+            logger.info(f"DATABASE_URL loaded: {masked_url}")
+        else:
+            logger.info(f"DATABASE_URL loaded: {db_url}")
+    else:
+        logger.warning("DATABASE_URL not found in environment - will use SQLite fallback")
 
 
 def _resolve_secret_key() -> str:
@@ -25,6 +67,10 @@ def _resolve_secret_key() -> str:
         "This instance will be isolated — sessions will not persist across restarts."
     )
     return secrets.token_hex(32)
+
+
+# CRITICAL: Load .env file BEFORE Settings class is instantiated
+_load_env_file()
 
 
 class Settings(BaseSettings):
@@ -72,7 +118,7 @@ class Settings(BaseSettings):
     CACHE_TTL_PATTERNS: int = 900  # 15 minutes
     
     class Config:
-        env_file = ".env"
+        env_file = str(ROOT_DIR / ".env")
         case_sensitive = True
 
 

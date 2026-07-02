@@ -26,6 +26,38 @@ async def lifespan(app: FastAPI):
     # Initialize database
     try:
         init_db()
+        
+        # Verify database type at startup
+        from backend.database import connection
+        from sqlalchemy import text
+        
+        engine_url = str(connection.engine.url)
+        if "postgresql" in engine_url or "postgres" in engine_url:
+            try:
+                with connection.engine.connect() as conn:
+                    result = conn.execute(text("SELECT version()"))
+                    version = result.scalar()
+                    logging.info(f"✅ PostgreSQL connection verified: {version}")
+                    
+                    # Extract host for confirmation
+                    if "@" in engine_url:
+                        host_part = engine_url.split("@")[1]
+                        db_host = host_part.split("/")[0].split(":")[0]
+                        logging.info(f"✅ Connected to PostgreSQL host: {db_host}")
+            except Exception as e:
+                logging.error(f"❌ PostgreSQL verification failed: {e}")
+        elif "sqlite" in engine_url:
+            logging.warning("⚠️  USING SQLITE DATABASE")
+            logging.warning("⚠️  This should only happen in development or if PostgreSQL connection failed")
+            logging.warning(f"⚠️  SQLite file: {engine_url}")
+            
+            # Check if DATABASE_URL was set but SQLite is being used (indicates fallback)
+            import os
+            if os.getenv("DATABASE_URL") or settings.DATABASE_URL:
+                logging.error("❌ DATABASE_URL is set but SQLite is being used!")
+                logging.error("❌ This indicates PostgreSQL connection failed and fallback was triggered")
+                logging.error("❌ Check DATABASE_URL value and network connectivity to database")
+        
     except Exception as e:
         logging.critical(f"Lifespan database initialization critical failure: {e}")
     
