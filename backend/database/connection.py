@@ -59,6 +59,10 @@ def _build_engine(url: str):
             pool_size=settings.DATABASE_POOL_SIZE,
             max_overflow=settings.DATABASE_MAX_OVERFLOW,
             pool_pre_ping=True,
+            connect_args={
+                "connect_timeout": 10,  # 10 second timeout
+                "options": "-c statement_timeout=30000"  # 30 second query timeout
+            }
         )
 
     raise ValueError(f"Unsupported database URL scheme: {url}")
