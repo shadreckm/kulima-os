@@ -99,6 +99,9 @@ export default function Home() {
   };
 
   useEffect(() => {
+    // Only run in browser, not during build
+    if (typeof window === 'undefined') return;
+    
     fetchSummary();
     fetchRecentSignals();
     const interval = setInterval(fetchRecentSignals, 7000);

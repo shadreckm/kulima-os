@@ -86,6 +86,11 @@ export async function generateProspectusReport(zone) {
  * Download zone prospectus PDF via blob fetch (correct endpoint, no duplicate /api/v1).
  */
 export async function downloadProspectusPdf(zone, mode = 'investor') {
+  // Guard against SSR
+  if (typeof window === 'undefined') {
+    throw new Error('PDF download only available in browser');
+  }
+  
   const params = new URLSearchParams({ mode });
   const url = `${BASE_URL}/prospectus/${zone.toLowerCase()}/pdf?${params}`;
   const response = await fetch(url);
