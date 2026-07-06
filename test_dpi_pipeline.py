@@ -26,7 +26,7 @@ def test_dpi_pipeline():
     
     print("\n2. LAYER 3 - CLUSTER ENGINE (LUMOZA)")
     print(f"   Activity: {data['cluster']['activity_concentration']}")
-    print(f"   Participants Lower Bound: {data['cluster']['estimated_participants_lower_bound']}")
+    print(f"   Participants Lower Bound: {data['cluster']['estimated_participants']['lower_bound']}")
     print(f"   Stability Index: {data['cluster']['stability_index']}")
     
     print("\n3. LAYER 4 - GAP ENGINE (LUNDAI)")
@@ -36,10 +36,10 @@ def test_dpi_pipeline():
     
     print("\n4. LAYER 5 - FINANCIAL ENGINE")
     print(f"   Project Name: {data['financial']['project_name']}")
-    print(f"   CAPEX: ${data['financial']['capex_estimate_usd']}")
-    print(f"   OPEX/mo: ${data['financial']['opex_monthly_usd']}")
-    print(f"   Revenue/mo: ${data['financial']['revenue_projection_monthly_usd']}")
-    print(f"   Payback (Months): {data['financial']['payback_period_months']}")
+    print(f"   CAPEX: ${data['financial']['scenarios']['base_case']['capex_estimate_usd']}")
+    print(f"   OPEX/mo: ${data['financial']['scenarios']['base_case']['opex_monthly_usd']}")
+    print(f"   Revenue/mo: ${data['financial']['scenarios']['base_case']['revenue_projection_monthly_usd']}")
+    print(f"   Payback (Months): {data['financial']['scenarios']['base_case']['payback_period_months']}")
     
     print("\n5. LAYER 6 - RISK & COMPLIANCE ENGINE")
     print(f"   Risk Score: {data['risk']['risk_score']}")

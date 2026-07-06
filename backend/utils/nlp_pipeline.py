@@ -11,8 +11,11 @@ FILLER_WORDS = frozenset({
 })
 
 SPELL_CORRECTIONS = {
+    # English typo corrections
     "irrigaton": "irrigation",
     "irrigatng": "irrigation",
+    "irigation": "irrigation",
+    "irrigatin": "irrigation",
     "wtering": "watering",
     "farmng": "farming",
     "miling": "milling",
@@ -23,34 +26,79 @@ SPELL_CORRECTIONS = {
     "blantyr": "blantyre",
     "maize": "maize",
     "tomatoe": "tomato",
+    "ekwendni": "ekwendeni",
+    "mhuj": "mhuju",
+    "bweng": "bwengu",
+    "rumphe": "rumphi",
+    "euthni": "euthini",
+    # Chichewa / Tumbuka phonetic variants
+    "kuthirira": "irrigation",   # Chichewa: to irrigate
+    "kuyeretsa": "irrigation",   # Chichewa: to water/clean (plants)
+    "chigayo": "milling",        # Chichewa: grinding mill
+    "mgayo": "milling",          # Chichewa: milling/grinding
+    "kugaya": "milling",         # Chichewa: to grind/mill
+    "msika": "trading",          # Chichewa: market
+    "msitulo": "trading",        # Chichewa: shop/trading
+    "kugulitsa": "trading",      # Chichewa: to sell
+    "kugula": "trading",         # Chichewa: to buy
+    "dimba": "irrigation",       # Chichewa: winter garden (dimba irrigation)
+    "madimba": "irrigation",     # Chichewa: plural of dimba (winter gardens)
+    "nkhokwe": "storage",        # Chichewa: granary/storage hut
+    "kusunga": "storage",        # Chichewa: to store/keep
+    "mpunga": "farming",         # Chichewa: rice farming
+    "ulimi": "farming",          # Chichewa: farming/agriculture
+    "kulima": "farming",         # Chichewa: to farm (root of Kulima OS name)
+    "mbewu": "farming",          # Chichewa: seed (seed request = farming context)
+    "fetelaiza": "farming",      # Chichewa phonetic: fertilizer
 }
 
 INTENT_PATTERNS: List[Tuple[str, List[str], float]] = [
     ("irrigation", [
+        # English terms
         "irrigation", "irrigat", "watering", "water crops", "watering crops",
         "pump water", "sprinkler", "drip", "irrigate", "need water", "water shortage",
+        # Chichewa / local terms
+        "kuthirira", "kuyeretsa", "dimba", "madimba", "water pump", "pump broken",
+        "water dry", "river dry", "borehole dry", "bwino madzi",
     ], 0.85),
     ("farming", [
+        # English terms
         "farming", "farm", "planting", "plant crops", "growing", "harvest",
         "cultivate", "agriculture", "field work", "grow maize",
+        # Chichewa / local terms
+        "kulima", "ulimi", "mpunga", "mbewu", "seed", "fertilizer", "fetelaiza",
+        "no seed", "no maize seed", "seed shortage", "input shortage",
+        "npk", "urea", "lime", "pesticide",
     ], 0.8),
     ("trading", [
+        # English terms
         "trading", "selling", "sell maize", "selling maize", "market", "buying",
         "shop", "vendor", "trade", "sold", "market day",
+        # Chichewa / local terms
+        "msika", "msitulo", "kugulitsa", "kugula", "stock out", "stockout",
+        "no stock", "out of stock", "supply", "depot",
     ], 0.85),
     ("milling", [
-        "milling", "mill", "grinding", "grind maize", "processing grain",
+        # English terms
+        "milling", "mill", "grinding", "grind maize", "processing grain", "grain mill",
+        "posho mill", "hammer mill", "queue", "long queue",
+        # Chichewa / local terms
+        "chigayo", "mgayo", "kugaya", "chigayo chathu", "chigayo chawonongeka",
     ], 0.85),
     ("storage", [
+        # English terms
         "storage", "warehouse", "cold storage", "cold chain", "store crops",
-        "store maize", "silo",
+        "store maize", "silo", "post harvest", "post-harvest",
+        # Chichewa / local terms
+        "nkhokwe", "kusunga", "granary", "storage hut",
     ], 0.85),
     ("welding", [
-        "welding", "weld", "metalwork", "forge", "fabrication",
+        "welding", "weld", "metalwork", "forge", "fabrication", "repair",
+        "broken pump", "chigayo chawonongeka",
     ], 0.8),
     ("energy", [
         "energy", "power", "electricity", "solar", "grid", "blackout",
-        "load shedding", "generator",
+        "load shedding", "generator", "no power", "power cut", "outage",
     ], 0.75),
 ]
 
@@ -61,16 +109,38 @@ RESOURCE_KEYWORDS = {
 }
 
 TIME_KEYWORDS = {
-    "morning": ["morning", "am", "early", "dawn", "6am", "7am"],
-    "afternoon": ["afternoon", "pm", "midday", "noon", "lunch"],
-    "evening": ["evening", "night", "late", "tonight", "dusk"],
+    "morning": [
+        "morning", "am", "early", "dawn", "6am", "7am", "8am",
+        # Chichewa: m'mawa = morning
+        "m'mawa", "mmawa", "sunrise", "cockcrow",
+    ],
+    "afternoon": [
+        "afternoon", "pm", "midday", "noon", "lunch",
+        # Chichewa: masana = afternoon/midday
+        "masana", "midday",
+    ],
+    "evening": [
+        "evening", "night", "late", "tonight", "dusk",
+        # Chichewa: madzulo = evening
+        "madzulo", "sunset", "after work",
+    ],
 }
 
 ZONE_KEYWORDS = {
+    # Northern Malawi pilot zones (primary)
+    "ekwendeni": "EKWENDENI",
+    "mhuju": "MHUJU",
+    "bwengu": "BWENGU",
+    "rumphi": "RUMPHI",
+    "euthini": "EUTHINI",
     "mzuzu": "MZUZU",
+    "mzimba": "MZIMBA",
+    # Broader Malawi zones (secondary)
     "lilongwe": "LILONGWE",
     "blantyre": "BLANTYRE",
     "zomba": "ZOMBA",
+    "kasungu": "KASUNGU",
+    "karonga": "KARONGA",
 }
 
 MIN_TEXT_LENGTH = 8

@@ -2,7 +2,7 @@
 
 ## Verified Coordination Patterns for Infrastructure Planning
 
-**Generated:** 2026-06-08T06:41:48.694899Z  
+**Generated:** 2026-07-06T06:33:58.555491Z  
 **Region:** Pilot Region  
 **Period:** 7-cycle window  
 **System:** KULIMA OS Pilot v0.2 (LUMOZA + LUNDAI + Critical Load Protection)
@@ -16,8 +16,8 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - **Total Coordination Patterns:** 10
 - **High Confidence Patterns:** 2
 - **Moderate Confidence Patterns:** 1
-- **Zones with Coordinated Demand:** zone_b, zone_c, zone_a
-- **Productive Activities Detected:** clinic, school, emergency_services, milling, cold_storage, water_system, irrigation
+- **Zones with Coordinated Demand:** zone_a, zone_c, zone_b
+- **Productive Activities Detected:** cold_storage, clinic, emergency_services, school, milling, water_system, irrigation
 
 ---
 
@@ -161,7 +161,7 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 **Reserved Capacity:** 40%
 
-**Rationale:** High essential service density. 30% capacity reserved for critical loads. Increased by 10% due to critical infrastructure gaps in 2 zone(s) with essential services.
+**Rationale:** High essential service density. 30% capacity reserved for critical loads. Increased by 10% due to critical infrastructure gaps in 3 zone(s) with essential services.
 
 **Enforcement:** Reserved capacity is excluded from optimization, monetization, and load-shedding logic
 
@@ -292,7 +292,7 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 **Essential Services Protected:**
 - Count: 5
-- Types: clinic, school, emergency_services, water_system
+- Types: clinic, emergency_services, school, water_system
 - Capacity Reserved: 30-40% of total capacity (non-negotiable)
 - Impact: Ensures clinics, schools, water systems remain operational under all scenarios
 
@@ -417,7 +417,7 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 ## Infrastructure Planning Guidance
 
-**High Priority Zones:** zone_b, zone_a
+**High Priority Zones:** zone_a, zone_b
 
 **Moderate Priority Zones:** zone_a
 

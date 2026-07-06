@@ -20,44 +20,146 @@ InfrastructureStatus = Literal["critical_gap", "underserved", "partial_coverage"
 
 # Zone metadata for pilot demonstration
 ZONE_METADATA: Dict[str, Dict] = {
-    "zone_a": {
+    # Ekwendeni EPA — Northern Malawi, Mzimba District
+    # High maize milling and dimba (winter garden) irrigation demand.
+    # Serves ~12,000 smallholder farming households across the sub-zone.
+    "ekwendeni": {
         "settlement_type": "rural_agricultural",
         "infrastructure_status": "underserved",
         "grid_connection": "partial",
-        "distance_to_substation_km": 15,
+        "distance_to_substation_km": 18,
         "transformer_capacity_kva": 50,
         "service_reliability": "intermittent",
-        "essential_services_present": ["clinic", "school"],
-        "productive_activities": ["irrigation", "milling"],
-        "population_density_category": "low",  # Not precise count, just category
+        "essential_services_present": ["clinic", "school", "water_system"],
+        "productive_activities": ["milling", "irrigation", "trading"],
+        "population_density_category": "low",
         "grid_edge_exposure": True,
-        "description": "Rural agricultural zone with partial grid access, frequent outages, essential services present but vulnerable"
+        "description": "Rural EPA in Mzimba District with strong chigayo (maize milling) demand and active dimba irrigation cooperatives. Partial grid with frequent outages during peak farming periods."
     },
-    "zone_b": {
+    "EKWENDENI": {
+        "settlement_type": "rural_agricultural",
+        "infrastructure_status": "underserved",
+        "grid_connection": "partial",
+        "distance_to_substation_km": 18,
+        "transformer_capacity_kva": 50,
+        "service_reliability": "intermittent",
+        "essential_services_present": ["clinic", "school", "water_system"],
+        "productive_activities": ["milling", "irrigation", "trading"],
+        "population_density_category": "low",
+        "grid_edge_exposure": True,
+        "description": "Rural EPA in Mzimba District with strong chigayo (maize milling) demand and active dimba irrigation cooperatives. Partial grid with frequent outages during peak farming periods."
+    },
+    # Mhuju EPA — Northern Malawi, Mzimba District
+    # Emerging cold storage and market coordination hub for tobacco and legumes.
+    "mhuju": {
         "settlement_type": "peri_urban",
         "infrastructure_status": "partial_coverage",
         "grid_connection": "connected",
-        "distance_to_substation_km": 5,
+        "distance_to_substation_km": 6,
         "transformer_capacity_kva": 100,
         "service_reliability": "moderate",
-        "essential_services_present": ["water_system", "emergency_services"],
-        "productive_activities": ["cold_storage", "welding"],
+        "essential_services_present": ["water_system", "emergency_services", "school"],
+        "productive_activities": ["cold_storage", "trading", "storage"],
         "population_density_category": "medium",
         "grid_edge_exposure": False,
-        "description": "Peri-urban zone with grid connection but insufficient capacity for productive use expansion"
+        "description": "Peri-urban EPA near Mzuzu with grid connectivity but insufficient transformer capacity for productive cold storage expansion. Main market node for surrounding EPAs."
     },
-    "zone_c": {
+    "MHUJU": {
+        "settlement_type": "peri_urban",
+        "infrastructure_status": "partial_coverage",
+        "grid_connection": "connected",
+        "distance_to_substation_km": 6,
+        "transformer_capacity_kva": 100,
+        "service_reliability": "moderate",
+        "essential_services_present": ["water_system", "emergency_services", "school"],
+        "productive_activities": ["cold_storage", "trading", "storage"],
+        "population_density_category": "medium",
+        "grid_edge_exposure": False,
+        "description": "Peri-urban EPA near Mzuzu with grid connectivity but insufficient transformer capacity for productive cold storage expansion. Main market node for surrounding EPAs."
+    },
+    # Bwengu EPA — Rumphi District, Northern Malawi
+    # Off-grid, high irrigation demand from Rukuru River basin cooperatives.
+    "bwengu": {
         "settlement_type": "informal_settlement",
         "infrastructure_status": "critical_gap",
         "grid_connection": "none",
-        "distance_to_substation_km": 25,
+        "distance_to_substation_km": 28,
         "transformer_capacity_kva": 0,
         "service_reliability": "none",
         "essential_services_present": ["water_system"],
-        "productive_activities": ["milling", "irrigation"],
+        "productive_activities": ["irrigation", "milling", "farming"],
         "population_density_category": "medium",
         "grid_edge_exposure": True,
-        "description": "Informal settlement with no grid access, critical infrastructure gap, essential services at risk"
+        "description": "Off-grid EPA in Rumphi District with critical infrastructure gap. Smallholder cooperatives rely on manual irrigation from Rukuru River. Highest priority for solar pump deployment."
+    },
+    "BWENGU": {
+        "settlement_type": "informal_settlement",
+        "infrastructure_status": "critical_gap",
+        "grid_connection": "none",
+        "distance_to_substation_km": 28,
+        "transformer_capacity_kva": 0,
+        "service_reliability": "none",
+        "essential_services_present": ["water_system"],
+        "productive_activities": ["irrigation", "milling", "farming"],
+        "population_density_category": "medium",
+        "grid_edge_exposure": True,
+        "description": "Off-grid EPA in Rumphi District with critical infrastructure gap. Smallholder cooperatives rely on manual irrigation from Rukuru River. Highest priority for solar pump deployment."
+    },
+    # Rumphi EPA — Rumphi District, Northern Malawi
+    # District headquarters area. Growing agro-dealer network and seed stockout patterns.
+    "rumphi": {
+        "settlement_type": "peri_urban",
+        "infrastructure_status": "partial_coverage",
+        "grid_connection": "connected",
+        "distance_to_substation_km": 4,
+        "transformer_capacity_kva": 150,
+        "service_reliability": "moderate",
+        "essential_services_present": ["clinic", "school", "water_system", "emergency_services"],
+        "productive_activities": ["trading", "storage", "milling"],
+        "population_density_category": "medium",
+        "grid_edge_exposure": False,
+        "description": "District headquarters EPA with reliable grid connectivity. Serves as input supply hub for surrounding rural EPAs. Recurring NPK fertilizer and seed stockout patterns during planting season."
+    },
+    "RUMPHI": {
+        "settlement_type": "peri_urban",
+        "infrastructure_status": "partial_coverage",
+        "grid_connection": "connected",
+        "distance_to_substation_km": 4,
+        "transformer_capacity_kva": 150,
+        "service_reliability": "moderate",
+        "essential_services_present": ["clinic", "school", "water_system", "emergency_services"],
+        "productive_activities": ["trading", "storage", "milling"],
+        "population_density_category": "medium",
+        "grid_edge_exposure": False,
+        "description": "District headquarters EPA with reliable grid connectivity. Serves as input supply hub for surrounding rural EPAs. Recurring NPK fertilizer and seed stockout patterns during planting season."
+    },
+    # Euthini EPA — Mzimba District, Northern Malawi
+    # Emerging irrigation activity. High seasonal maize production with poor post-harvest storage.
+    "euthini": {
+        "settlement_type": "rural_agricultural",
+        "infrastructure_status": "underserved",
+        "grid_connection": "partial",
+        "distance_to_substation_km": 20,
+        "transformer_capacity_kva": 30,
+        "service_reliability": "intermittent",
+        "essential_services_present": ["school", "water_system"],
+        "productive_activities": ["farming", "irrigation", "milling"],
+        "population_density_category": "low",
+        "grid_edge_exposure": True,
+        "description": "Rural EPA in Mzimba District with seasonal maize farming patterns. Poor post-harvest storage leading to significant post-harvest losses. Emerging dimba irrigation demand emerging from women-led cooperatives."
+    },
+    "EUTHINI": {
+        "settlement_type": "rural_agricultural",
+        "infrastructure_status": "underserved",
+        "grid_connection": "partial",
+        "distance_to_substation_km": 20,
+        "transformer_capacity_kva": 30,
+        "service_reliability": "intermittent",
+        "essential_services_present": ["school", "water_system"],
+        "productive_activities": ["farming", "irrigation", "milling"],
+        "population_density_category": "low",
+        "grid_edge_exposure": True,
+        "description": "Rural EPA in Mzimba District with seasonal maize farming patterns. Poor post-harvest storage leading to significant post-harvest losses. Emerging dimba irrigation demand emerging from women-led cooperatives."
     },
     # Pilot zone: Mzuzu, Northern Malawi — peri-urban city with partial grid coverage
     "mzuzu": {

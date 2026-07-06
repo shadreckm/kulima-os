@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
 """
-KULIMA OS Pilot Demonstration
-==============================
+KULIMA OS — Community Demand Intelligence Pilot
+=================================================
 
-End-to-end demonstration of "Trust-as-a-Service" using coordination intelligence.
+End-to-end demonstration of verified coordination intelligence for
+agricultural infrastructure planning in Northern Malawi.
 
 This pilot demonstrates how KULIMA OS:
 1. Processes identity-free coordination signals
-2. Identifies stable demand patterns through LUMOZA
-3. Evaluates coordination confidence through ZENTARI
-4. Generates a Demand-Signal Prospectus for infrastructure planning
+2. Identifies stable demand patterns (LUMOZA coordination engine)
+3. Evaluates trust and signal validity (ZENTARI trust engine)
+4. Generates a Demand-Signal Prospectus for infrastructure planners
 
 SYSTEM INVARIANTS (enforced throughout):
 - Zero-PII: No personal identifiers anywhere in the system
 - Temporal Moat: All processing in time-batched windows (no real-time)
 - Coordination > Identity: System reasons over collective patterns only
 - Semantic Guard: No surveillance, credit scoring, or individual profiling
-
-This is a proof-of-concept for the IBM Bob Dev Day Hackathon.
 """
 
 from pilot_signals import generate_pilot_signals, print_signal_summary
@@ -145,15 +144,15 @@ def main():
     print("- Including ethics compliance documentation")
     print("- Saving as JSON and Markdown")
     
-    from policy import compute_planning_reserve
-
     generator = ProspectusGenerator()
     planning_reserve = compute_planning_reserve(len(confidence_results))
     prospectus = generator.generate_prospectus(
         confidence_results,
         metadata={
-            "region": "Pilot Region - Rural Energy Planning",
-            "period": "7-cycle window (Week 1)"
+            "region": "Mzimba & Rumphi Districts, Northern Malawi",
+            "period": "Coordination Window: Week 1 (Planting Season)",
+            "pilot_epa_focus": "Ekwendeni, Mhuju, Bwengu, Rumphi, Euthini",
+            "data_collection_method": "SMS / WhatsApp field coordination signals",
         },
         planning_reserve=planning_reserve,
     )

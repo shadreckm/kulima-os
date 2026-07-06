@@ -2,7 +2,7 @@
 
 ## Verified Coordination Patterns for Infrastructure Planning
 
-**Generated:** 2026-06-08T06:46:49.148980Z  
+**Generated:** 2026-07-06T06:00:58.706976Z  
 **Region:** Pilot Region - Rural Energy Planning  
 **Period:** 7-cycle window (Week 1)  
 **System:** KULIMA OS Pilot v0.2 (LUMOZA + LUNDAI + Critical Load Protection)
@@ -16,8 +16,8 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 - **Total Coordination Patterns:** 10
 - **High Confidence Patterns:** 2
 - **Moderate Confidence Patterns:** 1
-- **Zones with Coordinated Demand:** zone_a, zone_b, zone_c
-- **Productive Activities Detected:** emergency_services, clinic, cold_storage, irrigation, milling, school, water_system
+- **Zones with Coordinated Demand:** zone_a, zone_c, zone_b
+- **Productive Activities Detected:** irrigation, emergency_services, clinic, water_system, cold_storage, milling, school
 
 ---
 
@@ -292,7 +292,7 @@ Detected 10 stable coordination patterns across 3 zones, with 2 patterns showing
 
 **Essential Services Protected:**
 - Count: 5
-- Types: emergency_services, school, clinic, water_system
+- Types: school, water_system, emergency_services, clinic
 - Capacity Reserved: 30-40% of total capacity (non-negotiable)
 - Impact: Ensures clinics, schools, water systems remain operational under all scenarios
 

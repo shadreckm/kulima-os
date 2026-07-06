@@ -6,19 +6,73 @@ from typing import Dict, List, Optional, Tuple
 import re
 
 ZONE_SUBZONES: Dict[str, List[str]] = {
-    "MZUZU": ["Chibanja", "Katoto", "Luwinga", "Zolozolo"],
-    "LILONGWE": ["Area 25", "Area 18", "Kawale", "Mtandire"],
-    "BLANTYRE": ["Ndirande", "Chilomoni", "Limbe", "Soche"],
-    "ZOMBA": ["Mulunguzi", "Chinamwali", "Domasi"],
+    # Northern Malawi Pilot EPAs
+    "EKWENDENI": ["Ekwendeni Mission", "Embangweni", "Eswazini", "Emfeni"],
+    "MHUJU":     ["Mhuju Centre", "Mzenga", "Hora Mouth", "Kapita"],
+    "BWENGU":    ["Bwengu Centre", "Kazomba", "Mtwalo", "Rufunsa"],
+    "RUMPHI":    ["Rumphi Boma", "Katowo", "Hewe", "Ruarwe"],
+    "EUTHINI":   ["Euthini Centre", "Elangeni", "Engalaweni", "Etchelo"],
+    "MZIMBA":    ["Mzimba Boma", "Mzimba West", "Mzimba North", "Mzimba South"],
+    # Primary pilot hub
+    "MZUZU":     ["Chibanja", "Katoto", "Luwinga", "Zolozolo", "Jombo"],
+    # Secondary zones
+    "LILONGWE":  ["Area 25", "Area 18", "Kawale", "Mtandire"],
+    "BLANTYRE":  ["Ndirande", "Chilomoni", "Limbe", "Soche"],
+    "ZOMBA":     ["Mulunguzi", "Chinamwali", "Domasi"],
 }
 
 # Aliases map extracted text → canonical whitelist name
 ZONE_ALIASES: Dict[str, Dict[str, str]] = {
+    "EKWENDENI": {
+        "ekwendeni mission": "Ekwendeni Mission",
+        "ekwendeni": "Ekwendeni Mission",
+        "embangweni": "Embangweni",
+        "eswazini": "Eswazini",
+        "emfeni": "Emfeni",
+    },
+    "MHUJU": {
+        "mhuju centre": "Mhuju Centre",
+        "mhuju center": "Mhuju Centre",
+        "mhuju": "Mhuju Centre",
+        "mzenga": "Mzenga",
+        "hora mouth": "Hora Mouth",
+        "kapita": "Kapita",
+    },
+    "BWENGU": {
+        "bwengu centre": "Bwengu Centre",
+        "bwengu center": "Bwengu Centre",
+        "bwengu": "Bwengu Centre",
+        "kazomba": "Kazomba",
+        "mtwalo": "Mtwalo",
+        "rufunsa": "Rufunsa",
+    },
+    "RUMPHI": {
+        "rumphi boma": "Rumphi Boma",
+        "rumphi": "Rumphi Boma",
+        "katowo": "Katowo",
+        "hewe": "Hewe",
+        "ruarwe": "Ruarwe",
+    },
+    "EUTHINI": {
+        "euthini centre": "Euthini Centre",
+        "euthini": "Euthini Centre",
+        "elangeni": "Elangeni",
+        "engalaweni": "Engalaweni",
+        "etchelo": "Etchelo",
+    },
+    "MZIMBA": {
+        "mzimba boma": "Mzimba Boma",
+        "mzimba west": "Mzimba West",
+        "mzimba north": "Mzimba North",
+        "mzimba south": "Mzimba South",
+        "mzimba": "Mzimba Boma",
+    },
     "MZUZU": {
         "chibanja": "Chibanja",
         "katoto": "Katoto",
         "luwinga": "Luwinga",
         "zolozolo": "Zolozolo",
+        "jombo": "Jombo",
     },
     "LILONGWE": {
         "area 25": "Area 25",
