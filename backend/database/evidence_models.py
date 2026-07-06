@@ -138,7 +138,7 @@ class EvidenceAuditLog(Base):
     user_agent = Column(String, nullable=True)
     
     # Metadata
-    metadata = Column(JSON, nullable=True)
+    audit_metadata = Column(JSON, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
