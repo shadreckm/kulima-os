@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchSummaryData, fetchRecentSignalsData, submitActivitySignal, generateProspectusReport, downloadProspectusPdf, BASE_URL } from '../lib/api';
 
-const ZONES = ['MZUZU', 'LILONGWE', 'BLANTYRE', 'ZOMBA'];
+const ZONES = ['EKWENDENI', 'MHUJU', 'BWENGU', 'RUMPHI', 'EUTHINI', 'MZUZU', 'MZIMBA'];
 const CLIENT_MODES = [
   { key: 'investor', label: 'Investor' },
   { key: 'government', label: 'Government' },
@@ -37,7 +37,10 @@ const buildTrustLabel = (summary) => {
 
 const parseTags = (text) => {
   const normalized = (text || '').toLowerCase();
-  const zoneMatch = normalized.match(/\b(mzuzu|lilongwe|blantyre|zomba)\b/);
+  // Match all pilot EPAs and major cities
+  const zoneMatch = normalized.match(
+    /\b(ekwendeni|mhuju|bwengu|rumphi|euthini|mzuzu|mzimba|lilongwe|blantyre|zomba)\b/
+  );
   const activityMatch = ACTIVITY_TERMS.find((term) => normalized.includes(term));
   const resourceMatch = RESOURCE_TERMS.find((term) => normalized.includes(term));
   return {
