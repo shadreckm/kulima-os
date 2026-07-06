@@ -131,7 +131,7 @@ async def upload_photo_evidence(
             file_hash=file_hash,
             trust_score=trust_score,
             trust_classification=classification,
-            metadata=metadata,
+            evidence_metadata=metadata,
             captured_at=datetime.fromisoformat(metadata['captured_at']) if 'captured_at' in metadata else None,
             source_type=source_type,
             status='active'
@@ -299,7 +299,7 @@ async def upload_document_evidence(
             file_hash=file_hash,
             trust_score=trust_score,
             trust_classification=classification,
-            metadata=metadata,
+            evidence_metadata=metadata,
             captured_at=datetime.fromisoformat(metadata['captured_at']) if 'captured_at' in metadata else None,
             source_type=source_type,
             status='active'
@@ -412,7 +412,7 @@ async def get_evidence(evidence_id: str, db: Session = Depends(get_db)):
         "file_size": evidence.file_size,
         "trust_score": evidence.trust_score,
         "trust_classification": evidence.trust_classification,
-        "metadata": evidence.metadata,
+        "metadata": evidence.evidence_metadata,
         "source_type": evidence.source_type,
         "captured_at": evidence.captured_at.isoformat() if evidence.captured_at else None,
         "uploaded_at": evidence.uploaded_at.isoformat(),

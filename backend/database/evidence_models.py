@@ -41,7 +41,7 @@ class Evidence(Base):
     trust_classification = Column(String, nullable=True)  # very_high, high, moderate, low
     
     # Metadata (JSON) - EXIF, timestamps, etc. (PII-filtered)
-    metadata = Column(JSON, nullable=True)
+    evidence_metadata = Column(JSON, nullable=True)
     
     # Temporal context (batched, not precise)
     captured_at = Column(DateTime, nullable=True)  # When evidence was captured (if available)
