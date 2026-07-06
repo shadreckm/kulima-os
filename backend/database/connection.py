@@ -142,6 +142,7 @@ def init_db(reset: bool = False):
     """
     global engine, SessionLocal
     from backend.database.models import Base
+    from backend.database.evidence_models import Evidence, EvidenceTrustFactors, EvidenceLink, EvidenceAuditLog
 
     def _ensure_schema():
         """Inspect table schema and add missing columns (non-destructive)."""

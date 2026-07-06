@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 import logging
 
 from backend.config import settings
-from backend.api import signals, summaries, prospectus, health, twilio, system, visualization, recent_signals, zones, reports
+from backend.api import signals, summaries, prospectus, health, twilio, system, visualization, recent_signals, zones, reports, evidence
 from backend.middleware.logging import setup_logging, RequestIDMiddleware, StructuredLoggingMiddleware
 from backend.middleware.rate_limiter import rate_limit_middleware
 from backend.middleware.error_handler import setup_error_handlers
@@ -104,6 +104,7 @@ app.include_router(reports.router, prefix=settings.API_PREFIX, tags=["Reports"])
 app.include_router(summaries.router, prefix=settings.API_PREFIX, tags=["Summaries"])
 app.include_router(zones.router, prefix=settings.API_PREFIX, tags=["Zones"])
 app.include_router(prospectus.router, prefix=settings.API_PREFIX, tags=["Prospectus"])
+app.include_router(evidence.router, prefix=settings.API_PREFIX, tags=["Evidence"])
 app.include_router(twilio.router, prefix=settings.API_PREFIX, tags=["Twilio"])
 app.include_router(system.router, prefix=settings.API_PREFIX, tags=["System"])
 app.include_router(visualization.router, prefix=settings.API_PREFIX, tags=["Visualization"])
