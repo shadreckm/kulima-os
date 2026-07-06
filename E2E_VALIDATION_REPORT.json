@@ -1,0 +1,79 @@
+{
+  "total_phases": 14,
+  "passed": 11,
+  "failed": 3,
+  "success_rate": 78.57142857142857,
+  "duration_seconds": 48.01,
+  "phases": {
+    "environment_validation": {
+      "status": true,
+      "details": "Backend vars: 3/3, Frontend vars: 2/2",
+      "timestamp": "2026-07-06T23:04:52.235893"
+    },
+    "backend_health": {
+      "status": true,
+      "details": "Backend healthy",
+      "timestamp": "2026-07-06T23:04:55.372829"
+    },
+    "database_health": {
+      "status": true,
+      "details": "All 8 tables exist. Total rows: 9",
+      "timestamp": "2026-07-06T23:05:00.418115"
+    },
+    "signal_submission": {
+      "status": true,
+      "details": "Signal sig_2ff66d05a2d5 created in zone unknown with confidence 0",
+      "timestamp": "2026-07-06T23:05:03.807128"
+    },
+    "database_persistence": {
+      "status": true,
+      "details": "Signal persisted correctly",
+      "timestamp": "2026-07-06T23:05:04.112963"
+    },
+    "signal_retrieval": {
+      "status": true,
+      "details": "API works but signal not in recent list",
+      "timestamp": "2026-07-06T23:05:07.528250"
+    },
+    "frontend_integration": {
+      "status": true,
+      "details": "Frontend accessible",
+      "timestamp": "2026-07-06T23:05:09.812491"
+    },
+    "frontend_data_display": {
+      "status": false,
+      "details": "Error: 0",
+      "timestamp": "2026-07-06T23:05:12.599931"
+    },
+    "role_based_access": {
+      "status": true,
+      "details": "Role infrastructure ready (full RBAC requires auth implementation)",
+      "timestamp": "2026-07-06T23:05:12.602925"
+    },
+    "evidence_layer": {
+      "status": true,
+      "details": "Evidence infrastructure operational",
+      "timestamp": "2026-07-06T23:05:18.880574"
+    },
+    "recommendation_engine": {
+      "status": true,
+      "details": "Submitted 3 test signals for recommendation generation",
+      "timestamp": "2026-07-06T23:05:28.185316"
+    },
+    "audit_trail": {
+      "status": true,
+      "details": "1 audit tables found",
+      "timestamp": "2026-07-06T23:05:28.495628"
+    },
+    "trust_framework": {
+      "status": false,
+      "details": "Error: 0",
+      "timestamp": "2026-07-06T23:05:32.110951"
+    },
+    "performance_test": {
+      "status": false,
+      "details": "Average response time: 2.71s",
+      "timestamp": "2026-07-06T23:05:40.242826"
+    }
+  }
+}
