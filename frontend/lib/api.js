@@ -1,111 +1,178 @@
-let rawUrl = process.env.NEXT_PUBLIC_API_URL || '';
-if (rawUrl) {
-  if (!rawUrl.includes('/api/v1')) {
-    rawUrl = `${rawUrl}/api/v1`;
-  }
-} else {
-  rawUrl = '/api/v1';
-}
-const BASE_URL = rawUrl.replace(/\/$/, '');
+// KULIMA OS - API Client
+// Connects frontend to Render backend with proper error handling
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://kulima-os-backend.onrender.com';
+const API_BASE = `${BACKEND_URL}/api/v1`;
 
 /**
- * Helper to perform fetch with retries
+ * Enhanced fetch with detailed error logging
  */
-async function fetchWithRetry(url, options = {}, retries = 3, backoff = 300) {
+async function apiFetch(endpoint, options = {}) {
+  const url = `${API_BASE}${endpoint}`;
+  
   try {
-    const response = await fetch(url, options);
+    console.log(`[API] ${options.method || 'GET'} ${url}`);
+    
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
     const contentType = response.headers.get('content-type') || '';
-    if (!response.ok) {
-      if (response.status >= 500 && retries > 0) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-      if (contentType.includes('application/json')) {
-        return await response.json();
-      }
-      const text = await response.text();
-      return { message: text || 'Request failed' };
-    }
+    let data;
+
     if (contentType.includes('application/json')) {
-      return await response.json();
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      data = { message: text };
     }
-    const text = await response.text();
-    return text ? { message: text } : {};
+
+    if (!response.ok) {
+      console.error(`[API ERROR] ${response.status}:`, data);
+      throw new Error(data.message || data.error || `HTTP ${response.status}`);
+    }
+
+    console.log(`[API SUCCESS] ${url}:`, data);
+    return data;
+
   } catch (error) {
-    if (retries > 0) {
-      await new Promise(resolve => setTimeout(resolve, backoff));
-      return fetchWithRetry(url, options, retries - 1, backoff * 2);
-    }
+    console.error(`[API FAILED] ${url}:`, error.message);
     throw error;
   }
 }
 
-export async function fetchSummaryData(zone, mode = 'investor') {
+/**
+ * Submit coordination signal (Farmer)
+ */
+export async function submitSignal(zone, activityType, timeWindow, rawText = '') {
   try {
-    const params = new URLSearchParams({ mode });
-    const data = await fetchWithRetry(`${BASE_URL}/summary/${zone}?${params}`, { cache: 'no-store' });
-    if (data?.status === 'success') {
-      return data.data;
+    const payload = {
+      zone: zone.toUpperCase(),
+      activity_type: activityType,
+      time_window: timeWindow,
+      raw_text: rawText || `${activityType} in ${zone} during ${timeWindow}`,
+      source: 'web',
+      timestamp: new Date().toISOString()
+    };
+
+    const result = await apiFetch('/signal', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    // Backend returns: { success: true, status: "success", data: { signal_id, message } }
+    if (result.success && result.data) {
+      return {
+        success: true,
+        signalId: result.data.signal_id,
+        message: result.data.message || 'Signal submitted successfully'
+      };
     }
-    return null;
+
+    throw new Error(result.message || 'Signal submission failed');
+
   } catch (error) {
-    console.error("Failed to fetch summary:", error);
-    return null;
+    console.error('[submitSignal] Error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to submit signal'
+    };
   }
-}
-
-export async function fetchRecentSignalsData() {
-  try {
-    const data = await fetchWithRetry(`${BASE_URL}/recent-signals`, { cache: 'no-store' });
-    if (data?.success && Array.isArray(data.data)) {
-      return data.data.slice(0, 12);
-    }
-    return [];
-  } catch (error) {
-    console.error("Failed to fetch recent signals:", error);
-    return [];
-  }
-}
-
-export async function submitActivitySignal(zone, raw_text, source = 'web') {
-  return fetchWithRetry(`${BASE_URL}/signal`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ zone, raw_text, source })
-  });
-}
-
-export async function generateProspectusReport(zone) {
-  return fetchWithRetry(`${BASE_URL}/generate-prospectus`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ zone, preview: true })
-  });
 }
 
 /**
- * Download zone prospectus PDF via blob fetch (correct endpoint, no duplicate /api/v1).
+ * Get recent signals (Program Manager)
  */
-export async function downloadProspectusPdf(zone, mode = 'investor') {
-  // Guard against SSR
-  if (typeof window === 'undefined') {
-    throw new Error('PDF download only available in browser');
+export async function getRecentSignals(limit = 50) {
+  try {
+    const result = await apiFetch(`/recent-signals?limit=${limit}`);
+    
+    // Backend returns: { success: true, status: "success", data: [...signals] }
+    if (result.success && Array.isArray(result.data)) {
+      return result.data;
+    }
+
+    console.warn('[getRecentSignals] Unexpected response format:', result);
+    return [];
+
+  } catch (error) {
+    console.error('[getRecentSignals] Error:', error);
+    return [];
   }
-  
-  const params = new URLSearchParams({ mode });
-  const url = `${BASE_URL}/prospectus/${zone.toLowerCase()}/pdf?${params}`;
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`PDF download failed: ${response.status}`);
-  }
-  const blob = await response.blob();
-  const blobUrl = window.URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = blobUrl;
-  anchor.download = `kulima_prospectus_${zone.toLowerCase()}.pdf`;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.URL.revokeObjectURL(blobUrl);
 }
 
-export { BASE_URL };
+/**
+ * Get signals for specific zone (Program Manager)
+ */
+export async function getZoneSignals(zone, limit = 100) {
+  try {
+    const result = await apiFetch(`/signals/${zone.toUpperCase()}?limit=${limit}`);
+    
+    // Backend returns: { status: "success", data: { zone, signals: [...], pagination } }
+    if (result.status === 'success' && result.data && Array.isArray(result.data.signals)) {
+      return result.data.signals;
+    }
+
+    console.warn('[getZoneSignals] Unexpected response format:', result);
+    return [];
+
+  } catch (error) {
+    console.error('[getZoneSignals] Error:', error);
+    return [];
+  }
+}
+
+/**
+ * Get all signals with filtering (Program Manager)
+ */
+export async function getAllSignals(filters = {}) {
+  try {
+    const params = new URLSearchParams();
+    if (filters.zone) params.append('zone', filters.zone.toUpperCase());
+    if (filters.activity_type) params.append('activity_type', filters.activity_type);
+    if (filters.limit) params.append('limit', filters.limit);
+    if (filters.offset) params.append('offset', filters.offset);
+
+    const result = await apiFetch(`/signals?${params.toString()}`);
+    
+    // Backend returns: { status: "success", data: { zone, signals: [...], pagination } }
+    if (result.status === 'success' && result.data && Array.isArray(result.data.signals)) {
+      return {
+        signals: result.data.signals,
+        pagination: result.data.pagination
+      };
+    }
+
+    console.warn('[getAllSignals] Unexpected response format:', result);
+    return { signals: [], pagination: null };
+
+  } catch (error) {
+    console.error('[getAllSignals] Error:', error);
+    return { signals: [], pagination: null };
+  }
+}
+
+/**
+ * Health check
+ */
+export async function checkHealth() {
+  try {
+    const response = await fetch(`${BACKEND_URL}/health`);
+    const data = await response.json();
+    return {
+      healthy: response.ok && (data.status === 'healthy' || data.status === 'OK'),
+      data
+    };
+  } catch (error) {
+    console.error('[checkHealth] Error:', error);
+    return { healthy: false, error: error.message };
+  }
+}
+
+export { API_BASE, BACKEND_URL };
+
+// Made with Bob
