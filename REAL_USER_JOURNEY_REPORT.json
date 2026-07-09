@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-07-09T15:24:55.059162",
+  "frontend_url": "https://kulima-os.vercel.app",
+  "backend_url": "https://kulima-os-backend.onrender.com",
+  "results": {
+    "frontend_api_config": "FAIL",
+    "network_inspection": "FAIL",
+    "signal_submission": "PASS",
+    "database_verification": "PARTIAL",
+    "retrieval": "PASS",
+    "multiple_signals": "PASS",
+    "role_experience": "PARTIAL",
+    "evidence": "PASS",
+    "audit_trail": "PASS",
+    "user_acceptance": "PASS",
+    "performance": "PASS"
+  },
+  "test_signals": [
+    {
+      "id": "sig_3a1a6cc2dff5",
+      "text": "stock out NPK fertilizer ekwendeni",
+      "submitted_at": "2026-07-09T15:24:29.290924"
+    }
+  ],
+  "overall_status": "NO-GO"
+}
