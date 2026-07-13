@@ -91,7 +91,6 @@ export async function getRecentSignals(limit = 50) {
   try {
     const result = await apiFetch(`/recent-signals?limit=${limit}`);
     
-    // Backend returns: { success: true, status: "success", data: [...signals] }
     if (result.success && Array.isArray(result.data)) {
       return result.data;
     }
@@ -102,6 +101,42 @@ export async function getRecentSignals(limit = 50) {
   } catch (error) {
     console.error('[getRecentSignals] Error:', error);
     return [];
+  }
+}
+
+/**
+ * Get zone summary from intelligence engines (Program Manager)
+ */
+export async function getZoneSummary(zone, mode = 'investor') {
+  try {
+    const result = await apiFetch(`/summary/${zone.toUpperCase()}?mode=${mode}`);
+    
+    if (result.status === 'success' && result.data) {
+      return result.data;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[getZoneSummary] Error:', error);
+    return null;
+  }
+}
+
+/**
+ * Get regional analysis (Program Manager)
+ */
+export async function getRegionalAnalysis() {
+  try {
+    const result = await apiFetch(`/regional-analysis`);
+    
+    if (result.status === 'success' && result.data) {
+      return result.data;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[getRegionalAnalysis] Error:', error);
+    return null;
   }
 }
 
